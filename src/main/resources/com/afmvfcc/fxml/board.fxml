@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.BoardController"
+      spacing="16">
+
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- Board Members Tab -->
+        <Tab text="Board Members">
+            <VBox spacing="12">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="boardSearchField" styleClass="search-field"
+                               promptText="🔍  Search board members..."
+                               onKeyReleased="#handleBoardSearch"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="＋  Add Board Member" styleClass="btn-primary"
+                            onAction="#handleAddBoardMember"/>
+                </HBox>
+                <TableView fx:id="boardTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colBoardName"    text="FULL NAME"   prefWidth="220"/>
+                        <TableColumn fx:id="colBoardRole"    text="ROLE / TITLE" prefWidth="200"/>
+                        <TableColumn fx:id="colBoardPhone"   text="PHONE"       prefWidth="140"/>
+                        <TableColumn fx:id="colBoardEmail"   text="EMAIL"       prefWidth="200"/>
+                        <TableColumn fx:id="colBoardStart"   text="SINCE"       prefWidth="120"/>
+                        <TableColumn fx:id="colBoardActions" text="ACTIONS"     prefWidth="140"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- Meetings Tab -->
+        <Tab text="Board Meetings">
+            <VBox spacing="12">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="meetingSearchField" styleClass="search-field"
+                               promptText="🔍  Search meetings..."
+                               onKeyReleased="#handleMeetingSearch"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="＋  Add Meeting" styleClass="btn-primary"
+                            onAction="#handleAddMeeting"/>
+                </HBox>
+                <TableView fx:id="meetingsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colMeetTitle"    text="MEETING TITLE"  prefWidth="220"/>
+                        <TableColumn fx:id="colMeetDate"     text="DATE"           prefWidth="120"/>
+                        <TableColumn fx:id="colMeetLocation" text="LOCATION"       prefWidth="160"/>
+                        <TableColumn fx:id="colMeetStatus"   text="STATUS"         prefWidth="100"/>
+                        <TableColumn fx:id="colMeetAttend"   text="ATTENDEES"      prefWidth="90"/>
+                        <TableColumn fx:id="colMeetActions"  text="ACTIONS"        prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

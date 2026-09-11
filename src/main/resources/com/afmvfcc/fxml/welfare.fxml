@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.WelfareController"
+      spacing="16" style="-fx-padding:0;">
+
+    <TabPane VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+
+        <!-- WELFARE CASES TAB -->
+        <Tab text="Cases">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="welfareSearchField" styleClass="search-field"
+                               promptText="Search cases..."
+                               onKeyReleased="#handleSearch" prefWidth="280"/>
+                    <ComboBox fx:id="statusFilter" styleClass="form-combo"
+                              prefWidth="140" onAction="#handleFilter"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="📊  Print" styleClass="btn-secondary" onAction="#handleExportPdf"/>
+                    <Button text="+ New Case" styleClass="btn-primary"   onAction="#handleAddCase"/>
+                </HBox>
+                <TableView fx:id="welfareTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colWMember"  text="MEMBER"      prefWidth="200"/>
+                        <TableColumn fx:id="colWReason"  text="REASON"      prefWidth="220"/>
+                        <TableColumn fx:id="colWWorker"  text="ASSIGNED TO" prefWidth="180"/>
+                        <TableColumn fx:id="colWStatus"  text="STATUS"      prefWidth="110"/>
+                        <TableColumn fx:id="colWOpened"  text="OPENED"      prefWidth="120"/>
+                        <TableColumn fx:id="colWActions" text="ACTIONS"     prefWidth="150"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- WELFARE AGENTS TAB -->
+        <Tab text="Welfare Agents">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Members designated to visit and support those in need."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="agentSearchField" styleClass="search-field"
+                               promptText="Search agents..."
+                               onKeyReleased="#handleAgentSearch"
+                               prefWidth="220"/>
+                    <Button text="+ Add Agent" styleClass="btn-primary"
+                            onAction="#handleAddAgent"/>
+                </HBox>
+                <TableView fx:id="agentsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colAgentName"    text="AGENT NAME"   prefWidth="260"/>
+                        <TableColumn fx:id="colAgentPhone"   text="PHONE"        prefWidth="160"/>
+                        <TableColumn fx:id="colAgentCases"   text="CASES ASSIGNED" prefWidth="150"/>
+                        <TableColumn fx:id="colAgentActions" text="ACTIONS"      prefWidth="160"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.WebsiteController" spacing="16">
+
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- BLOG POSTS -->
+        <Tab text="Blog Posts">
+            <VBox spacing="12" style="-fx-padding:20;-fx-background-color:#F5F6FA;">
+                <HBox alignment="CENTER_RIGHT">
+                    <Button text="+ New Blog Post" styleClass="btn-primary" onAction="#handleAddBlog"/>
+                </HBox>
+                <TableView fx:id="blogsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colBlogTitle"   text="TITLE"   prefWidth="340"/>
+                        <TableColumn fx:id="colBlogAuthor"  text="AUTHOR"  prefWidth="180"/>
+                        <TableColumn fx:id="colBlogDate"    text="DATE"    prefWidth="140"/>
+                        <TableColumn fx:id="colBlogActions" text="ACTIONS" prefWidth="140"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- WEBSITE EVENTS -->
+        <Tab text="Events">
+            <VBox spacing="12" style="-fx-padding:20;-fx-background-color:#F5F6FA;">
+                <HBox alignment="CENTER_RIGHT">
+                    <Button text="+ New Event" styleClass="btn-primary" onAction="#handleAddWebEvent"/>
+                </HBox>
+                <TableView fx:id="webEventsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colWebEvTitle"   text="TITLE"   prefWidth="300"/>
+                        <TableColumn fx:id="colWebEvDate"    text="DATE"    prefWidth="140"/>
+                        <TableColumn fx:id="colWebEvPoster"  text="POSTER"  prefWidth="100"/>
+                        <TableColumn fx:id="colWebEvActions" text="ACTIONS" prefWidth="140"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.BroadcastController"
+            style="-fx-background-color:transparent;-fx-background:transparent;">
+
+    <VBox spacing="24" style="-fx-padding:4 0 32 0;">
+
+        <!-- ── PAGE INTRO ── -->
+        <VBox styleClass="page-card" spacing="6">
+            <Label text="BROADCAST" styleClass="section-label"/>
+            <Label text="Facebook → YouTube" styleClass="section-title"/>
+            <Label text="Download a completed Facebook Live service and upload it directly to the church YouTube channel."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+
+            <!-- yt-dlp warning banner (hidden by default) -->
+            <VBox fx:id="ytdlpWarningBox" visible="false" managed="false"
+                  style="-fx-background-color:#FFF8E1;-fx-background-radius:8;
+                         -fx-border-color:#F9A825;-fx-border-radius:8;-fx-border-width:1;
+                         -fx-padding:12 16;">
+                <Label text="⚠  yt-dlp not found — required for Facebook downloads"
+                       style="-fx-font-weight:700;-fx-text-fill:#E65100;-fx-font-size:13px;"/>
+                <Label text="yt-dlp is a free, trusted tool needed to download Facebook videos. Place yt-dlp.exe in the same folder as this application, then restart."
+                       wrapText="true"
+                       style="-fx-text-fill:#5A4000;-fx-font-size:12px;"/>
+                <HBox spacing="10" style="-fx-padding:8 0 0 0;">
+                    <Button text="📥  Download yt-dlp.exe (2 MB)"
+                            styleClass="btn-secondary"
+                            onAction="#handleDownloadYtdlp"/>
+                    <Button text="🔍  Check Again"
+                            styleClass="btn-secondary"
+                            onAction="#handleCheckYtdlp"/>
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- ── TWO STEP CARDS ── -->
+        <HBox spacing="20">
+
+            <!-- STEP 1 — DOWNLOAD / SELECT -->
+            <VBox styleClass="page-card" spacing="16" HBox.hgrow="ALWAYS">
+                <Label text="STEP 1" styleClass="section-label"/>
+                <Label text="📥  Download from Facebook" styleClass="section-title"/>
+                <Label text="Paste the Facebook video link after the live stream has ended, or select an existing video file from your computer."
+                       style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+
+                <VBox spacing="6">
+                    <Label text="FACEBOOK VIDEO URL" styleClass="form-label"/>
+                    <TextField fx:id="facebookUrlField" styleClass="form-field"
+                               promptText="https://www.facebook.com/watch?v=..."
+                               maxWidth="Infinity"/>
+                </VBox>
+
+                <VBox spacing="6">
+                    <Label text="DOWNLOAD FOLDER" styleClass="form-label"/>
+                    <HBox spacing="8">
+                        <TextField fx:id="downloadFolderField" styleClass="form-field"
+                                   promptText="Set in Settings or browse below"
+                                   HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                                   editable="false"/>
+                        <Button text="Browse..." styleClass="btn-secondary"
+                                onAction="#handleBrowseDownload"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Action buttons: Download OR browse local -->
+                <HBox spacing="10">
+                    <Button fx:id="downloadBtn" text="▼  Download from Facebook"
+                            styleClass="btn-primary" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                            onAction="#handleDownload"/>
+                    <Button text="📂  Use Local File"
+                            styleClass="btn-secondary"
+                            onAction="#handleBrowseLocalFile"/>
+                </HBox>
+
+                <Label text="— or select a video file already on your computer using 'Use Local File' —"
+                       style="-fx-text-fill:#9099AA;-fx-font-size:11px;" wrapText="true"/>
+
+                <!-- Progress -->
+                <VBox fx:id="downloadProgressBox" visible="false" managed="false" spacing="6">
+                    <ProgressBar fx:id="downloadProgressBar" maxWidth="Infinity" progress="0"/>
+                    <Label fx:id="downloadStatusLabel"
+                           style="-fx-font-size:12px;-fx-text-fill:#5A6275;" wrapText="true"/>
+                </VBox>
+
+                <!-- Downloaded / selected file info -->
+                <VBox fx:id="downloadedFileBox" visible="false" managed="false"
+                      spacing="4"
+                      style="-fx-background-color:#F0FFF4;-fx-background-radius:8;
+                             -fx-border-color:#2E7D4F;-fx-border-radius:8;
+                             -fx-border-width:1;-fx-padding:10 14;">
+                    <Label text="✓  Video ready to upload"
+                           style="-fx-font-weight:700;-fx-text-fill:#2E7D4F;-fx-font-size:13px;"/>
+                    <Label fx:id="downloadedFileLabel"
+                           style="-fx-font-size:11px;-fx-text-fill:#5A6275;" wrapText="true"/>
+                </VBox>
+            </VBox>
+
+            <!-- STEP 2 — UPLOAD -->
+            <VBox styleClass="page-card" spacing="16" HBox.hgrow="ALWAYS">
+                <Label text="STEP 2" styleClass="section-label"/>
+                <Label text="📤  Upload to YouTube" styleClass="section-title"/>
+                <Label text="Fill in the video details, then upload to the church channel."
+                       style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+
+                <VBox spacing="6">
+                    <Label text="YOUTUBE TITLE" styleClass="form-label"/>
+                    <TextField fx:id="youtubeTitleField" styleClass="form-field"
+                               promptText="e.g. Sunday Service — 24 March 2026"
+                               maxWidth="Infinity"/>
+                </VBox>
+
+                <VBox spacing="6">
+                    <Label text="DESCRIPTION" styleClass="form-label"/>
+                    <TextArea fx:id="youtubeDescField"
+                              promptText="Add a description for the video..."
+                              prefRowCount="4" wrapText="true"
+                              style="-fx-font-size:13px;" maxWidth="Infinity"/>
+                </VBox>
+
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="PRIVACY" styleClass="form-label"/>
+                        <ComboBox fx:id="privacyCombo" styleClass="form-combo"
+                                  maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="CATEGORY" styleClass="form-label"/>
+                        <ComboBox fx:id="categoryCombo" styleClass="form-combo"
+                                  maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+
+                <!-- OAuth notice -->
+                <Label fx:id="oauthNoticeLabel"
+                       text="💡  First upload will open a browser window to authorise the church YouTube account. This only happens once."
+                       style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+
+                <Button fx:id="uploadBtn" text="🚀  Upload to YouTube"
+                        styleClass="btn-primary" maxWidth="Infinity"
+                        onAction="#handleUpload" disable="true"/>
+
+                <Button fx:id="reauthorizeBtn"
+                        text="🔑  Re-authorise YouTube"
+                        visible="false" managed="false"
+                        styleClass="btn-secondary"
+                        onAction="#handleReauthorize"/>
+
+                <!-- Progress -->
+                <VBox fx:id="uploadProgressBox" visible="false" managed="false" spacing="6">
+                    <ProgressBar fx:id="uploadProgressBar" maxWidth="Infinity" progress="0"/>
+                    <Label fx:id="uploadStatusLabel"
+                           style="-fx-font-size:12px;-fx-text-fill:#5A6275;" wrapText="true"/>
+                </VBox>
+
+                <!-- Upload success -->
+                <VBox fx:id="uploadSuccessBox" visible="false" managed="false"
+                      spacing="6"
+                      style="-fx-background-color:#F0FFF4;-fx-background-radius:8;
+                             -fx-border-color:#2E7D4F;-fx-border-radius:8;
+                             -fx-border-width:1;-fx-padding:10 14;">
+                    <Label text="✓  Uploaded to YouTube successfully!"
+                           style="-fx-font-weight:700;-fx-text-fill:#2E7D4F;-fx-font-size:13px;"/>
+                    <Label fx:id="youtubeLinkLabel"
+                           style="-fx-font-size:12px;-fx-text-fill:#3A86C8;
+                                  -fx-cursor:hand;" wrapText="true"
+                           onMouseClicked="#handleOpenYoutubeLink"/>
+                    <Button text="📋  Copy Link" styleClass="btn-secondary"
+                            style="-fx-padding:4 12;" onAction="#handleCopyLink"/>
+                </VBox>
+            </VBox>
+        </HBox>
+
+        <!-- ── UPLOAD HISTORY ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <HBox alignment="CENTER_LEFT">
+                <VBox spacing="2" HBox.hgrow="ALWAYS">
+                    <Label text="HISTORY" styleClass="section-label"/>
+                    <Label text="Upload History" styleClass="section-title"/>
+                </VBox>
+                <Button text="🔄  Refresh" styleClass="btn-secondary"
+                        onAction="#handleRefreshHistory"/>
+            </HBox>
+
+            <TableView fx:id="historyTable" prefHeight="280">
+                <columns>
+                    <TableColumn fx:id="colHTitle"       text="TITLE"        prefWidth="250"/>
+                    <TableColumn fx:id="colHStatus"      text="STATUS"       prefWidth="100"/>
+                    <TableColumn fx:id="colHDate"        text="DATE"         prefWidth="140"/>
+                    <TableColumn fx:id="colHUploadedBy"  text="UPLOADED BY"  prefWidth="150"/>
+                    <TableColumn fx:id="colHYoutubeLink" text="YOUTUBE LINK" prefWidth="220"/>
+                    <TableColumn fx:id="colHActions"     text="ACTIONS"      prefWidth="100"/>
+                </columns>
+                <placeholder>
+                    <Label text="No uploads yet. Download and upload a service to get started."
+                           style="-fx-text-fill:#9099AA;"/>
+                </placeholder>
+            </TableView>
+        </VBox>
+
+    </VBox>
+</ScrollPane>

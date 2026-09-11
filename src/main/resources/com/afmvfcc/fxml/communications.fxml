@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.CommunicationsController" spacing="0">
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- ── COMPOSE TAB ── -->
+        <Tab text="Compose Message">
+            <VBox spacing="18" style="-fx-padding:24;-fx-background-color:#F5F6FA;">
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="RECIPIENT GROUP" styleClass="form-label"/>
+                        <ComboBox fx:id="recipientGroup" styleClass="form-combo" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" prefWidth="160">
+                        <Label text="CHANNEL" styleClass="form-label"/>
+                        <ComboBox fx:id="channelCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" alignment="BOTTOM_LEFT">
+                        <Label text=" " styleClass="form-label"/>
+                        <Button text="👥  View Recipients" styleClass="btn-secondary"
+                                onAction="#handleViewRecipients"/>
+                    </VBox>
+                </HBox>
+                <VBox spacing="6">
+                    <Label text="SUBJECT (EMAIL ONLY)" styleClass="form-label"/>
+                    <TextField fx:id="subjectField" styleClass="form-field"
+                               promptText="Email subject..." maxWidth="Infinity"/>
+                </VBox>
+                <VBox spacing="6" VBox.vgrow="ALWAYS">
+                    <Label text="MESSAGE *" styleClass="form-label"/>
+                    <TextArea fx:id="messageArea" styleClass="form-textarea"
+                              promptText="Write your message here..."
+                              prefHeight="220" maxWidth="Infinity"/>
+                </VBox>
+                <HBox alignment="CENTER_LEFT" spacing="14">
+                    <Button text="Send Message" styleClass="btn-primary" onAction="#handleSend"/>
+                    <Label fx:id="statusLabel" visible="false"/>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- ANNOUNCEMENTS TAB -->
+        <Tab text="Announcements">
+            <ScrollPane fitToWidth="true"
+                        style="-fx-background-color:transparent;-fx-background:transparent;">
+                <VBox spacing="24" style="-fx-padding:24;-fx-background-color:#F5F6FA;">
+
+                    <VBox styleClass="page-card" spacing="16">
+                        <Label text="ANNOUNCEMENTS" styleClass="section-label"/>
+                        <Label text="Post to Church Channels" styleClass="section-title"/>
+                        <Label text="Write an announcement and post it directly to the church WhatsApp group and/or Facebook page."
+                               style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+
+                        <VBox spacing="6">
+                            <Label text="ANNOUNCEMENT TEXT *" styleClass="form-label"/>
+                            <TextArea fx:id="announcementText"
+                                      promptText="Write your announcement here..."
+                                      prefRowCount="8" wrapText="true"
+                                      style="-fx-font-size:13px;" maxWidth="Infinity"/>
+                        </VBox>
+
+                        <VBox spacing="6">
+                            <Label text="ATTACHMENT (optional)" styleClass="form-label"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Button text="📎  Attach File" styleClass="btn-secondary"
+                                        onAction="#handleAttachFile"/>
+                                <Label fx:id="attachmentLabel" text="No attachment"
+                                       style="-fx-text-fill:#9099AA;-fx-font-size:12px;"
+                                       HBox.hgrow="ALWAYS"/>
+                                <Button text="✕ Remove" styleClass="btn-secondary"
+                                        style="-fx-padding:4 10;-fx-font-size:11px;"
+                                        onAction="#handleRemoveAttachment"/>
+                            </HBox>
+                            <Label text="Supports: PDF, Word (.docx), Images (JPG/PNG), Videos (MP4)."
+                                   style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+                        </VBox>
+
+                        <VBox spacing="8">
+                            <Label text="POST TO" styleClass="form-label"/>
+                            <HBox spacing="24" alignment="CENTER_LEFT">
+                                <HBox spacing="10" alignment="CENTER_LEFT"
+                                      style="-fx-background-color:#F0FFF4;-fx-border-color:#25D366;-fx-border-radius:8;-fx-background-radius:8;-fx-padding:10 16;">
+                                    <CheckBox fx:id="sendToWhatsApp"/>
+                                    <VBox spacing="2">
+                                        <Label text="📱 WhatsApp"
+                                               style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#128C7E;"/>
+                                        <Label text="Sends to configured recipient via WhatsApp Cloud API"
+                                               style="-fx-font-size:10px;-fx-text-fill:#5A6275;" wrapText="true"/>
+                                    </VBox>
+                                </HBox>
+                                <HBox spacing="10" alignment="CENTER_LEFT"
+                                      style="-fx-background-color:#EBF5FF;-fx-border-color:#1877F2;-fx-border-radius:8;-fx-background-radius:8;-fx-padding:10 16;">
+                                    <CheckBox fx:id="sendToFacebook"/>
+                                    <VBox spacing="2">
+                                        <Label text="📘 Facebook Page"
+                                               style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#1877F2;"/>
+                                        <Label text="Posts to the church Facebook Page feed"
+                                               style="-fx-font-size:10px;-fx-text-fill:#5A6275;" wrapText="true"/>
+                                    </VBox>
+                                </HBox>
+                            </HBox>
+                        </VBox>
+
+                        <HBox spacing="14" alignment="CENTER_LEFT">
+                            <Button text="📢  Post Announcement"
+                                    styleClass="btn-primary" style="-fx-padding:10 24;"
+                                    onAction="#handlePostAnnouncement"/>
+                            <Label fx:id="announcementStatus"
+                                   visible="false" managed="false"
+                                   style="-fx-font-size:12px;-fx-font-weight:600;"
+                                   wrapText="true" HBox.hgrow="ALWAYS"/>
+                        </HBox>
+
+                        <Label text="💡  Configure WhatsApp and Facebook credentials in Settings → Announcements before posting."
+                               style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+                    </VBox>
+
+                    <VBox styleClass="page-card" spacing="16">
+                        <Label text="ANNOUNCEMENT HISTORY" styleClass="section-label"/>
+                        <Label text="All Posted Announcements" styleClass="section-title"/>
+                        <TableView fx:id="announcementTable" prefHeight="320">
+                            <columns>
+                                <TableColumn fx:id="colAnnTitle"    text="ANNOUNCEMENT"  prefWidth="280"/>
+                                <TableColumn fx:id="colAnnDate"     text="DATE"          prefWidth="140"/>
+                                <TableColumn fx:id="colAnnChannels" text="CHANNELS"      prefWidth="130"/>
+                                <TableColumn fx:id="colAnnPostedBy" text="POSTED BY"     prefWidth="140"/>
+                                <TableColumn fx:id="colAnnStatus"   text="STATUS"        prefWidth="160"/>
+                                <TableColumn fx:id="colAnnActions"  text=""              prefWidth="80"/>
+                            </columns>
+                            <placeholder>
+                                <Label text="No announcements posted yet."
+                                       style="-fx-text-fill:#9099AA;"/>
+                            </placeholder>
+                        </TableView>
+                    </VBox>
+
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
+        <!-- ── SENT LOG TAB ── -->
+        <Tab text="Sent Log">
+            <VBox spacing="12" style="-fx-padding:24;-fx-background-color:#F5F6FA;">
+                <Label text="Double-click any row or click View to read the full message. Click 'Recipients' to see who was in the group."
+                       style="-fx-font-size:11px;-fx-text-fill:#9099AA;"/>
+                <TableView fx:id="sentTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colSentType"    text="CHANNEL"  prefWidth="90"/>
+                        <TableColumn fx:id="colSentTo"      text="SENT TO"  prefWidth="190"/>
+                        <TableColumn fx:id="colSentSubject" text="SUBJECT"  prefWidth="200"/>
+                        <TableColumn fx:id="colSentDate"    text="DATE"     prefWidth="140"/>
+                        <TableColumn fx:id="colSentActions" text=""         prefWidth="160"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

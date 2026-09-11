@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.MembersController"
+      spacing="16" style="-fx-padding:0;">
+
+    <!-- TOOLBAR -->
+    <HBox spacing="10" alignment="BOTTOM_LEFT">
+
+        <!-- Search -->
+        <VBox spacing="4">
+            <Label text="SEARCH" styleClass="form-label"/>
+            <TextField fx:id="searchField" styleClass="search-field"
+                       promptText="Name, phone or email..."
+                       prefWidth="220"
+                       onKeyReleased="#handleSearch"/>
+        </VBox>
+
+        <!-- Status filter -->
+        <VBox spacing="4">
+            <Label text="STATUS" styleClass="form-label"/>
+            <ComboBox fx:id="filterStatus" styleClass="form-combo"
+                      promptText="All" prefWidth="130"
+                      onAction="#handleFilter"/>
+        </VBox>
+
+        <!-- Sub-branch filter -->
+        <VBox spacing="4">
+            <Label text="SUB-BRANCH" styleClass="form-label"/>
+            <ComboBox fx:id="filterSubBranch" styleClass="form-combo"
+                      promptText="All" prefWidth="140"
+                      onAction="#handleFilter"/>
+        </VBox>
+
+        <!-- Ministry filter -->
+        <VBox spacing="4">
+            <Label text="MINISTRY" styleClass="form-label"/>
+            <ComboBox fx:id="filterMinistry" styleClass="form-combo"
+                      promptText="All" prefWidth="150"
+                      onAction="#handleFilter"/>
+        </VBox>
+
+        <!-- Gender filter -->
+        <VBox spacing="4">
+            <Label text="GENDER" styleClass="form-label"/>
+            <ComboBox fx:id="filterGender" styleClass="form-combo"
+                      promptText="All" prefWidth="110"
+                      onAction="#handleFilter"/>
+        </VBox>
+
+        <HBox HBox.hgrow="ALWAYS"/>
+
+        <!-- Action buttons — align to bottom so they sit flush with the combos -->
+        <VBox spacing="4" alignment="BOTTOM_LEFT">
+            <Label text=" " styleClass="form-label"/>  <!-- spacer to match label height -->
+            <HBox spacing="8">
+                <Button text="+ Add Member"  styleClass="btn-primary"   onAction="#handleAdd"/>
+                <Button text="📊  Print"     styleClass="btn-secondary" onAction="#handlePrint"/>
+            </HBox>
+        </VBox>
+
+    </HBox>
+
+    <!-- PENDING REVIEW BANNER -->
+    <HBox fx:id="pendingBanner" spacing="12" alignment="CENTER_LEFT"
+          style="-fx-background-color:rgba(212,160,23,0.1);-fx-border-color:rgba(212,160,23,0.3);
+                 -fx-border-radius:8;-fx-background-radius:8;-fx-padding:10 16;"
+          visible="false" managed="false">
+        <Label fx:id="pendingBannerLabel" text="0 new members pending approval"
+               style="-fx-text-fill:#D4A017;-fx-font-weight:700;-fx-font-size:13px;"/>
+        <HBox HBox.hgrow="ALWAYS"/>
+        <Button text="Review Pending" styleClass="btn-primary"
+                style="-fx-padding:6 14;" onAction="#showPendingTab"/>
+    </HBox>
+
+    <!-- TAB PANE -->
+    <TabPane fx:id="memberTabs" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+
+        <!-- MEMBERS TAB -->
+        <Tab text="All Members">
+            <VBox spacing="12" style="-fx-padding:0 0 8 0;">
+                <TableView fx:id="membersTable" VBox.vgrow="ALWAYS"
+                           style="-fx-min-height:500px;" onMouseClicked="#handleTableClick">
+                    <columns>
+                        <TableColumn fx:id="colPhoto"        text=""             prefWidth="50"/>
+                        <TableColumn fx:id="colName"         text="FULL NAME"    prefWidth="200"/>
+                        <TableColumn fx:id="colPhone"        text="PHONE"        prefWidth="130"/>
+                        <TableColumn fx:id="colSubBranch"    text="SUB-BRANCH"   prefWidth="130"/>
+                        <TableColumn fx:id="colMinistries"   text="MINISTRIES"   prefWidth="200"/>
+                        <TableColumn fx:id="colAvailability" text="AVAILABILITY" prefWidth="110"/>
+                        <TableColumn fx:id="colStatus"       text="STATUS"       prefWidth="90"/>
+                        <TableColumn fx:id="colActions"      text="ACTIONS"      prefWidth="200"/>
+                    </columns>
+                </TableView>
+                <HBox alignment="CENTER_LEFT">
+                    <Label fx:id="memberCountLabel" text="0 members"
+                           style="-fx-text-fill:#9099AA;-fx-font-size:12px;"/>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- SUB-BRANCHES TAB -->
+        <Tab text="Sub-Branches">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Manage the sub-branches of your church."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="+ Add Sub-Branch" styleClass="btn-primary"
+                            onAction="#handleAddSubBranch"/>
+                </HBox>
+                <TableView fx:id="subBranchTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colSbName"    text="SUB-BRANCH NAME" prefWidth="300"/>
+                        <TableColumn fx:id="colSbMembers" text="MEMBERS"         prefWidth="100"/>
+                        <TableColumn fx:id="colSbStatus"  text="STATUS"          prefWidth="100"/>
+                        <TableColumn fx:id="colSbActions" text="ACTIONS"         prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- MINISTRIES TAB -->
+        <Tab text="Ministries">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Manage the ministries of your church."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="+ Add Ministry" styleClass="btn-primary"
+                            onAction="#handleAddMinistry"/>
+                </HBox>
+                <TableView fx:id="ministriesTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colMinName"    text="MINISTRY NAME" prefWidth="240"/>
+                        <TableColumn fx:id="colMinDesc"    text="DESCRIPTION"   prefWidth="280"/>
+                        <TableColumn fx:id="colMinMembers" text="MEMBERS"       prefWidth="100"/>
+                        <TableColumn fx:id="colMinStatus"  text="STATUS"        prefWidth="100"/>
+                        <TableColumn fx:id="colMinActions" text="ACTIONS"       prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- GUESTS TAB -->
+        <Tab text="Guests">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="guestSearchField" styleClass="search-field"
+                               promptText="Search guests..."
+                               prefWidth="260"/>
+                    <ComboBox fx:id="filterGuestStatus" styleClass="form-combo"
+                              prefWidth="130"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="guestCountLabel" text="0 guest(s)"
+                           style="-fx-text-fill:#9099AA;-fx-font-size:12px;"/>
+                </HBox>
+                <TableView fx:id="guestsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colGuestName"       text="NAME"             prefWidth="160"/>
+                        <TableColumn fx:id="colGuestPhone"      text="PHONE"            prefWidth="110"/>
+                        <TableColumn fx:id="colGuestGender"     text="GENDER"           prefWidth="80"/>
+                        <TableColumn fx:id="colGuestBranch"     text="SUB-BRANCH"       prefWidth="110"/>
+                        <TableColumn fx:id="colGuestInvited"    text="INVITED BY"       prefWidth="130"/>
+                        <TableColumn fx:id="colGuestMembership" text="WANTS MEMBERSHIP" prefWidth="130"/>
+                        <TableColumn fx:id="colGuestDate"       text="VISIT DATE"       prefWidth="100"/>
+                        <TableColumn fx:id="colGuestStatus"     text="STATUS"           prefWidth="90"/>
+                        <TableColumn fx:id="colGuestActions"    text="ACTIONS"          prefWidth="185"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- FAMILIES TAB -->
+        <Tab text="Families">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Group members into family units."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="+ Create Family" styleClass="btn-primary"
+                            onAction="#handleAddFamily"/>
+                </HBox>
+                <TableView fx:id="familiesTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colFamilyName"    text="FAMILY NAME" prefWidth="250"/>
+                        <TableColumn fx:id="colFamilyMembers" text="MEMBERS"     prefWidth="350"/>
+                        <TableColumn fx:id="colFamilyActions" text="ACTIONS"     prefWidth="150"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- PENDING TAB -->
+        <Tab text="Pending Review" fx:id="pendingTab">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <TableView fx:id="pendingTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colPendingName"     text="FULL NAME"  prefWidth="200"/>
+                        <TableColumn fx:id="colPendingPhone"    text="PHONE"      prefWidth="130"/>
+                        <TableColumn fx:id="colPendingBranch"   text="SUB-BRANCH" prefWidth="130"/>
+                        <TableColumn fx:id="colPendingMinistry" text="MINISTRY"   prefWidth="150"/>
+                        <TableColumn fx:id="colPendingDate"     text="SUBMITTED"  prefWidth="150"/>
+                        <TableColumn fx:id="colPendingActions"  text="ACTIONS"    prefWidth="180"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- FAITHFUL DEPARTED TAB -->
+        <Tab text="Faithful Departed" fx:id="faithfulDepartedTab">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Members who have passed on. Their records and history are preserved."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="deceasedSearchField" styleClass="search-field"
+                               promptText="Search by name or sub-branch..."
+                               onKeyReleased="#handleDeceasedSearch"
+                               prefWidth="280"/>
+                </HBox>
+                <TableView fx:id="deceasedTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                    <columns>
+                        <TableColumn fx:id="colDecName"      text="FULL NAME"      prefWidth="200"/>
+                        <TableColumn fx:id="colDecDod"       text="DATE OF DEATH"  prefWidth="130"/>
+                        <TableColumn fx:id="colDecSubBranch" text="SUB-BRANCH"     prefWidth="130"/>
+                        <TableColumn fx:id="colDecObituary"  text="MEMORIAL NOTE"  prefWidth="240"/>
+                        <TableColumn fx:id="colDecRecorded"  text="RECORDED"       prefWidth="120"/>
+                        <TableColumn fx:id="colDecActions"   text="ACTIONS"        prefWidth="200"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

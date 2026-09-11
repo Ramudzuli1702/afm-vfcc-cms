@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AFM VFCC CMS - prerequisite bundle.
+
+  A WiX "Burn" bootstrapper that chains two steps into one setup .exe:
+    1. install.ps1 - installs and hardens MySQL Server if not already present
+       (skips silently if it is).
+    2. The app installer itself, built by `gradle createInstaller` (which
+       already bundles its own Java runtime via jlink, so no separate Java
+       step is needed here).
+
+  Built by installer\build-installer.ps1, which supplies -dAppInstallerPath
+  and -dAppIcon on the command line.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:bal="http://schemas.microsoft.com/wix/BalExtension">
+
+  <Bundle Name="AFM VFCC CMS Setup"
+          Version="1.0.0.0"
+          Manufacturer="Ralidzhivha RR"
+          UpgradeCode="1372e4d2-f5e8-405c-80f0-e44f3df296c6"
+          IconSourceFile="$(var.AppIcon)">
+
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense">
+      <bal:WixStandardBootstrapperApplication ShowVersion="yes" LicenseFile="$(var.AppLicenseRtf)" />
+    </BootstrapperApplicationRef>
+
+    <Chain>
+      <ExePackage Id="MySqlPrereq"
+                  DisplayName="MySQL Server (prerequisite)"
+                  Description="Installs and hardens MySQL Server if it isn't already present"
+                  SourceFile="$(env.SystemRoot)\System32\WindowsPowerShell\v1.0\powershell.exe"
+                  InstallCommand="-NoProfile -ExecutionPolicy Bypass -File &quot;install.ps1&quot;"
+                  PerMachine="yes"
+                  Vital="yes"
+                  Permanent="yes">
+        <Payload SourceFile="$(var.InstallPs1)" Name="install.ps1" />
+        <Payload SourceFile="$(var.MysqlMsi)" Name="mysql-9.7.0-winx64.msi" />
+      </ExePackage>
+
+      <ExePackage Id="AfmVfccCms"
+                  DisplayName="AFM VFCC CMS"
+                  Description="Installs the AFM VFCC Church Management System"
+                  SourceFile="$(var.AppInstallerPath)"
+                  PerMachine="yes"
+                  Vital="yes"
+                  Permanent="no" />
+    </Chain>
+  </Bundle>
+</Wix>

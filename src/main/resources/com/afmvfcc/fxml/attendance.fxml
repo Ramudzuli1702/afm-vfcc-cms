@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.AttendanceController"
+      spacing="16">
+
+    <TabPane fx:id="attendanceTabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- ── TAKE ATTENDANCE TAB ── -->
+        <Tab text="Take Attendance">
+            <VBox spacing="12" style="-fx-padding:16;-fx-background-color:#F5F6FA;">
+
+                <!-- ── Row 1: Session selector + ministry filter + IP address ── -->
+                <HBox spacing="10" alignment="CENTER_LEFT"
+                      style="-fx-background-color:#FFFFFF;-fx-background-radius:12;
+                             -fx-border-color:#DDE1EA;-fx-border-radius:12;
+                             -fx-border-width:1;-fx-padding:14 20;">
+
+                    <VBox spacing="4" HBox.hgrow="ALWAYS">
+                        <Label text="SESSION" styleClass="form-label"/>
+                        <ComboBox fx:id="sessionCombo" styleClass="form-combo"
+                                  maxWidth="Infinity" promptText="Select or create session"
+                                  onAction="#handleSessionSelected"/>
+                    </VBox>
+
+                    <VBox spacing="4" HBox.hgrow="ALWAYS">
+                        <Label text="FILTER BY MINISTRY" styleClass="form-label"/>
+                        <ComboBox fx:id="attendanceMinistryCombo" styleClass="form-combo"
+                                  maxWidth="Infinity" onAction="#handleMinistryFilter"/>
+                    </VBox>
+
+                    <VBox spacing="4" prefWidth="140">
+                        <Label text="SHOW MEMBERS" styleClass="form-label"/>
+                        <ComboBox fx:id="presenceFilterCombo" styleClass="form-combo"
+                                  maxWidth="Infinity" onAction="#handlePresenceFilter"/>
+                    </VBox>
+
+                    <Separator orientation="VERTICAL" style="-fx-padding:0 8;"/>
+
+                    <!-- IP address for mobile app -->
+                    <VBox spacing="3" alignment="CENTER">
+                        <Label text="📱 APP SERVER IP" styleClass="form-label"/>
+                        <Label fx:id="ipAddressLabel" text="Detecting..."
+                               style="-fx-font-size:15px;-fx-font-weight:700;
+                                      -fx-text-fill:#1B3A6B;-fx-font-family:'Courier New';"/>
+                        <Label text="Enter this in the app"
+                               style="-fx-font-size:10px;-fx-text-fill:#9099AA;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- ── Row 2: Action buttons ── -->
+                <HBox spacing="8" alignment="CENTER_LEFT"
+                      style="-fx-background-color:#FFFFFF;-fx-background-radius:10;
+                             -fx-border-color:#DDE1EA;-fx-border-radius:10;
+                             -fx-border-width:1;-fx-padding:10 16;">
+                    <Button text="＋  New Session"    styleClass="btn-primary"
+                            onAction="#handleNewSession"/>
+                    <Separator orientation="VERTICAL" style="-fx-padding:0 4;"/>
+                    <Button text="📊  Print All"      styleClass="btn-secondary"
+                            onAction="#handleExportExcel"/>
+                    <Button text="✅  Print Present"  styleClass="btn-secondary"
+                            onAction="#handleExportPresentOnly"/>
+                    <Separator orientation="VERTICAL" style="-fx-padding:0 4;"/>
+                    <Button text="🔒  Close Session"  styleClass="btn-secondary"
+                            style="-fx-text-fill:#D94040;"
+                            onAction="#handleCloseSession"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="📱  Merge Android"  styleClass="btn-secondary"
+                            style="-fx-padding:6 12;-fx-font-size:11px;"
+                            onAction="#handleMergeAndroid"/>
+                </HBox>
+
+                <!-- ── Sync status bar ── -->
+                <HBox fx:id="syncBar" spacing="10" alignment="CENTER_LEFT"
+                      style="-fx-background-color:rgba(52,152,219,0.1);
+                             -fx-border-color:rgba(52,152,219,0.3);
+                             -fx-border-radius:8;-fx-background-radius:8;-fx-padding:8 16;"
+                      visible="false" managed="false">
+                    <Label fx:id="syncStatusLabel" text="No active session"
+                           style="-fx-text-fill:#3498db;-fx-font-size:12px;-fx-font-weight:600;"/>
+                </HBox>
+
+                <!-- ── Member search bar ── -->
+                <TextField fx:id="attendanceSearchField" styleClass="search-field"
+                           promptText="🔍  Search member..."
+                           onKeyReleased="#handleAttendanceSearch"/>
+
+                <!-- ── Present count + bulk actions ── -->
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label fx:id="presentCountLabel" text="Present: 0  /  Total: 0"
+                           style="-fx-text-fill:#888;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button text="Mark All Present" styleClass="btn-secondary"
+                            style="-fx-padding:6 14;-fx-font-size:11px;"
+                            onAction="#handleMarkAllPresent"/>
+                    <Button text="Clear All" styleClass="btn-secondary"
+                            style="-fx-padding:6 14;-fx-font-size:11px;"
+                            onAction="#handleClearAll"/>
+                </HBox>
+
+                <!-- ── Member list ── -->
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                            style="-fx-background-color:transparent;-fx-background:transparent;">
+                    <VBox fx:id="attendanceMembersBox" spacing="4"/>
+                </ScrollPane>
+
+            </VBox>
+        </Tab>
+
+        <!-- ── SESSIONS HISTORY TAB ── -->
+        <Tab text="Session History">
+            <VBox spacing="12" style="-fx-padding:16;-fx-background-color:#F5F6FA;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="sessionSearchField" styleClass="search-field"
+                               promptText="🔍  Search sessions..."
+                               onKeyReleased="#handleSessionSearch"
+                               HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <TableView fx:id="sessionsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                    <columns>
+                        <TableColumn fx:id="colSessName"     text="SESSION NAME"  prefWidth="195"/>
+                        <TableColumn fx:id="colSessDate"     text="DATE"          prefWidth="115"/>
+                        <TableColumn fx:id="colSessMinistry" text="MINISTRY"      prefWidth="140"/>
+                        <TableColumn fx:id="colSessPresent"  text="PRESENT"       prefWidth="80"/>
+                        <TableColumn fx:id="colSessTotal"    text="TOTAL"         prefWidth="70"/>
+                        <TableColumn fx:id="colSessStatus"   text="STATUS"        prefWidth="85"/>
+                        <TableColumn fx:id="colSessActions"  text="ACTIONS"       prefWidth="230"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

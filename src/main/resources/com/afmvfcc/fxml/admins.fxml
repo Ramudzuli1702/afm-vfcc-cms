@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.afmvfcc.controllers.AdminsController" spacing="16">
+    <Label fx:id="accessDeniedLabel" text="⛔  Access denied. Only the super admin can manage admin accounts."
+           style="-fx-text-fill:#e74c3c;-fx-font-size:14px;-fx-padding:40;" visible="false" managed="false"/>
+    <VBox fx:id="contentBox" spacing="16">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <TextField fx:id="adminSearchField" styleClass="search-field" promptText="🔍  Search admins..." onKeyReleased="#handleSearch"/>
+            <HBox HBox.hgrow="ALWAYS"/>
+            <Button text="＋  Add Admin" styleClass="btn-primary" onAction="#handleAddAdmin"/>
+        </HBox>
+        <TableView fx:id="adminsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:540px;">
+            <columns>
+                <TableColumn fx:id="colAdminName"     text="FULL NAME"  prefWidth="200"/>
+                <TableColumn fx:id="colAdminUsername" text="USERNAME"   prefWidth="150"/>
+                <TableColumn fx:id="colAdminRole"     text="ROLE"       prefWidth="160"/>
+                <TableColumn fx:id="colAdminEmail"    text="EMAIL"      prefWidth="200"/>
+                <TableColumn fx:id="colAdminStatus"   text="STATUS"     prefWidth="100"/>
+                <TableColumn fx:id="colAdminActions"  text="ACTIONS"    prefWidth="200"/>
+            </columns>
+        </TableView>
+    </VBox>
+</VBox>

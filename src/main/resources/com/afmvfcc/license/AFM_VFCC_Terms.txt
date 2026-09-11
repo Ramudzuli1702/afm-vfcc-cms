@@ -1,0 +1,39 @@
+AFM VFCC Church Management System
+Terms and Conditions of Use
+
+Dear Bishop Ramatshimbila and the Church Family,
+
+Thank you for using the AFM VFCC Church Management System. This system was lovingly developed to help manage your church records, members, finances, and ministries more effectively.
+
+By installing and using this software, you agree to the following simple terms:
+
+1. Ownership and Usage Rights
+   1.1 The intellectual property (the code, design, structure, and all related materials) of this system remains the property of Ralidzhivha Ramudzuli Ricardo.
+   1.2 However, once you receive the system, the church is granted full perpetual rights to use it for all its ministry and administrative needs within the AFM VFCC.
+   1.3 The system may not be used by any other church, organisation, or individual outside of the AFM VFCC without written permission.
+
+2. Modifications and Technical Support
+   2.1 Only Ralidzhivha Ramudzuli Ricardo or someone officially approved by me may modify, fix, or make changes to the system.
+   2.2 Please do not allow any other person (including local IT technicians or other developers) to open, change, or repair the code.
+   2.3 If you experience any problem or need a new feature, kindly contact me directly so I can assist you properly.
+
+3. Respect and Responsible Use
+   3.1 Use the system only for honest and godly church administration purposes.
+   3.2 Keep all church member and financial information safe and confidential.
+   3.3 Do not share, copy, or distribute the software to anyone else.
+
+4. No Guarantees
+   4.1 The system is provided as a helpful tool. While every effort has been made to make it reliable, I cannot guarantee it will be perfect at all times.
+   4.2 Please always backup the records in the system's setting.
+
+5. Termination
+   If these terms are not followed (for example, if the software is used outside the AFM VFCC or modified by unauthorised persons), I reserve the right to stop supporting the system for the church.
+
+Acceptance
+By installing and using the AFM VFCC Church Management System, you confirm that you have read and agree to these simple terms.
+
+
+Developed with unreserved love for the church by
+Ralidzhivha Ramudzuli Ricardo
+Contact: +27 63 620 2691
+Email: ralidzhivhar@gmail.com

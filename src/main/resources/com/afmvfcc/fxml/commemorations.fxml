@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.CommemorationsController"
+      spacing="0" style="-fx-background-color:#F5F6FA;-fx-padding:0;">
+
+    <!-- Page header -->
+    <VBox style="-fx-background-color:#FFFFFF;-fx-padding:24 28 20 28;
+                 -fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;">
+        <Label text="COMMEMORATIONS"
+               style="-fx-font-size:9px;-fx-font-weight:700;-fx-text-fill:#3A86C8;-fx-letter-spacing:2px;"/>
+        <Label text="Issue Certificates"
+               style="-fx-font-size:22px;-fx-font-weight:700;-fx-text-fill:#1E2130;-fx-padding:4 0 4 0;"/>
+        <Label text="Select a certificate, fill in the recipient details and generate a print-ready PDF. A preview is shown before saving."
+               style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+    </VBox>
+
+    <!-- Cards -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                style="-fx-background-color:#F5F6FA;-fx-background:transparent;-fx-padding:0;">
+        <VBox spacing="20" style="-fx-padding:24 28;">
+
+            <!-- Row 1: Baptism + Appreciation + Marriage -->
+            <HBox spacing="20">
+
+                <!-- BAPTISM -->
+                <VBox styleClass="page-card" spacing="0" prefWidth="280" maxWidth="320"
+                      style="-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;
+                             -fx-border-radius:12;-fx-background-radius:12;
+                             -fx-border-width:1;-fx-effect:dropshadow(gaussian,rgba(0,0,0,0.06),8,0,0,2);">
+                    <HBox style="-fx-background-color:#EAF2FF;-fx-padding:16 20 14 20;
+                                 -fx-background-radius:12 12 0 0;">
+                        <VBox spacing="4">
+                            <Label text="BAPTISM"
+                                   style="-fx-font-size:9px;-fx-font-weight:700;
+                                          -fx-text-fill:#3A86C8;-fx-letter-spacing:2px;"/>
+                            <Label text="Certificate of Baptism"
+                                   style="-fx-font-size:15px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="12" style="-fx-padding:16 20 20 20;" VBox.vgrow="ALWAYS">
+                        <Label text="Issued to a member received into church fellowship through water baptism."
+                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+                        <VBox spacing="4">
+                            <Label text="FIELDS REQUIRED" style="-fx-font-size:9px;-fx-font-weight:700;-fx-text-fill:#9099AA;"/>
+                            <Label text="Recipient name"  style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"/>
+                            <Label text="Date of baptism" style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"/>
+                            <Label text="Church minister" style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"/>
+                        </VBox>
+                        <HBox VBox.vgrow="ALWAYS"/>
+                        <Button text="Issue Certificate" styleClass="btn-primary"
+                                maxWidth="Infinity" onAction="#handleBaptismCert"/>
+                    </VBox>
+                </VBox>
+
+                <!-- APPRECIATION -->
+                <VBox styleClass="page-card" spacing="0" prefWidth="280" maxWidth="320"
+                      style="-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;
+                             -fx-border-radius:12;-fx-background-radius:12;
+                             -fx-border-width:1;-fx-effect:dropshadow(gaussian,rgba(0,0,0,0.06),8,0,0,2);">
+                    <HBox style="-fx-background-color:#EAF2FF;-fx-padding:16 20 14 20;
+                                 -fx-background-radius:12 12 0 0;">
+                        <VBox spacing="4">
+                            <Label text="APPRECIATION"
+                                   style="-fx-font-size:9px;-fx-font-weight:700;
+                                          -fx-text-fill:#3A86C8;-fx-letter-spacing:2px;"/>
+                            <Label text="Certificate of Appreciation"
+                                   style="-fx-font-size:15px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="12" style="-fx-padding:16 20 20 20;" VBox.vgrow="ALWAYS">
+                        <Label text="Recognised for faithful service, dedication and commitment to the work of the ministry."
+                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+                        <VBox spacing="4">
+                            <Label text="FIELDS REQUIRED" style="-fx-font-size:9px;-fx-font-weight:700;-fx-text-fill:#9099AA;"/>
+                            <Label text="Recipient name" style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"/>
+                            <Label text="Date"           style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"/>
+                        </VBox>
+                        <HBox VBox.vgrow="ALWAYS"/>
+                        <Button text="Issue Certificate" styleClass="btn-primary"
+                                maxWidth="Infinity" onAction="#handleAppreciationCert"/>
+                    </VBox>
+                </VBox>
+
+                <!-- MARRIAGE BLESSING -->
+                <VBox styleClass="page-card" spacing="0" prefWidth="280" maxWidth="320"
+                      style="-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;
+                             -fx-border-radius:12;-fx-background-radius:12;
+                             -fx-border-width:1;-fx-effect:dropshadow(gaussian,rgba(0,0,0,0.06),8,0,0,2);">
+                    <HBox style="-fx-background-color:#FDF6E8;-fx-padding:16 20 14 20;
+                                 -fx-background-radius:12 12 0 0;">
+                        <VBox spacing="4">
+                            <Label text="MARRIAGE"
+                                   style="-fx-font-size:9px;-fx-font-weight:700;
+                                          -fx-text-fill:#B5862A;-fx-letter-spacing:2px;"/>
+                            <Label text="Marriage Blessing"
+                                   style="-fx-font-size:15px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="12" style="-fx-padding:16 20 20 20;" VBox.vgrow="ALWAYS">
+                        <Label text="A church blessing commemorating a couple's union in love, faith and covenant."
+                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+                        <VBox spacing="4">
+                            <Label text="FIELDS REQUIRED" style="-fx-font-size:9px;-fx-font-weight:700;-fx-text-fill:#9099AA;"/>
+                            <Label text="Bride name"              style="-fx-text-fill:#B5862A;-fx-font-size:11px;"/>
+                            <Label text="Groom name"              style="-fx-text-fill:#B5862A;-fx-font-size:11px;"/>
+                            <Label text="Date"                    style="-fx-text-fill:#B5862A;-fx-font-size:11px;"/>
+                            <Label text="Couple photo (optional)" style="-fx-text-fill:#B5862A;-fx-font-size:11px;"/>
+                        </VBox>
+                        <HBox VBox.vgrow="ALWAYS"/>
+                        <Button text="Issue Certificate" styleClass="btn-primary"
+                                maxWidth="Infinity" onAction="#handleBlessingCert"/>
+                    </VBox>
+                </VBox>
+
+            </HBox>
+
+            <!-- Row 2: Death Announcement (full-width, deliberately wider and distinct) -->
+            <HBox spacing="20">
+
+                <!-- DEATH ANNOUNCEMENT -->
+                <VBox styleClass="page-card" spacing="0" HBox.hgrow="ALWAYS"
+                      style="-fx-background-color:#FFFFFF;-fx-border-color:#C8CDD8;
+                             -fx-border-radius:12;-fx-background-radius:12;
+                             -fx-border-width:1;-fx-effect:dropshadow(gaussian,rgba(0,0,0,0.06),8,0,0,2);">
+                    <!-- Muted dark header — solemn, not alarming -->
+                    <HBox style="-fx-background-color:#EAECF0;-fx-padding:16 20 14 20;
+                                 -fx-background-radius:12 12 0 0;">
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label text="ANNOUNCEMENT"
+                                   style="-fx-font-size:9px;-fx-font-weight:700;
+                                          -fx-text-fill:#4A5568;-fx-letter-spacing:2px;"/>
+                            <Label text="Death Announcement"
+                                   style="-fx-font-size:15px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+                        </VBox>
+                        <!-- Output format badge -->
+                        <Label text="Saves as PNG image"
+                               style="-fx-font-size:10px;-fx-text-fill:#6B7280;
+                                      -fx-background-color:#FFFFFF;-fx-padding:3 8;
+                                      -fx-border-color:#C8CDD8;-fx-border-radius:20;
+                                      -fx-background-radius:20;"/>
+                    </HBox>
+                    <HBox spacing="32" style="-fx-padding:16 20 20 20;">
+                        <!-- Description and fields list -->
+                        <VBox spacing="12" HBox.hgrow="ALWAYS">
+                            <Label text="Notifies the congregation of the passing of a beloved member and provides funeral arrangements for the family."
+                                   style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+                            <VBox spacing="4">
+                                <Label text="FIELDS REQUIRED" style="-fx-font-size:9px;-fx-font-weight:700;-fx-text-fill:#9099AA;"/>
+                                <Label text="Deceased member name" style="-fx-text-fill:#4A5568;-fx-font-size:11px;"/>
+                                <Label text="Burial date"          style="-fx-text-fill:#4A5568;-fx-font-size:11px;"/>
+                                <Label text="Time"                 style="-fx-text-fill:#4A5568;-fx-font-size:11px;"/>
+                                <Label text="Venue"                style="-fx-text-fill:#4A5568;-fx-font-size:11px;"/>
+                            </VBox>
+                        </VBox>
+                        <!-- Note and button -->
+                        <VBox spacing="12" alignment="CENTER" minWidth="200">
+                            <Label text="The announcement is saved as a high-resolution PNG suitable for sharing on WhatsApp and church platforms."
+                                   style="-fx-text-fill:#9099AA;-fx-font-size:11px;-fx-font-style:italic;"
+                                   wrapText="true" maxWidth="200"/>
+                            <Button text="Create Announcement"
+                                    onAction="#handleDeathAnnouncement"
+                                    maxWidth="Infinity"
+                                    style="-fx-background-color:#4A5568;-fx-text-fill:#FFFFFF;
+                                           -fx-font-weight:700;-fx-background-radius:8;
+                                           -fx-padding:9 18;"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+
+            </HBox>
+
+        </VBox>
+    </ScrollPane>
+
+</VBox>

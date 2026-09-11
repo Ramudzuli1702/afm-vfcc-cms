@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.SettingsController"
+            style="-fx-background-color:transparent;-fx-background:transparent;">
+
+    <VBox spacing="24" style="-fx-padding:4 0 32 0;">
+
+        <!-- ── BACKUP ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="BACKUP" styleClass="section-label"/>
+            <Label text="Database Backup &amp; Restore" styleClass="section-title"/>
+            <Label text="Export the full database to a file, or restore from a previous backup."
+                style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="BACKUP LOCATION" styleClass="form-label"/>
+                    <HBox spacing="8">
+                        <TextField fx:id="backupPathField" styleClass="form-field"
+                                promptText="e.g. C:\Backups\AFM_VFCC" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Browse..." styleClass="btn-secondary" onAction="#handleBrowseBackup"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Button text="💾  Backup Now" styleClass="btn-primary" onAction="#handleBackupNow"/>
+                <Button text="📂  Restore Backup…" styleClass="btn-secondary" onAction="#handleRestoreBackup"
+                        style="-fx-border-color:#D94040;-fx-text-fill:#D94040;"/>
+                <Label fx:id="backupStatusLabel" visible="false"
+                    style="-fx-font-size:12px;-fx-font-weight:600;" wrapText="true" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <Label text="⚠  Restore will REPLACE all current data with the selected backup file."
+                style="-fx-text-fill:#D94040;-fx-font-size:11px;" wrapText="true"/>
+
+            <VBox spacing="4">
+                <Label text="RECENT BACKUPS" styleClass="form-label"/>
+                <ListView fx:id="backupHistoryList" prefHeight="120"
+                        style="-fx-background-color:#F5F6FA;-fx-border-color:#DDE1EA;
+                                -fx-border-radius:8;-fx-background-radius:8;"/>
+            </VBox>
+        </VBox>
+
+        <!-- ── EMAIL (SMTP) ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="COMMUNICATIONS" styleClass="section-label"/>
+            <Label text="Email Settings (SMTP)" styleClass="section-title"/>
+            <Label text="Used for sending bulk email to members. Works with Gmail, Outlook, or any SMTP server."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+            <HBox spacing="16">
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="SMTP HOST" styleClass="form-label"/>
+                    <TextField fx:id="smtpHostField" styleClass="form-field" promptText="smtp.gmail.com" maxWidth="Infinity"/>
+                </VBox>
+                <VBox spacing="6" prefWidth="120">
+                    <Label text="PORT" styleClass="form-label"/>
+                    <TextField fx:id="smtpPortField" styleClass="form-field" promptText="587" maxWidth="Infinity"/>
+                </VBox>
+            </HBox>
+            <HBox spacing="16">
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="EMAIL ADDRESS / USERNAME" styleClass="form-label"/>
+                    <TextField fx:id="smtpUserField" styleClass="form-field" promptText="your@email.com" maxWidth="Infinity"/>
+                </VBox>
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="PASSWORD / APP PASSWORD" styleClass="form-label"/>
+                    <PasswordField fx:id="smtpPassField" styleClass="form-field" maxWidth="Infinity"/>
+                </VBox>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Button text="Send Test Email" styleClass="btn-secondary" onAction="#handleTestEmail"/>
+                <Label fx:id="emailTestLabel" visible="false" style="-fx-font-size:12px;-fx-font-weight:600;"/>
+            </HBox>
+            <Label text="💡  For Gmail: enable 2-factor auth and use an App Password (not your normal password)."
+                   style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+        </VBox>
+
+        <!-- ── SMS (BULKSMS) ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="SMS (BULKSMS)" styleClass="section-title"/>
+            <Label text="Create a free account at bulksms.com — pay in Rands, no monthly fees."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+            <HBox spacing="16">
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="TOKEN ID (API KEY)" styleClass="form-label"/>
+                    <TextField fx:id="bulkSmsKeyField" styleClass="form-field" promptText="BulkSMS Token ID" maxWidth="Infinity"/>
+                </VBox>
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="TOKEN SECRET" styleClass="form-label"/>
+                    <PasswordField fx:id="bulkSmsSecretField" styleClass="form-field" maxWidth="Infinity"/>
+                </VBox>
+            </HBox>
+            <HBox spacing="16">
+                <VBox spacing="6" prefWidth="200">
+                    <Label text="SENDER ID (optional)" styleClass="form-label"/>
+                    <TextField fx:id="bulkSmsSenderField" styleClass="form-field" promptText="AFMVFCC" maxWidth="Infinity"/>
+                </VBox>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Button text="Send Test SMS" styleClass="btn-secondary" onAction="#handleTestSms"/>
+                <Label fx:id="smsTestLabel" visible="false" style="-fx-font-size:12px;-fx-font-weight:600;"/>
+            </HBox>
+            <Label text="💡  In BulkSMS: go to Settings → API Tokens → Create Token. Copy both the Token ID and Token Secret."
+                   style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+        </VBox>
+
+        <!-- ── ANNOUNCEMENTS ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="ANNOUNCEMENTS" styleClass="section-label"/>
+            <Label text="WhatsApp &amp; Facebook Credentials" styleClass="section-title"/>
+            <Label text="Set up these credentials once to enable posting announcements directly from the CMS."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+            <!-- WhatsApp -->
+            <VBox spacing="10"
+                  style="-fx-background-color:#F0FFF4;-fx-border-color:#25D366;-fx-border-radius:8;-fx-background-radius:8;-fx-padding:14 16;">
+                <Label text="📱  WHATSAPP CLOUD API"
+                       style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#128C7E;"/>
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="PERMANENT ACCESS TOKEN" styleClass="form-label"/>
+                        <TextField fx:id="whatsappTokenField" styleClass="form-field" promptText="EAAxxxxx..." maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="PHONE NUMBER ID" styleClass="form-label"/>
+                        <TextField fx:id="whatsappPhoneIdField" styleClass="form-field" promptText="123456789012345" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="RECIPIENT (phone or group ID)" styleClass="form-label"/>
+                        <TextField fx:id="whatsappRecipientField" styleClass="form-field" promptText="+27821234567" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+                <Button text="Test WhatsApp" styleClass="btn-secondary" onAction="#handleTestWhatsApp"/>
+                <Label text="💡  Get these from: developers.facebook.com → Your App → WhatsApp → API Setup"
+                       style="-fx-text-fill:#128C7E;-fx-font-size:11px;" wrapText="true"/>
+            </VBox>
+            <!-- Facebook -->
+            <VBox spacing="10"
+                  style="-fx-background-color:#EBF5FF;-fx-border-color:#1877F2;-fx-border-radius:8;-fx-background-radius:8;-fx-padding:14 16;">
+                <Label text="📘  FACEBOOK PAGE API"
+                       style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#1877F2;"/>
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="PAGE ACCESS TOKEN (permanent)" styleClass="form-label"/>
+                        <TextField fx:id="facebookPageTokenField" styleClass="form-field" promptText="EAAxxxxx..." maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" prefWidth="200">
+                        <Label text="PAGE ID" styleClass="form-label"/>
+                        <TextField fx:id="facebookPageIdField" styleClass="form-field" promptText="123456789" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+                <Button text="Test Facebook Post" styleClass="btn-secondary" onAction="#handleTestFacebook"/>
+                <Label text="💡  Get these from: developers.facebook.com → Your App → Graph API Explorer → select your Page token"
+                       style="-fx-text-fill:#1877F2;-fx-font-size:11px;" wrapText="true"/>
+            </VBox>
+            <Label fx:id="annTestStatus" visible="false"
+                   style="-fx-font-size:12px;-fx-font-weight:600;" wrapText="true"/>
+        </VBox>
+
+        <!-- ── BROADCAST ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="BROADCAST" styleClass="section-label"/>
+            <Label text="Facebook → YouTube" styleClass="section-title"/>
+            <Label text="Configure where downloaded Facebook videos are saved before uploading to YouTube."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+            <VBox spacing="6">
+                <Label text="VIDEO DOWNLOAD FOLDER" styleClass="form-label"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <TextField fx:id="broadcastDownloadFolderField" styleClass="form-field"
+                               promptText="e.g. C:\AFM_VFCC_Videos" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Button text="Browse..." styleClass="btn-secondary" onAction="#handleBrowseBroadcastFolder"/>
+                </HBox>
+                <Label text="Downloaded videos are deleted automatically after a successful YouTube upload."
+                       style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+            </VBox>
+            <VBox spacing="8">
+                <Label text="GOOGLE API CREDENTIALS" styleClass="form-label"/>
+                <Label text="The YouTube upload feature requires a client_secrets.json file from Google Cloud Console."
+                       wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                <Label fx:id="secretsStatusLabel" text="Checking..."
+                       style="-fx-font-size:11px;-fx-text-fill:#9099AA;" wrapText="true"/>
+                <HBox spacing="10" style="-fx-padding:4 0 0 0;">
+                    <Button text="📄  Upload client_secrets.json" styleClass="btn-secondary"
+                            onAction="#handleUploadClientSecrets"/>
+                </HBox>
+                <Label wrapText="true" style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"
+                       text="How to get this file: Google Cloud Console → Your Project → APIs &amp; Services → Credentials → OAuth 2.0 Client ID (Desktop) → Download JSON."/>
+            </VBox>
+            <VBox spacing="6">
+                <Label text="YOUTUBE AUTHORISATION" styleClass="form-label"/>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label fx:id="youtubeAuthStatusLabel" text="Not yet authorised"
+                           style="-fx-font-size:12px;-fx-text-fill:#9099AA;" HBox.hgrow="ALWAYS"/>
+                    <Button text="🔑  Re-authorise YouTube Account" styleClass="btn-secondary"
+                            onAction="#handleRevokeYoutubeToken"/>
+                </HBox>
+                <Label text="Click 'Re-authorise' if the church changes its Google account or if uploads start failing."
+                       style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+            </VBox>
+        </VBox>
+
+        <!-- ══════════════════════════════════════════════════════════
+             ── GITHUB INTEGRATION ──
+        ══════════════════════════════════════════════════════════ -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="GITHUB INTEGRATION" styleClass="section-label"/>
+            <Label text="Website Auto-Sync (GitHub)" styleClass="section-title"/>
+            <Label text="When enabled, every event or blog you publish will automatically update data.js in your GitHub repository and upload/delete poster images — no manual deployment needed."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+
+            <VBox spacing="10"
+                  style="-fx-background-color:#F6F8FF;-fx-border-color:#6E40C9;-fx-border-radius:8;
+                         -fx-background-radius:8;-fx-padding:14 16;">
+                <Label text="🔑  GITHUB CREDENTIALS"
+                       style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#6E40C9;"/>
+
+                <!-- Token -->
+                <VBox spacing="6">
+                    <Label text="PERSONAL ACCESS TOKEN (classic) — needs 'repo' scope" styleClass="form-label"/>
+                    <PasswordField fx:id="githubTokenField" styleClass="form-field"
+                                   promptText="ghp_xxxxxxxxxxxxxxxxxxxx" maxWidth="Infinity"/>
+                </VBox>
+
+                <!-- Owner + Repo side by side -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="REPOSITORY OWNER (your GitHub username)" styleClass="form-label"/>
+                        <TextField fx:id="githubOwnerField" styleClass="form-field"
+                                   promptText="Ramudzuli1702" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="REPOSITORY NAME" styleClass="form-label"/>
+                        <TextField fx:id="githubRepoField" styleClass="form-field"
+                                   promptText="afm_vfcc" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Branch + Custom Domain side by side -->
+                <HBox spacing="16">
+                    <VBox spacing="6" prefWidth="200">
+                        <Label text="BRANCH (usually 'main')" styleClass="form-label"/>
+                        <TextField fx:id="githubBranchField" styleClass="form-field"
+                                   promptText="main" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="CUSTOM DOMAIN (optional — leave blank for GitHub Pages URL)" styleClass="form-label"/>
+                        <TextField fx:id="websiteCustomDomainField" styleClass="form-field"
+                                   promptText="www.afmvfcc.co.za" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Button text="🔗  Test Connection" styleClass="btn-secondary"
+                            onAction="#handleTestGitHub"/>
+                    <Label fx:id="githubStatusLabel" visible="false" wrapText="true"
+                           style="-fx-font-size:12px;-fx-font-weight:600;" HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <Label wrapText="true" style="-fx-text-fill:#6E40C9;-fx-font-size:11px;"
+                       text="How to create a token: github.com → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → tick 'repo' → copy."/>
+            </VBox>
+
+            <Label wrapText="true" style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"
+                   text="Once connected, every time you save an event or blog post the CMS will commit data.js to your repo and upload/delete poster images automatically. The website updates within a few seconds."/>
+        </VBox>
+
+        <!-- ── WEBSITE (local folder — optional) ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="WEBSITE" styleClass="section-label"/>
+            <Label text="Local Website Folder (optional)" styleClass="section-title"/>
+            <Label text="If you also run the website locally, point to your index.html folder and the CMS will keep a local copy of data.js in sync as well."
+                   style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="WEBSITE FOLDER (where index.html is)" styleClass="form-label"/>
+                    <TextField fx:id="websiteFolderField" styleClass="form-field"
+                               promptText="e.g. C:\AFM_VFCC_Website" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                </VBox>
+                <Button text="Browse..." styleClass="btn-secondary"
+                        onAction="#handleBrowseWebsite" style="-fx-padding:10 14;"/>
+            </HBox>
+            <Label text="The local folder sync works alongside GitHub — both are updated on every save."
+                   style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+        </VBox>
+
+        <!-- ── SAVE ALL ── -->
+        <HBox alignment="CENTER_RIGHT">
+            <Button text="Save All Settings" styleClass="btn-primary"
+                    style="-fx-padding:12 32;" onAction="#handleSaveAll"/>
+        </HBox>
+
+    </VBox>
+</ScrollPane>

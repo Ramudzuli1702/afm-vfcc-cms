@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.CalendarController"
+      spacing="0" style="-fx-background-color:#F5F6FA;">
+
+    <!-- Toolbar -->
+    <HBox spacing="10" alignment="CENTER_LEFT"
+          style="-fx-padding:0 0 16 0;">
+        <Button text="&lt;" styleClass="btn-secondary" onAction="#handlePrevMonth"
+                style="-fx-font-weight:700;-fx-font-size:14px;-fx-padding:8 14;"/>
+        <Label fx:id="monthYearLabel"
+               style="-fx-font-size:18px;-fx-font-weight:700;-fx-text-fill:#1E2130;-fx-min-width:180px;-fx-alignment:CENTER;"/>
+        <Button text="&gt;" styleClass="btn-secondary" onAction="#handleNextMonth"
+                style="-fx-font-weight:700;-fx-font-size:14px;-fx-padding:8 14;"/>
+        <Button text="Today" styleClass="btn-secondary" onAction="#handleToday"/>
+        <HBox HBox.hgrow="ALWAYS"/>
+        <Label text="CATEGORY" style="-fx-font-size:11px;-fx-font-weight:700;-fx-text-fill:#5A6275;"/>
+        <ComboBox fx:id="categoryFilter" styleClass="form-combo" prefWidth="130"/>
+        <Button text="📊  Print Events" styleClass="btn-secondary" onAction="#handlePrintEvents"/>
+        <Button text="+ Add Event" styleClass="btn-primary" onAction="#handleAddEvent"/>
+    </HBox>
+
+    <!-- Calendar grid -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                style="-fx-background-color:transparent;-fx-background:transparent;">
+        <GridPane fx:id="calendarGrid" hgap="0" vgap="0"
+                  style="-fx-background-color:#DDE1EA;-fx-border-color:#DDE1EA;"
+                  gridLinesVisible="true">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+                <ColumnConstraints percentWidth="14.28" hgrow="ALWAYS" minWidth="80"/>
+            </columnConstraints>
+        </GridPane>
+    </ScrollPane>
+</VBox>

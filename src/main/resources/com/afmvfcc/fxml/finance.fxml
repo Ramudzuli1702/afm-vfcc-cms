@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.afmvfcc.controllers.FinanceController"
+      alignment="CENTER" spacing="16" style="-fx-padding:60;">
+    <Label text="💰" style="-fx-font-size:48px;"/>
+    <Label text="Finance Module" style="-fx-font-size:22px;-fx-font-weight:700;-fx-text-fill:blue;"/>
+    <Label text="Coming in a future update" style="-fx-font-size:13px;-fx-text-fill:#555;"/>
+</VBox>

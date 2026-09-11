@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<ScrollPane fitToWidth="true" styleClass="root"
+            style="-fx-background-color:transparent;-fx-background:transparent;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.DashboardController">
+
+    <VBox spacing="24" style="-fx-padding:4 0 24 0;">
+
+        <!-- ── STAT CARDS ROW 1 ── -->
+        <GridPane hgap="14" vgap="14">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+            </columnConstraints>
+
+            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
+                <Label text="TOTAL MEMBERS" styleClass="stat-label"/>
+                <Label fx:id="statTotal" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
+                <Label text="ACTIVE (FULL TIME)" styleClass="stat-label"/>
+                <Label fx:id="statActive" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
+                <Label text="PART TIME" styleClass="stat-label"/>
+                <Label fx:id="statPartTime" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
+                <Label text="LAST WEEK ATTENDANCE" styleClass="stat-label"/>
+                <Label fx:id="statLastAttendance" text="0" styleClass="stat-number"/>
+            </VBox>
+        </GridPane>
+
+        <!-- ── STAT CARDS ROW 2 ── -->
+        <GridPane hgap="14" vgap="14">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+            </columnConstraints>
+
+            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
+                <Label text="YOUTH" styleClass="stat-label"/>
+                <Label fx:id="statYouth" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
+                <Label text="SUNDAY SCHOOL" styleClass="stat-label"/>
+                <Label fx:id="statSundaySchool" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
+                <Label text="WOMEN'S MINISTRY" styleClass="stat-label"/>
+                <Label fx:id="statWomen" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
+                <Label text="MEN'S MINISTRY" styleClass="stat-label"/>
+                <Label fx:id="statMen" text="0" styleClass="stat-number"/>
+            </VBox>
+        </GridPane>
+
+        <!-- ── REMINDERS + PENDING ROW ── -->
+        <HBox spacing="14">
+
+            <!-- Upcoming Events -->
+            <VBox styleClass="reminder-card" spacing="12" HBox.hgrow="ALWAYS">
+                <Label text="UPCOMING EVENTS (NEXT 7 DAYS)" styleClass="section-label"/>
+                <VBox fx:id="eventsRemindersBox" spacing="8">
+                    <Label text="No upcoming events." styleClass="reminder-item"/>
+                </VBox>
+            </VBox>
+
+            <!-- Welfare Due -->
+            <VBox styleClass="reminder-card" spacing="12" HBox.hgrow="ALWAYS">
+                <Label text="WELFARE CASES DUE" styleClass="section-label"/>
+                <VBox fx:id="welfareRemindersBox" spacing="8">
+                    <Label text="No pending welfare cases." styleClass="reminder-item"/>
+                </VBox>
+            </VBox>
+
+            <!-- Pending Members -->
+            <VBox styleClass="reminder-card" spacing="12" prefWidth="240">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="PENDING APPROVALS" styleClass="section-label"/>
+                    <Label fx:id="pendingBadge" text="0" styleClass="pending-badge"/>
+                </HBox>
+                <VBox fx:id="pendingBox" spacing="8">
+                    <Label text="No pending members." styleClass="reminder-item"/>
+                </VBox>
+            </VBox>
+
+        </HBox>
+
+    </VBox>
+</ScrollPane>
