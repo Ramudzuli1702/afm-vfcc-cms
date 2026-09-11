@@ -27,7 +27,7 @@ The AFM VFCC Attendance App is used by ushers and assigned church workers to tak
 | Phone OS | Android 8.0 (Oreo) or later |
 | CMS computer OS | Windows 10 or 11 |
 | Network | Both phone and CMS computer must be on the **same WiFi network** |
-| CMS version | AFM VFCC CMS with the API server update applied |
+| CMS version | Any current AFM VFCC CMS — the API server is built in, nothing to enable |
 
 ---
 
@@ -35,22 +35,19 @@ The AFM VFCC Attendance App is used by ushers and assigned church workers to tak
 
 ### On the CMS Computer (do this first)
 
-1. Run `guests_migration.sql` in MySQL Workbench to create the required database tables.
-2. Replace the following CMS files with the updated versions provided:
-   - `build.gradle` (project root)
-   - `Main.java`
-   - `CmsApiServer.java` (place in `src/main/java/com/afmvfcc/api/`)
-   - `GuestsController.java`
-   - `MembersController.java`
-   - `members.fxml`
-3. Run `gradle run` as normal. The CMS will now automatically start the API server on **port 8080** every time it launches. You will see this message in the console:
-   ```
-   [CMS API] Server started on port 8080
-   ```
+Nothing extra to set up — `CmsApiServer` is started automatically by
+`Main.java` every time the CMS launches, and it creates its own database
+tables (`app_tokens`, `guests`) on first start if they don't already exist.
+Just run the CMS as normal (`gradle run`, or the installed app). You'll see
+this in the console:
+```
+[CMS API] Server started on port 8080
+```
 
 ### On the Android Phone
 
-1. Open **Android Studio** and open the `AFM_VFCC_App` folder.
+1. Open **Android Studio** and open the `android-app` folder (inside the
+   `afm-vfcc-cms` repo, alongside the CMS).
 2. Connect your Android phone via USB with USB debugging enabled, or use an emulator.
 3. Click **Run** (the green play button) to build and install the app.
 4. The app icon will appear as **AFM VFCC** on the phone.
@@ -166,7 +163,7 @@ When you are ready to send the attendance and guest records to the main system:
 ## Project Structure
 
 ```
-AFM_VFCC_App/
+android-app/
 ├── app/
 │   ├── src/main/
 │   │   ├── AndroidManifest.xml
@@ -218,10 +215,18 @@ The app communicates with the CMS via a lightweight REST API (Javalin) embedded 
 
 ## Security Notes
 
-- Login tokens are stored securely in DataStore and sent with every API request as a `Bearer` token.
-- The API server validates every request before processing it.
-- Tokens can be invalidated by deactivating the user account in the CMS.
-- All communication happens on the local network only — no data is ever sent to the internet.
+- Login tokens are stored in the app's private DataStore (sandboxed to this
+  app on the device, though not encrypted at rest) and sent with every API
+  request as a `Bearer` token.
+- The API server checks every request's token against the database — it must
+  be active, unexpired, and belong to a user who is still active in the CMS.
+- Tokens expire automatically after 90 days, and are invalidated immediately
+  if the user's account is deactivated in the CMS's Admins page.
+- Repeated failed logins lock the account after 5 attempts, same as the
+  desktop CMS login.
+- All communication happens on the local network only, over plain HTTP (no
+  TLS) — this is an accepted trade-off for a church-WiFi-only tool with no
+  internet exposure; no data is ever sent to the internet.
 
 ---
 
