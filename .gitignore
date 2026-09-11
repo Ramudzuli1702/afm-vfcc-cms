@@ -20,6 +20,15 @@ yt-dlp.exe
 # runtime, never a placeholder. Never commit it.
 cookies.txt
 
+# Android app (android-app/) - local.properties holds a machine-specific SDK
+# path and must never be committed; build/.gradle/.idea above already cover
+# its build output and IDE state since those patterns match at any depth.
+android-app/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+
 # IDE
 .idea/
 .vscode/
