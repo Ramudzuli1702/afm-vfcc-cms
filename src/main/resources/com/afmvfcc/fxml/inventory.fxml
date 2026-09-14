@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<ScrollPane fitToWidth="true" styleClass="root"
+            style="-fx-background-color:transparent;-fx-background:transparent;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.InventoryController">
+
+    <VBox spacing="16" style="-fx-padding:4 0 24 0;">
+
+        <!-- ── STAT CARDS ── -->
+        <GridPane hgap="14" vgap="14">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+            </columnConstraints>
+
+            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
+                <Label text="📦" styleClass="stat-icon"/>
+                <Label text="TOTAL ITEMS" styleClass="stat-label"/>
+                <Label fx:id="statTotalItems" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
+                <Label text="💰" styleClass="stat-icon"/>
+                <Label text="ESTIMATED VALUE" styleClass="stat-label"/>
+                <Label fx:id="statTotalValue" text="R0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
+                <Label text="⚠" styleClass="stat-icon"/>
+                <Label text="LOW STOCK" styleClass="stat-label"/>
+                <Label fx:id="statLowStock" text="0" styleClass="stat-number"/>
+            </VBox>
+            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
+                <Label text="🔧" styleClass="stat-icon"/>
+                <Label text="NEEDS REPAIR" styleClass="stat-label"/>
+                <Label fx:id="statNeedsRepair" text="0" styleClass="stat-number"/>
+            </VBox>
+        </GridPane>
+
+        <!-- ── TOOLBAR ── -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <TextField fx:id="inventorySearchField" styleClass="search-field"
+                       promptText="🔍  Search items..." onKeyReleased="#handleSearch"
+                       HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <ComboBox fx:id="categoryFilterCombo" styleClass="form-combo"
+                      promptText="All Categories" onAction="#handleFilter"/>
+            <ComboBox fx:id="conditionFilterCombo" styleClass="form-combo"
+                      promptText="All Conditions" onAction="#handleFilter"/>
+            <Button text="⬇  Export"    styleClass="btn-secondary" onAction="#handleExport"/>
+            <Button text="＋  Add Item" styleClass="btn-primary"   onAction="#handleAddItem"/>
+        </HBox>
+
+        <!-- ── TABLE ── -->
+        <TableView fx:id="inventoryTable" style="-fx-min-height:520px;">
+            <columns>
+                <TableColumn fx:id="colItemName"   text="ITEM"       prefWidth="200"/>
+                <TableColumn fx:id="colCategory"   text="CATEGORY"   prefWidth="140"/>
+                <TableColumn fx:id="colQuantity"   text="QTY"        prefWidth="80"/>
+                <TableColumn fx:id="colCondition"  text="CONDITION"  prefWidth="120"/>
+                <TableColumn fx:id="colLocation"   text="LOCATION"   prefWidth="140"/>
+                <TableColumn fx:id="colCustodian"  text="CUSTODIAN"  prefWidth="140"/>
+                <TableColumn fx:id="colValue"      text="VALUE"      prefWidth="100"/>
+                <TableColumn fx:id="colActions"    text="ACTIONS"    prefWidth="150"/>
+            </columns>
+            <placeholder>
+                <Label text="No inventory items recorded yet. Click &quot;Add Item&quot; to get started."
+                       style="-fx-text-fill:#9099AA;"/>
+            </placeholder>
+        </TableView>
+
+    </VBox>
+</ScrollPane>

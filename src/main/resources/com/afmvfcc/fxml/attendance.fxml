@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
@@ -40,15 +41,19 @@
 
                     <Separator orientation="VERTICAL" style="-fx-padding:0 8;"/>
 
-                    <!-- IP address for mobile app -->
-                    <VBox spacing="3" alignment="CENTER">
-                        <Label text="📱 APP SERVER IP" styleClass="form-label"/>
-                        <Label fx:id="ipAddressLabel" text="Detecting..."
-                               style="-fx-font-size:15px;-fx-font-weight:700;
-                                      -fx-text-fill:#1B3A6B;-fx-font-family:'Courier New';"/>
-                        <Label text="Enter this in the app"
-                               style="-fx-font-size:10px;-fx-text-fill:#9099AA;"/>
-                    </VBox>
+                    <!-- IP address + QR for mobile app -->
+                    <HBox spacing="10" alignment="CENTER" onMouseClicked="#handleEnlargeQr"
+                          style="-fx-cursor:hand;">
+                        <ImageView fx:id="attendanceQrThumb" fitWidth="52" fitHeight="52"/>
+                        <VBox spacing="3" alignment="CENTER_LEFT">
+                            <Label text="📱 APP SERVER IP" styleClass="form-label"/>
+                            <Label fx:id="ipAddressLabel" text="Detecting..."
+                                   style="-fx-font-size:15px;-fx-font-weight:700;
+                                          -fx-text-fill:#1B3A6B;-fx-font-family:'Courier New';"/>
+                            <Label text="Tap to enlarge QR"
+                                   style="-fx-font-size:10px;-fx-text-fill:#9099AA;"/>
+                        </VBox>
+                    </HBox>
                 </HBox>
 
                 <!-- ── Row 2: Action buttons ── -->

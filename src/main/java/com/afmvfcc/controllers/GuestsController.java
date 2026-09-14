@@ -4,6 +4,7 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -265,14 +266,12 @@ public class GuestsController {
                 AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                     "Promoted guest to Pending Review: " + g[1]);
                 loadGuests();
+                ToastManager.success(g[1] + " moved to Pending Review.");
 
-                Alert info = new Alert(Alert.AlertType.INFORMATION);
-                Main.applyStyles(info.getDialogPane());
-                info.setHeaderText(null);
-                info.setContentText(g[1] + " moved to Pending Review.");
-                info.showAndWait();
-
-            } catch (SQLException e) { e.printStackTrace(); }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                ToastManager.error("Failed to promote guest: " + e.getMessage());
+            }
         });
     }
 
@@ -286,7 +285,11 @@ public class GuestsController {
             AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                 "Dismissed guest: " + g[1]);
             loadGuests();
-        } catch (SQLException e) { e.printStackTrace(); }
+            ToastManager.success("Guest \"" + g[1] + "\" dismissed.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to dismiss guest: " + e.getMessage());
+        }
     }
 
     private String nvl(String s) { return s != null ? s : "-"; }

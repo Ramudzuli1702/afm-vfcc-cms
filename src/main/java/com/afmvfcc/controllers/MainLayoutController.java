@@ -4,6 +4,7 @@ import com.afmvfcc.Main;
 import com.afmvfcc.models.User;
 import com.afmvfcc.utils.GitHubSync;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -11,6 +12,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +20,7 @@ import java.util.Map;
 public class MainLayoutController {
 
     @FXML private StackPane contentPane;
+    @FXML private VBox      toastContainer;
     @FXML private Label     topbarTitle;
     @FXML private Label     topbarSub;
     @FXML private Label     sidebarUserName;
@@ -30,6 +33,7 @@ public class MainLayoutController {
     @FXML private Button btnCalendar;
     @FXML private Button btnWelfare;
     @FXML private Button btnFinance;
+    @FXML private Button btnInventory;
     @FXML private Button btnComms;
     @FXML private Button btnWebsite;
     @FXML private Button btnAdmins;
@@ -46,6 +50,8 @@ public class MainLayoutController {
     @FXML
     public void initialize() {
 
+        ToastManager.attach(toastContainer);
+
         pageMap.put("btnDashboard",  new String[]{"dashboard.fxml",       "Dashboard",       "Overview & reminders"});
         pageMap.put("btnMembers",    new String[]{"members.fxml",         "Members",         "Manage church members"});
         pageMap.put("btnAttendance", new String[]{"attendance.fxml",      "Attendance",      "Track service attendance"});
@@ -53,6 +59,7 @@ public class MainLayoutController {
         pageMap.put("btnCalendar",   new String[]{"calendar.fxml",        "Calendar",        "Upcoming church events"});
         pageMap.put("btnWelfare",    new String[]{"welfare.fxml",         "Welfare",         "Member welfare cases"});
         pageMap.put("btnFinance",    new String[]{"finance.fxml",         "Finance",         "Financial management"});
+        pageMap.put("btnInventory",  new String[]{"inventory.fxml",       "Inventory",       "Instruments, equipment & materials"});
         pageMap.put("btnComms",      new String[]{"communications.fxml",  "Communications",  "Email & SMS"});
         pageMap.put("btnWebsite",    new String[]{"website.fxml",         "Website",         "Manage blogs & events"});
         pageMap.put("btnAdmins",     new String[]{"admins.fxml",          "Admins",          "Manage system users"});
@@ -178,6 +185,7 @@ public class MainLayoutController {
         btnCalendar.setText("📅  Calendar");
         btnWelfare.setText("❤  Welfare");
         btnFinance.setText("💰  Finance");
+        btnInventory.setText("📦  Inventory");
         btnComms.setText("✉  Communications");
         btnWebsite.setText("🌐  Website");
         btnBroadcast.setText("📡  Broadcast");

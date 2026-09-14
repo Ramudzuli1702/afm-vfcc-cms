@@ -6,6 +6,7 @@ import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.GitHubSync;
 import com.afmvfcc.utils.WebsiteExporter;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -286,7 +287,11 @@ public class WebsiteController {
                 // DB write is complete on the FX thread — safe to export now
                 triggerExport();
                 stage.close();
-            } catch (SQLException ex) { ex.printStackTrace(); }
+                ToastManager.success(existing == null ? "Blog post published." : "Blog post updated.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                ToastManager.error("Failed to save blog post: " + ex.getMessage());
+            }
         });
 
         showScene(stage, root, 600, 560);
@@ -456,10 +461,12 @@ public class WebsiteController {
                             // ── Export AFTER the DB write has completed ──
                             triggerExport();
                             stage.close();
+                            ToastManager.success(existing == null ? "Event published." : "Event updated.");
                         } catch (SQLException ex) {
                             ex.printStackTrace();
                             saveBtn.setDisable(false);
                             uploadStatus.setText("❌ Save failed: " + ex.getMessage());
+                            ToastManager.error("Failed to save event: " + ex.getMessage());
                         }
                     });
                 }).start();
@@ -474,10 +481,12 @@ public class WebsiteController {
                     // ── Export AFTER the DB write has completed ──
                     triggerExport();
                     stage.close();
+                    ToastManager.success(existing == null ? "Event published." : "Event updated.");
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                     saveBtn.setDisable(false);
                     uploadStatus.setText("❌ Save failed: " + ex.getMessage());
+                    ToastManager.error("Failed to save event: " + ex.getMessage());
                 }
             }
         });
@@ -535,7 +544,11 @@ public class WebsiteController {
                         "Deleted blog post ID " + id);
                     loadBlogs();
                     triggerExport();
-                } catch (SQLException e) { e.printStackTrace(); }
+                    ToastManager.success("Blog post deleted.");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    ToastManager.error("Failed to delete blog post: " + e.getMessage());
+                }
             }
         });
     }
@@ -570,7 +583,11 @@ public class WebsiteController {
                         "Deleted website event ID " + id);
                     loadWebEvents();
                     triggerExport();
-                } catch (SQLException e) { e.printStackTrace(); }
+                    ToastManager.success("Event deleted.");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    ToastManager.error("Failed to delete event: " + e.getMessage());
+                }
             }
         });
     }
@@ -756,6 +773,7 @@ public class WebsiteController {
 
     private void showError(String msg) {
         javafx.application.Platform.runLater(() -> {
+            ToastManager.error(msg);
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("Website Export");
             alert.setHeaderText("Could not export to website");

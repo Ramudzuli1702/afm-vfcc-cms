@@ -5,6 +5,7 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.Member;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -700,8 +701,10 @@ public class MembersController {
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                             "Deleted member: " + m.getFullName());
                     loadMembers();
+                    ToastManager.success("Member deleted successfully.");
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    ToastManager.error("Failed to delete member: " + e.getMessage());
                 }
             }
         });

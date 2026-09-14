@@ -6,6 +6,7 @@ import com.afmvfcc.models.User;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.PasswordUtil;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -263,6 +264,7 @@ public class AdminsController {
                     ps.executeUpdate();
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Created admin: " + user);
+                    ToastManager.success("Admin \"" + name + "\" added successfully.");
                 } else {
                     String sql = "UPDATE users SET full_name=?, email=?, phone=?, " +
                         "role_title=?, is_active=?" +
@@ -279,6 +281,7 @@ public class AdminsController {
                     ps.executeUpdate();
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Updated admin: " + existing.getUsername());
+                    ToastManager.success("Admin \"" + name + "\" updated successfully.");
                 }
                 loadAdmins();
                 stage.close();
@@ -286,6 +289,7 @@ public class AdminsController {
                 errLabel.setText("Database error: " + ex.getMessage());
                 errLabel.setVisible(true);
                 ex.printStackTrace();
+                ToastManager.error("Failed to save admin: " + ex.getMessage());
             }
         });
 
@@ -307,7 +311,11 @@ public class AdminsController {
             AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                 "Unlocked admin account: " + u.getUsername());
             loadAdmins();
-        } catch (SQLException e) { e.printStackTrace(); }
+            ToastManager.success("Account unlocked for " + u.getUsername() + ".");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to unlock account: " + e.getMessage());
+        }
     }
 
     // -- Delete ------------------------------------------------
@@ -328,7 +336,11 @@ public class AdminsController {
                 AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                     "Deleted admin: " + u.getUsername());
                 loadAdmins();
-            } catch (SQLException e) { e.printStackTrace(); }
+                ToastManager.success("Admin \"" + u.getFullName() + "\" deleted.");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                ToastManager.error("Failed to delete admin: " + e.getMessage());
+            }
         });
     }
 

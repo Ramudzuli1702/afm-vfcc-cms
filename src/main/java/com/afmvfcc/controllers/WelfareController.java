@@ -5,6 +5,7 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.WelfareCase;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -289,7 +290,11 @@ public class WelfareController {
                 }
                 loadCases();
                 stage.close();
-            } catch (SQLException ex) { ex.printStackTrace(); }
+                ToastManager.success(existing == null ? "Welfare case added successfully." : "Welfare case updated successfully.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                ToastManager.error("Failed to save welfare case: " + ex.getMessage());
+            }
         });
 
         Scene scene = new Scene(root, 520, 580);
@@ -315,7 +320,11 @@ public class WelfareController {
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Closed welfare case for: " + wc.getMemberName());
                     loadCases();
-                } catch (SQLException e) { e.printStackTrace(); }
+                    ToastManager.success("Welfare case closed successfully.");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    ToastManager.error("Failed to close welfare case: " + e.getMessage());
+                }
             }
         });
     }

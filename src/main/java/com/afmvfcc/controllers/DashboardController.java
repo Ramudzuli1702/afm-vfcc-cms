@@ -1,39 +1,75 @@
 package com.afmvfcc.controllers;
 
 import com.afmvfcc.db.DatabaseConnection;
+import com.afmvfcc.utils.SessionManager;
 import javafx.fxml.FXML;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class DashboardController {
+
+    @FXML private Label greetingTitle;
+    @FXML private Label greetingSubtitle;
 
     @FXML private Label statTotal;
     @FXML private Label statActive;
     @FXML private Label statPartTime;
     @FXML private Label statLastAttendance;
-    @FXML private Label statYouth;
-    @FXML private Label statSundaySchool;
-    @FXML private Label statWomen;
-    @FXML private Label statMen;
+    @FXML private Label attendanceTrendBadge;
+
+    @FXML private BarChart<String, Number> ministryChart;
+    @FXML private LineChart<String, Number> attendanceChart;
 
     @FXML private VBox eventsRemindersBox;
+    @FXML private VBox birthdaysBox;
     @FXML private VBox welfareRemindersBox;
     @FXML private VBox pendingBox;
     @FXML private Label pendingBadge;
 
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    private static final DateTimeFormatter FMT       = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    private static final DateTimeFormatter SUBTITLE_FMT = DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy");
+    private static final DateTimeFormatter WEEK_LABEL_FMT = DateTimeFormatter.ofPattern("dd MMM");
 
     @FXML
     public void initialize() {
+        loadGreeting();
         loadStats();
+        loadAttendanceTrend();
         loadUpcomingEvents();
+        loadBirthdays();
         loadWelfareDue();
         loadPendingMembers();
+    }
+
+    // ── GREETING ───────────────────────────────────────────────
+
+    private void loadGreeting() {
+        int hour = LocalDateTime.now().getHour();
+        String period = hour < 12 ? "morning" : (hour < 17 ? "afternoon" : "evening");
+
+        String firstName = "";
+        try {
+            var user = SessionManager.getInstance().getCurrentUser();
+            if (user != null && user.getFullName() != null && !user.getFullName().isBlank()) {
+                firstName = user.getFullName().split(" ")[0];
+            }
+        } catch (Exception ignored) {}
+
+        greetingTitle.setText("Good " + period + (firstName.isEmpty() ? "" : ", " + firstName));
+        greetingSubtitle.setText(LocalDate.now().format(SUBTITLE_FMT));
     }
 
     // ── STATS ──────────────────────────────────────────────────
@@ -42,14 +78,20 @@ public class DashboardController {
         try {
             Connection conn = DatabaseConnection.getConnection();
 
-            statTotal.setText(       String.valueOf(count(conn, "SELECT COUNT(*) FROM members WHERE is_deleted=0 AND is_deceased=0")));
-            statActive.setText(      String.valueOf(count(conn, "SELECT COUNT(*) FROM members WHERE is_deleted=0 AND is_full_time=1 AND is_active=1 AND is_deceased=0")));
-            statPartTime.setText(    String.valueOf(count(conn, "SELECT COUNT(*) FROM members WHERE is_deleted=0 AND is_full_time=0 AND is_deceased=0")));
-            statYouth.setText(       String.valueOf(countMinistry(conn, "Youth")));
-            statSundaySchool.setText(String.valueOf(countMinistry(conn, "Sunday School")));
-            statWomen.setText(       String.valueOf(countMinistry(conn, "Women's Ministry")));
-            statMen.setText(         String.valueOf(countMinistry(conn, "Men's Ministry")));
-            statLastAttendance.setText(String.valueOf(lastWeekAttendance(conn)));
+            statTotal.setText(   String.valueOf(count(conn, "SELECT COUNT(*) FROM members WHERE is_deleted=0 AND is_deceased=0")));
+            statActive.setText(  String.valueOf(count(conn, "SELECT COUNT(*) FROM members WHERE is_deleted=0 AND is_full_time=1 AND is_active=1 AND is_deceased=0")));
+            statPartTime.setText(String.valueOf(count(conn, "SELECT COUNT(*) FROM members WHERE is_deleted=0 AND is_full_time=0 AND is_deceased=0")));
+
+            int youth        = countMinistry(conn, "Youth");
+            int sundaySchool = countMinistry(conn, "Sunday School");
+            int women        = countMinistry(conn, "Women's Ministry");
+            int men          = countMinistry(conn, "Men's Ministry");
+            loadMinistryChart(youth, sundaySchool, women, men);
+
+            int thisWeek = weeklyAttendance(conn, 0);
+            int lastWeek = weeklyAttendance(conn, 7);
+            statLastAttendance.setText(String.valueOf(thisWeek));
+            setTrendBadge(thisWeek, lastWeek);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -75,9 +117,10 @@ public class DashboardController {
         return rs.next() ? rs.getInt(1) : 0;
     }
 
-    private int lastWeekAttendance(Connection conn) throws SQLException {
-        LocalDate today    = LocalDate.now();
-        LocalDate weekAgo  = today.minusDays(7);
+    /** Attendance count for the 7-day window ending {@code daysAgo} days before today. */
+    private int weeklyAttendance(Connection conn, int daysAgo) throws SQLException {
+        LocalDate end   = LocalDate.now().minusDays(daysAgo);
+        LocalDate start = end.minusDays(7);
         String sql = """
             SELECT COUNT(*) FROM attendance_records ar
             JOIN attendance_sessions ase ON ase.id = ar.session_id
@@ -85,10 +128,68 @@ public class DashboardController {
             AND ase.session_date BETWEEN ? AND ?
             """;
         PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setDate(1, Date.valueOf(weekAgo));
-        ps.setDate(2, Date.valueOf(today));
+        ps.setDate(1, Date.valueOf(start));
+        ps.setDate(2, Date.valueOf(end));
         ResultSet rs = ps.executeQuery();
         return rs.next() ? rs.getInt(1) : 0;
+    }
+
+    private void setTrendBadge(int thisWeek, int lastWeek) {
+        attendanceTrendBadge.setVisible(true);
+        attendanceTrendBadge.setManaged(true);
+
+        if (lastWeek == 0) {
+            attendanceTrendBadge.setVisible(false);
+            attendanceTrendBadge.setManaged(false);
+            return;
+        }
+
+        double changePct = ((thisWeek - lastWeek) / (double) lastWeek) * 100.0;
+        String rounded = String.valueOf(Math.round(Math.abs(changePct)));
+
+        attendanceTrendBadge.getStyleClass().removeAll("badge-up", "badge-down", "badge-flat");
+        if (changePct > 0.5) {
+            attendanceTrendBadge.setText("▲ " + rounded + "%");
+            attendanceTrendBadge.getStyleClass().add("badge-up");
+        } else if (changePct < -0.5) {
+            attendanceTrendBadge.setText("▼ " + rounded + "%");
+            attendanceTrendBadge.getStyleClass().add("badge-down");
+        } else {
+            attendanceTrendBadge.setText("Flat");
+            attendanceTrendBadge.getStyleClass().add("badge-flat");
+        }
+    }
+
+    // ── MINISTRY CHART ────────────────────────────────────────
+
+    private void loadMinistryChart(int youth, int sundaySchool, int women, int men) {
+        ministryChart.getData().clear();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.getData().add(new XYChart.Data<>("Youth", youth));
+        series.getData().add(new XYChart.Data<>("Sunday School", sundaySchool));
+        series.getData().add(new XYChart.Data<>("Women's", women));
+        series.getData().add(new XYChart.Data<>("Men's", men));
+        ministryChart.getData().add(series);
+    }
+
+    // ── ATTENDANCE TREND CHART ────────────────────────────────
+
+    private void loadAttendanceTrend() {
+        attendanceChart.getData().clear();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            // 6 weekly buckets, oldest first, each a 7-day window ending on
+            // that week's marker date (today, today-7, today-14, ...).
+            for (int weeksAgo = 5; weeksAgo >= 0; weeksAgo--) {
+                LocalDate end = LocalDate.now().minusDays((long) weeksAgo * 7);
+                int weekCount = weeklyAttendance(conn, weeksAgo * 7);
+                series.getData().add(new XYChart.Data<>(end.format(WEEK_LABEL_FMT), weekCount));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        attendanceChart.getData().add(series);
     }
 
     // ── UPCOMING EVENTS ────────────────────────────────────────
@@ -131,6 +232,70 @@ public class DashboardController {
                 eventsRemindersBox.getChildren().add(
                     makeEmpty("No upcoming events in the next 7 days.")
                 );
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ── BIRTHDAYS THIS WEEK ────────────────────────────────────
+
+    private void loadBirthdays() {
+        birthdaysBox.getChildren().clear();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            String sql = """
+                SELECT full_name, date_of_birth
+                FROM members
+                WHERE date_of_birth IS NOT NULL
+                AND is_deleted = 0 AND is_deceased = 0
+                """;
+            ResultSet rs = conn.createStatement().executeQuery(sql);
+
+            LocalDate today = LocalDate.now();
+            List<Object[]> upcoming = new ArrayList<>(); // {name, daysUntil, MonthDay}
+
+            while (rs.next()) {
+                Date dob = rs.getDate("date_of_birth");
+                if (dob == null) continue;
+                MonthDay birthdayMd = MonthDay.from(dob.toLocalDate());
+
+                LocalDate nextOccurrence = birthdayMd.atYear(today.getYear());
+                if (nextOccurrence.isBefore(today)) {
+                    nextOccurrence = birthdayMd.atYear(today.getYear() + 1);
+                }
+                long daysUntil = nextOccurrence.toEpochDay() - today.toEpochDay();
+
+                if (daysUntil >= 0 && daysUntil <= 7) {
+                    upcoming.add(new Object[]{ rs.getString("full_name"), daysUntil, birthdayMd });
+                }
+            }
+
+            upcoming.sort(Comparator.comparingLong(o -> (long) o[1]));
+
+            int shown = 0;
+            for (Object[] row : upcoming) {
+                if (shown >= 6) break;
+                shown++;
+                String name = (String) row[0];
+                long daysUntil = (long) row[1];
+                MonthDay md = (MonthDay) row[2];
+
+                VBox item = new VBox(2);
+                Label nameLabel = new Label(name);
+                nameLabel.getStyleClass().add("reminder-title");
+                String when = daysUntil == 0 ? "Today"
+                            : daysUntil == 1 ? "Tomorrow"
+                            : "In " + daysUntil + " days";
+                Label sub = new Label(md.format(DateTimeFormatter.ofPattern("dd MMM")) + "  ·  " + when);
+                sub.getStyleClass().add("reminder-item-date");
+                item.getChildren().addAll(nameLabel, sub);
+                birthdaysBox.getChildren().add(item);
+            }
+
+            if (shown == 0) {
+                birthdaysBox.getChildren().add(makeEmpty("No birthdays in the next 7 days."));
             }
 
         } catch (SQLException e) {

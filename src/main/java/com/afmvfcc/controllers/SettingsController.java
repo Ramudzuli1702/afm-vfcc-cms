@@ -5,13 +5,19 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.EmailService;
 import com.afmvfcc.utils.GitHubSync;
+import com.afmvfcc.utils.NetworkUtils;
+import com.afmvfcc.utils.QrCodeGenerator;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.SmsService;
+import com.afmvfcc.utils.ToastManager;
 import com.afmvfcc.utils.YouTubeUploader;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import java.io.*;
@@ -65,6 +71,21 @@ public class SettingsController {
     @FXML private TextField     websiteCustomDomainField;
     @FXML private Label         githubStatusLabel;
 
+    // Mobile app connection
+    @FXML private ImageView connectQrImage;
+    @FXML private Label     serverAddressLabel;
+    @FXML private Label     serverAdapterLabel;
+    @FXML private Label     hotspotNoticeLabel;
+
+    // Connected devices
+    @FXML private TableView<String[]>           devicesTable;
+    @FXML private TableColumn<String[], String> colDeviceUser;
+    @FXML private TableColumn<String[], String> colDeviceName;
+    @FXML private TableColumn<String[], String> colDeviceSince;
+    @FXML private TableColumn<String[], Void>   colDeviceActions;
+
+    private static final int APP_SERVER_PORT = 8080;
+
     private static final DateTimeFormatter FMT =
             DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
 
@@ -74,6 +95,127 @@ public class SettingsController {
         refreshYoutubeAuthStatus();
         refreshSecretsStatus();
         loadBackupHistory();
+        setupDevicesTable();
+        loadServerAddress();
+        loadConnectedDevices();
+    }
+
+    // ── MOBILE APP CONNECTION ─────────────────────────────────────────
+
+    @FXML
+    public void handleRefreshServerAddress() {
+        loadServerAddress();
+        loadConnectedDevices();
+    }
+
+    @FXML
+    public void handleCopyServerAddress() {
+        String text = serverAddressLabel.getText();
+        if (text == null || text.isBlank() || "Detecting...".equals(text)) return;
+        ClipboardContent content = new ClipboardContent();
+        content.putString(text);
+        Clipboard.getSystemClipboard().setContent(content);
+        ToastManager.success("Server address copied to clipboard.");
+    }
+
+    private void loadServerAddress() {
+        NetworkUtils.ServerAddress addr = NetworkUtils.findServerAddress();
+        if (addr == null) {
+            serverAddressLabel.setText("No active network connection found");
+            serverAdapterLabel.setText("");
+            hotspotNoticeLabel.setText(
+                "Connect to WiFi, or turn on Mobile Hotspot in Windows Settings, then click Refresh.");
+            connectQrImage.setImage(null);
+            return;
+        }
+
+        String display = addr.ip + ":" + APP_SERVER_PORT;
+        serverAddressLabel.setText(display);
+        serverAdapterLabel.setText("via " + addr.adapterName);
+
+        if (addr.isHotspotAdapter) {
+            hotspotNoticeLabel.setText("✓ Mobile Hotspot is on — phones can connect by joining it and scanning this code.");
+        } else {
+            hotspotNoticeLabel.setText(
+                "Mobile Hotspot is off, so this is your regular WiFi address — phones must be on the same WiFi network. " +
+                "Turn on Mobile Hotspot in Windows Settings for a dedicated connection, then click Refresh.");
+        }
+
+        String qrPayload = "afmvfcc://connect?ip=" + addr.ip + "&port=" + APP_SERVER_PORT;
+        connectQrImage.setImage(QrCodeGenerator.generate(qrPayload, 320));
+    }
+
+    // ── CONNECTED DEVICES ──────────────────────────────────────────────
+
+    private void setupDevicesTable() {
+        colDeviceUser.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[0]));
+        colDeviceName.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[1]));
+        colDeviceSince.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[2]));
+
+        colDeviceActions.setCellFactory(col -> new TableCell<>() {
+            private final Button revokeBtn = new Button("Revoke");
+            {
+                revokeBtn.getStyleClass().add("btn-danger");
+                revokeBtn.setStyle("-fx-font-size:11px;-fx-padding:4 10;");
+                revokeBtn.setOnAction(e -> {
+                    String[] row = getTableView().getItems().get(getIndex());
+                    revokeDevice(Integer.parseInt(row[3]), row[0]);
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : revokeBtn);
+            }
+        });
+    }
+
+    private void loadConnectedDevices() {
+        List<String[]> rows = new ArrayList<>();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT id, stored_user, device_name, created_at FROM app_tokens " +
+                "WHERE is_active = 1 ORDER BY created_at DESC"
+            );
+            while (rs.next()) {
+                Timestamp created = rs.getTimestamp("created_at");
+                rows.add(new String[]{
+                    rs.getString("stored_user") != null ? rs.getString("stored_user") : "Unknown",
+                    rs.getString("device_name") != null ? rs.getString("device_name") : "Unknown device",
+                    created != null ? created.toLocalDateTime().format(FMT) : "",
+                    String.valueOf(rs.getInt("id"))
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        devicesTable.setItems(FXCollections.observableArrayList(rows));
+    }
+
+    private void revokeDevice(int tokenId, String userName) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
+        confirm.setTitle("Revoke Device");
+        confirm.setHeaderText("Sign out " + userName + " on this device?");
+        confirm.setContentText("They will need to log in again on the app to reconnect.");
+        confirm.showAndWait().ifPresent(btn -> {
+            if (btn != ButtonType.OK) return;
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE app_tokens SET is_active = 0 WHERE id = ?");
+                ps.setInt(1, tokenId);
+                ps.executeUpdate();
+                AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                    "Revoked app device session for: " + userName);
+                loadConnectedDevices();
+                ToastManager.success("Device signed out successfully.");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                ToastManager.error("Failed to revoke device: " + e.getMessage());
+            }
+        });
     }
 
     // ── LOAD / SAVE SETTINGS ─────────────────────────────────────────

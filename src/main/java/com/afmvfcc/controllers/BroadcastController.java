@@ -5,7 +5,9 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.BroadcastTaskManager;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import com.afmvfcc.utils.YouTubeUploader;
+import com.afmvfcc.utils.YtdlpUpdater;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -26,7 +28,9 @@ import java.io.*;
 import java.net.URI;
 import java.sql.*;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class BroadcastController {
 
@@ -127,6 +131,9 @@ public class BroadcastController {
 
         loadDownloadFolder();
         checkYtdlp();
+
+        String ytdlpPath = findYtdlp();
+        if (ytdlpPath != null) YtdlpUpdater.checkAndUpdateIfDue(ytdlpPath);
 
         boolean hasToken = hasYoutubeToken();
         oauthNoticeLabel.setVisible(!hasToken);
@@ -231,6 +238,30 @@ public class BroadcastController {
                 System.getenv("USERPROFILE") + "\\ffmpeg.exe",
                 System.getenv("USERPROFILE") + "\\Downloads\\ffmpeg.exe",
         });
+    }
+
+    /**
+     * Looks for cookies.txt next to the running jar (installed app) or in the
+     * working directory (dev/gradle run). Returns null if not found — the
+     * caller should just omit --cookies rather than pass a bad relative path,
+     * since a bare "cookies.txt" argument only resolves correctly if yt-dlp's
+     * child-process working directory happens to be wherever the file lives,
+     * which isn't guaranteed for the installed app's launcher.
+     */
+    private String findCookiesFile() {
+        try {
+            File jar = new File(BroadcastController.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getParentFile();
+            File next = new File(jar, "cookies.txt");
+            if (next.exists()) return next.getAbsolutePath();
+            File up = new File(jar.getParentFile(), "cookies.txt");
+            if (up.exists()) return up.getAbsolutePath();
+        } catch (Exception ignored) {}
+
+        File cwd = new File(System.getProperty("user.dir"), "cookies.txt");
+        if (cwd.exists()) return cwd.getAbsolutePath();
+
+        return null;
     }
 
     /**
@@ -352,6 +383,8 @@ public class BroadcastController {
         String ffmpegLocation = new File(ffmpeg).getParent();
         if (ffmpegLocation == null) ffmpegLocation = ffmpeg;
 
+        String cookiesFile = findCookiesFile();
+
         File outDir = new File(folder);
         outDir.mkdirs();
 
@@ -369,6 +402,7 @@ public class BroadcastController {
         final String finalUrl           = url;
         final String finalYtdlp         = ytdlp;
         final String finalFfmpegLocation = ffmpegLocation;
+        final String finalCookiesFile   = cookiesFile;
 
         Task<File> task = new Task<>() {
             @Override
@@ -376,17 +410,27 @@ public class BroadcastController {
                 String outputTemplate = outDir.getAbsolutePath()
                         + File.separator + "%(title)s.%(ext)s";
 
-                ProcessBuilder pb = new ProcessBuilder(
-                        finalYtdlp,
-                        "--cookies", "cookies.txt",
-                        "--user-agent", "Mozilla/5.0",
-                        "--format", "bv*+ba/b",
-                        "--merge-output-format", "mp4",
-                        "--ffmpeg-location", finalFfmpegLocation,
-                        "--no-playlist",
-                        "--newline",
-                        "--output", outputTemplate,
-                        finalUrl);
+                List<String> args = new ArrayList<>();
+                args.add(finalYtdlp);
+                if (finalCookiesFile != null) {
+                    args.add("--cookies");
+                    args.add(finalCookiesFile);
+                }
+                args.add("--user-agent");
+                args.add("Mozilla/5.0");
+                args.add("--format");
+                args.add("bv*+ba/b");
+                args.add("--merge-output-format");
+                args.add("mp4");
+                args.add("--ffmpeg-location");
+                args.add(finalFfmpegLocation);
+                args.add("--no-playlist");
+                args.add("--newline");
+                args.add("--output");
+                args.add(outputTemplate);
+                args.add(finalUrl);
+
+                ProcessBuilder pb = new ProcessBuilder(args);
                 pb.redirectErrorStream(true);
                 Process process = pb.start();
 
@@ -857,6 +901,7 @@ public class BroadcastController {
     }
 
     private void showError(String msg) {
+        ToastManager.error(msg);
         Alert alert = new Alert(Alert.AlertType.ERROR);
         Main.applyStyles(alert.getDialogPane());
         alert.setTitle("Error");
@@ -866,6 +911,7 @@ public class BroadcastController {
     }
 
     private void showInfo(String title, String msg) {
+        ToastManager.success(msg);
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         Main.applyStyles(alert.getDialogPane());
         alert.setTitle(title);

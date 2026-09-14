@@ -6,6 +6,7 @@ import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.EmailService;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.SmsService;
+import com.afmvfcc.utils.ToastManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -496,18 +497,23 @@ public class CommunicationsController {
                 "Sent " + channel + " to '" + group + "' — " +
                 success + "/" + total + " delivered.");
 
-            if (failed == 0)
+            if (failed == 0) {
                 showStatus("✓ Sent to all " + success + " recipient(s).", true);
-            else
+                ToastManager.success("Message sent to all " + success + " recipient(s).");
+            } else {
                 showStatus(success + " sent, " + failed + " failed. Check addresses/settings.", false);
+                ToastManager.error(success + " sent, " + failed + " failed. Check addresses/settings.");
+            }
 
             loadSentLog();
             messageArea.clear();
             subjectField.clear();
         });
 
-        task.setOnFailed(e ->
-            showStatus("Send failed: " + task.getException().getMessage(), false));
+        task.setOnFailed(e -> {
+            showStatus("Send failed: " + task.getException().getMessage(), false);
+            ToastManager.error("Send failed: " + task.getException().getMessage());
+        });
         new Thread(task).start();
     }
 
@@ -843,6 +849,8 @@ public class CommunicationsController {
             boolean anySuccess = (waResult != null && waResult.startsWith("✓"))
                               || (fbResult != null && fbResult.startsWith("✓"));
             showAnnStatus(status.toString(), anySuccess);
+            if (anySuccess) ToastManager.success("Announcement posted — " + status);
+            else ToastManager.error("Announcement failed — " + status);
 
             List<String> channels = new ArrayList<>();
             if (toWA) channels.add("WhatsApp");
@@ -871,8 +879,10 @@ public class CommunicationsController {
             loadAnnouncements();
         }));
 
-        task.setOnFailed(e -> Platform.runLater(() ->
-            showAnnStatus("Error: " + task.getException().getMessage(), false)));
+        task.setOnFailed(e -> Platform.runLater(() -> {
+            showAnnStatus("Error: " + task.getException().getMessage(), false);
+            ToastManager.error("Error: " + task.getException().getMessage());
+        }));
 
         new Thread(task).start();
     }

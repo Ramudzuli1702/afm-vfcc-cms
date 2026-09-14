@@ -4,6 +4,7 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.Member;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -136,16 +137,19 @@ public class AddEditMemberController {
         String subBranch = subBranchCombo.getValue();
         if (subBranch == null || subBranch.isEmpty()) { showError("Sub-branch is required."); return; }
 
+        boolean isNewMember = editingMember == null;
         try {
             Connection conn = DatabaseConnection.getConnection();
             int subBranchId = getSubBranchId(conn, subBranch);
-            if (editingMember == null) insertMember(conn, fullName, subBranchId);
-            else                       updateMember(conn, fullName, subBranchId);
+            if (isNewMember) insertMember(conn, fullName, subBranchId);
+            else             updateMember(conn, fullName, subBranchId);
             if (onSaved != null) onSaved.run();
             closeDialog();
+            ToastManager.success(isNewMember ? "Member added successfully." : "Member updated successfully.");
         } catch (SQLException e) {
             showError("Database error: " + e.getMessage());
             e.printStackTrace();
+            ToastManager.error("Failed to save member: " + e.getMessage());
         }
     }
 

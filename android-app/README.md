@@ -62,12 +62,25 @@ Before using the app for the first time, you need to tell it the IP address of t
 
 ### Step 1 — Find the CMS computer's IP address
 
+The easiest way: on the CMS computer, open **Settings** (or the **Attendance**
+tab) — both show a **Server Address** box with the current IP and a QR code.
+If Windows **Mobile Hotspot** is turned on, the CMS automatically shows that
+adapter's address instead of the regular WiFi one, so phones can connect
+directly to the church computer's hotspot with no router needed.
+
+> The IP address may change if the router restarts (or the Mobile Hotspot is
+> toggled off/on). If the app stops connecting, check the CMS's Settings or
+> Attendance screen again for the current address.
+
+<details>
+<summary>Manual method (ipconfig)</summary>
+
 1. On the CMS computer, press `Windows + R`, type `cmd` and press Enter.
 2. In the black window, type `ipconfig` and press Enter.
-3. Look for **"IPv4 Address"** under your WiFi adapter. It will look something like `192.168.1.5`.
-4. Write this number down.
+3. Look for **"IPv4 Address"** under your WiFi (or "Local Area Connection\*")
+   adapter. It will look something like `192.168.1.5`.
 
-> The IP address may change if the router restarts. If the app stops connecting, repeat this step.
+</details>
 
 ### Step 2 — Enter the server address in the app
 
@@ -156,7 +169,7 @@ When you are ready to send the attendance and guest records to the main system:
 | "Account is locked" | Log into the CMS desktop app and unlock the account from Admin Management. |
 | App shows no sessions | Make sure the CMS is running. Tap the refresh button on the Sessions screen. |
 | Sync fails | Check WiFi connection. Try again. If it still fails, do not close the app — the data is still saved on the phone. |
-| IP address changed | On the CMS computer run `ipconfig` again to get the new IP. Update it in the app's Server Settings. |
+| IP address changed | Check the Server Address box in the CMS's Settings or Attendance screen for the current IP. Update it in the app's Server Settings. |
 
 ---
 

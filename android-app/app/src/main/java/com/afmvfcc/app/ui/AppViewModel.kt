@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.afmvfcc.app.data.api.ApiClient
+import com.afmvfcc.app.data.api.ApiException
 import com.afmvfcc.app.data.local.Prefs
 import com.afmvfcc.app.data.model.*
 import kotlinx.coroutines.flow.*
@@ -86,10 +87,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 _loggedInUser.value = resp.name
                 _isLoggedIn.value   = true
                 prefs.ensureDeviceId()
+            } catch (e: ApiException) {
+                // e.message is the CMS's actual error text (e.g. "Invalid
+                // username or password", "Account is locked. Contact the
+                // super admin.") - just show it directly.
+                _loginError.value = e.message ?: "Login failed."
             } catch (e: Exception) {
                 _loginError.value = when {
-                    e.message?.contains("401") == true -> "Incorrect username or password."
-                    e.message?.contains("403") == true -> "Account is locked or inactive."
                     e.message?.contains("refused") == true ||
                             e.message?.contains("connect") == true ->
                         "Cannot reach the CMS. Check the server IP and make sure you are on the same WiFi."

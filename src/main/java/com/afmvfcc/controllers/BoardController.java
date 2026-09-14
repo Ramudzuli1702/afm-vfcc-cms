@@ -4,6 +4,7 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.BoardMeeting;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -199,9 +200,11 @@ public class BoardController {
                 }
                 loadBoard();
                 stage.close();
+                ToastManager.success(existing == null ? "Board member added successfully." : "Board member updated successfully.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
                 showAlert("Database Error", "Could not save board member:\n" + ex.getMessage());
+                ToastManager.error("Failed to save board member: " + ex.getMessage());
             }
         });
 
@@ -228,7 +231,11 @@ public class BoardController {
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Removed board member ID " + boardId);
                     loadBoard();
-                } catch (SQLException e) { e.printStackTrace(); }
+                    ToastManager.success("Board member removed successfully.");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    ToastManager.error("Failed to remove board member: " + e.getMessage());
+                }
             }
         });
     }
@@ -601,7 +608,11 @@ public class BoardController {
 
                 loadMeetings();
                 stage.close();
-            } catch (SQLException ex) { ex.printStackTrace(); }
+                ToastManager.success(existing == null ? "Meeting added successfully." : "Meeting updated successfully.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                ToastManager.error("Failed to save meeting: " + ex.getMessage());
+            }
         });
 
         Scene scene = new Scene(root, 720, 680);

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.chart.*?>
 <?import javafx.geometry.*?>
 
 <ScrollPane fitToWidth="true" styleClass="root"
@@ -10,7 +11,13 @@
 
     <VBox spacing="24" style="-fx-padding:4 0 24 0;">
 
-        <!-- ── STAT CARDS ROW 1 ── -->
+        <!-- ── GREETING HEADER ── -->
+        <VBox spacing="2">
+            <Label fx:id="greetingTitle" text="Welcome back" styleClass="dashboard-greeting-title"/>
+            <Label fx:id="greetingSubtitle" text="" styleClass="dashboard-greeting-subtitle"/>
+        </VBox>
+
+        <!-- ── STAT CARDS ── -->
         <GridPane hgap="14" vgap="14">
             <columnConstraints>
                 <ColumnConstraints percentWidth="25"/>
@@ -20,63 +27,88 @@
             </columnConstraints>
 
             <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
+                <Label text="👥" styleClass="stat-icon"/>
                 <Label text="TOTAL MEMBERS" styleClass="stat-label"/>
                 <Label fx:id="statTotal" text="0" styleClass="stat-number"/>
             </VBox>
             <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
+                <Label text="✅" styleClass="stat-icon"/>
                 <Label text="ACTIVE (FULL TIME)" styleClass="stat-label"/>
                 <Label fx:id="statActive" text="0" styleClass="stat-number"/>
             </VBox>
             <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
+                <Label text="🕓" styleClass="stat-icon"/>
                 <Label text="PART TIME" styleClass="stat-label"/>
                 <Label fx:id="statPartTime" text="0" styleClass="stat-number"/>
             </VBox>
             <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
+                <Label text="📊" styleClass="stat-icon"/>
                 <Label text="LAST WEEK ATTENDANCE" styleClass="stat-label"/>
-                <Label fx:id="statLastAttendance" text="0" styleClass="stat-number"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label fx:id="statLastAttendance" text="0" styleClass="stat-number"/>
+                    <Label fx:id="attendanceTrendBadge" text="" styleClass="badge-flat" visible="false" managed="false"/>
+                </HBox>
             </VBox>
         </GridPane>
 
-        <!-- ── STAT CARDS ROW 2 ── -->
-        <GridPane hgap="14" vgap="14">
-            <columnConstraints>
-                <ColumnConstraints percentWidth="25"/>
-                <ColumnConstraints percentWidth="25"/>
-                <ColumnConstraints percentWidth="25"/>
-                <ColumnConstraints percentWidth="25"/>
-            </columnConstraints>
-
-            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
-                <Label text="YOUTH" styleClass="stat-label"/>
-                <Label fx:id="statYouth" text="0" styleClass="stat-number"/>
-            </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
-                <Label text="SUNDAY SCHOOL" styleClass="stat-label"/>
-                <Label fx:id="statSundaySchool" text="0" styleClass="stat-number"/>
-            </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
-                <Label text="WOMEN'S MINISTRY" styleClass="stat-label"/>
-                <Label fx:id="statWomen" text="0" styleClass="stat-number"/>
-            </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
-                <Label text="MEN'S MINISTRY" styleClass="stat-label"/>
-                <Label fx:id="statMen" text="0" styleClass="stat-number"/>
-            </VBox>
-        </GridPane>
-
-        <!-- ── REMINDERS + PENDING ROW ── -->
+        <!-- ── CHARTS ROW ── -->
         <HBox spacing="14">
 
+            <VBox styleClass="chart-card" spacing="10" HBox.hgrow="ALWAYS">
+                <Label text="MINISTRY INVOLVEMENT" styleClass="section-label"/>
+                <BarChart fx:id="ministryChart" legendVisible="false"
+                          animated="false" prefHeight="220" VBox.vgrow="ALWAYS"
+                          styleClass="ministry-chart">
+                    <xAxis>
+                        <CategoryAxis fx:id="ministryCategoryAxis" side="BOTTOM"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis fx:id="ministryValueAxis" side="LEFT"/>
+                    </yAxis>
+                </BarChart>
+            </VBox>
+
+            <VBox styleClass="chart-card" spacing="10" HBox.hgrow="ALWAYS">
+                <Label text="ATTENDANCE — LAST 6 WEEKS" styleClass="section-label"/>
+                <LineChart fx:id="attendanceChart" legendVisible="false"
+                           animated="false" prefHeight="220" VBox.vgrow="ALWAYS"
+                           styleClass="attendance-chart">
+                    <xAxis>
+                        <CategoryAxis fx:id="attendanceCategoryAxis" side="BOTTOM"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis fx:id="attendanceValueAxis" side="LEFT"/>
+                    </yAxis>
+                </LineChart>
+            </VBox>
+
+        </HBox>
+
+        <!-- ── REMINDERS GRID (2x2) ── -->
+        <GridPane hgap="14" vgap="14">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="50"/>
+                <ColumnConstraints percentWidth="50"/>
+            </columnConstraints>
+
             <!-- Upcoming Events -->
-            <VBox styleClass="reminder-card" spacing="12" HBox.hgrow="ALWAYS">
+            <VBox styleClass="reminder-card" spacing="12" GridPane.columnIndex="0" GridPane.rowIndex="0">
                 <Label text="UPCOMING EVENTS (NEXT 7 DAYS)" styleClass="section-label"/>
                 <VBox fx:id="eventsRemindersBox" spacing="8">
                     <Label text="No upcoming events." styleClass="reminder-item"/>
                 </VBox>
             </VBox>
 
+            <!-- Birthdays This Week -->
+            <VBox styleClass="reminder-card" spacing="12" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <Label text="🎂 BIRTHDAYS THIS WEEK" styleClass="section-label"/>
+                <VBox fx:id="birthdaysBox" spacing="8">
+                    <Label text="No birthdays this week." styleClass="reminder-item"/>
+                </VBox>
+            </VBox>
+
             <!-- Welfare Due -->
-            <VBox styleClass="reminder-card" spacing="12" HBox.hgrow="ALWAYS">
+            <VBox styleClass="reminder-card-urgent" spacing="12" GridPane.columnIndex="0" GridPane.rowIndex="1">
                 <Label text="WELFARE CASES DUE" styleClass="section-label"/>
                 <VBox fx:id="welfareRemindersBox" spacing="8">
                     <Label text="No pending welfare cases." styleClass="reminder-item"/>
@@ -84,7 +116,7 @@
             </VBox>
 
             <!-- Pending Members -->
-            <VBox styleClass="reminder-card" spacing="12" prefWidth="240">
+            <VBox styleClass="reminder-card-urgent" spacing="12" GridPane.columnIndex="1" GridPane.rowIndex="1">
                 <HBox alignment="CENTER_LEFT" spacing="10">
                     <Label text="PENDING APPROVALS" styleClass="section-label"/>
                     <Label fx:id="pendingBadge" text="0" styleClass="pending-badge"/>
@@ -94,7 +126,7 @@
                 </VBox>
             </VBox>
 
-        </HBox>
+        </GridPane>
 
     </VBox>
 </ScrollPane>

@@ -5,6 +5,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LoginResponse(val token: String, val userId: Int, val name: String)
 
+/** Shape of every error response the CMS API returns, e.g. {"error":"Invalid username or password"}. */
+@Serializable
+data class ErrorResponse(val error: String = "Request failed")
+
 @Serializable
 data class Session(
     val id: Int,

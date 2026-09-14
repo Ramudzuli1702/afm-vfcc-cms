@@ -5,6 +5,7 @@ import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.Event;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -269,20 +270,23 @@ public class CalendarController {
         cell.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         boolean isToday   = date.equals(today);
+        boolean isPast    = date.isBefore(today);
         boolean isWeekend = date.getDayOfWeek().getValue() >= 6;
 
         String bg = isToday   ? "#EEF5FF" :
+                    isPast    ? "#EEF0F5" :
                     isWeekend ? "#FAFAFA"  : "#FFFFFF";
 
         cell.setStyle("-fx-background-color:" + bg + ";" +
-                      "-fx-border-color:#DDE1EA;-fx-border-width:0.5;");
+                      "-fx-border-color:#DDE1EA;-fx-border-width:0.5;" +
+                      (isPast ? "-fx-opacity:0.6;" : ""));
 
         Label dayLbl = new Label(String.valueOf(day));
         dayLbl.setStyle(
             "-fx-font-size:12px;" +
             "-fx-font-weight:" + (isToday ? "700" : "500") + ";" +
             "-fx-background-color:" + (isToday ? "#3A86C8" : "transparent") + ";" +
-            "-fx-text-fill:" + (isToday ? "#FFFFFF" : isWeekend ? "#9099AA" : "#5A6275") + ";" +
+            "-fx-text-fill:" + (isToday ? "#FFFFFF" : isPast ? "#9099AA" : isWeekend ? "#9099AA" : "#5A6275") + ";" +
             "-fx-background-radius:50%;-fx-padding:1 5;"
         );
         cell.getChildren().add(dayLbl);
@@ -320,7 +324,7 @@ public class CalendarController {
         }
 
         cell.setOnMouseClicked(e -> {
-            if (e.getTarget() == cell) openEventDialogOnDate(date);
+            if (e.getTarget() == cell && !isPast) openEventDialogOnDate(date);
         });
         return cell;
     }
@@ -356,12 +360,29 @@ public class CalendarController {
         titleField.getStyleClass().add("form-field");
         titleField.setPromptText("Event title");
 
+        boolean isNewEvent = existing == null || existing.getId() <= 0;
+
         DatePicker datePicker = new DatePicker(
             existing != null && existing.getEventDate() != null
                 ? existing.getEventDate() : LocalDate.now()
         );
         datePicker.getStyleClass().add("form-date-picker");
         datePicker.setMaxWidth(Double.MAX_VALUE);
+
+        // New events can't be dated in the past — existing (already past-dated)
+        // events remain freely editable, e.g. to fix a typo after the fact.
+        if (isNewEvent) {
+            datePicker.setDayCellFactory(picker -> new DateCell() {
+                @Override
+                public void updateItem(LocalDate item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (item != null && item.isBefore(LocalDate.now())) {
+                        setDisable(true);
+                        setStyle("-fx-background-color:#F0F1F4;-fx-text-fill:#C0C5CF;");
+                    }
+                }
+            });
+        }
 
         TextField timeField = new TextField();
         timeField.getStyleClass().add("form-field");
@@ -437,6 +458,16 @@ public class CalendarController {
         saveBtn.setOnAction(e -> {
             String t = titleField.getText().trim();
             if (t.isEmpty()) return;
+
+            if (isNewEvent && datePicker.getValue() != null
+                    && datePicker.getValue().isBefore(LocalDate.now())) {
+                Alert a = new Alert(Alert.AlertType.WARNING,
+                    "Events can't be added on a past date. Please choose today or a future date.");
+                Main.applyStyles(a.getDialogPane());
+                a.showAndWait();
+                return;
+            }
+
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 Time time = null;
@@ -475,7 +506,11 @@ public class CalendarController {
                 }
                 loadEvents();
                 stage.close();
-            } catch (SQLException ex) { ex.printStackTrace(); }
+                ToastManager.success(isNewEvent ? "Event added successfully." : "Event updated successfully.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                ToastManager.error("Failed to save event: " + ex.getMessage());
+            }
         });
 
         Scene scene = new Scene(root, 480, 540);
@@ -498,7 +533,11 @@ public class CalendarController {
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Deleted event: " + e.getTitle());
                     loadEvents();
-                } catch (SQLException ex) { ex.printStackTrace(); }
+                    ToastManager.success("Event deleted successfully.");
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    ToastManager.error("Failed to delete event: " + ex.getMessage());
+                }
             }
         });
     }

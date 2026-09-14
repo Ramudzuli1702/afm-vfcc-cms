@@ -7,13 +7,13 @@
 
 | File count | Category |
 |---|---|
-| 22 Java controllers | `src/main/java/com/afmvfcc/controllers/` |
-| 9 Java models | `src/main/java/com/afmvfcc/models/` |
-| 10 Java utilities | `src/main/java/com/afmvfcc/utils/` |
+| 23 Java controllers | `src/main/java/com/afmvfcc/controllers/` |
+| 10 Java models | `src/main/java/com/afmvfcc/models/` |
+| 14 Java utilities | `src/main/java/com/afmvfcc/utils/` |
 | 1 DB connection class | `src/main/java/com/afmvfcc/db/` |
 | 1 embedded REST API | `src/main/java/com/afmvfcc/api/` — serves the Android app, see [Android App](#-android-app) |
 | 1 Main entry point | `src/main/java/com/afmvfcc/` |
-| 17 FXML layouts | `src/main/resources/com/afmvfcc/fxml/` |
+| 18 FXML layouts | `src/main/resources/com/afmvfcc/fxml/` |
 | 1 CSS stylesheet | `src/main/resources/com/afmvfcc/css/` |
 | 1 reference schema | `afm_vfcc_setup.sql` (kept for documentation — the app builds its own schema automatically, see below) |
 | 1 Android companion app | `android-app/` — see [Android App](#-android-app) |
@@ -138,6 +138,7 @@ AFM_VFCC_CMS/
     │       │   ├── WelfareCase.java
     │       │   ├── WebsiteBlog.java
     │       │   ├── WebsiteEvent.java
+    │       │   ├── InventoryItem.java          ← Instruments, office equipment, building materials
     │       │   └── AuditEntry.java
     │       ├── utils/
     │       │   ├── PasswordUtil.java           ← BCrypt hashing
@@ -149,10 +150,14 @@ AFM_VFCC_CMS/
     │       │   ├── SmsService.java             ← BulkSMS sending
     │       │   ├── GitHubSync.java             ← Publishes website content via GitHub Contents API
     │       │   ├── WebsiteExporter.java        ← Generates data.js from the DB for the website
-    │       │   └── YouTubeUploader.java        ← YouTube Data API v3 upload (OAuth)
+    │       │   ├── YouTubeUploader.java        ← YouTube Data API v3 upload (OAuth)
+    │       │   ├── YtdlpUpdater.java           ← Auto-updates bundled yt-dlp every ~90 days
+    │       │   ├── NetworkUtils.java           ← Finds the LAN/Mobile-Hotspot IP for the Android app
+    │       │   ├── QrCodeGenerator.java        ← Renders a connect-QR (ZXing) for the Android app
+    │       │   └── ToastManager.java           ← App-wide Success/Failed toast notifications
     │       └── controllers/
     │           ├── LoginController.java        ← Auth + lockout
-    │           ├── MainLayoutController.java   ← Sidebar navigation
+    │           ├── MainLayoutController.java   ← Sidebar navigation + toast layer
     │           ├── DashboardController.java    ← Stats + reminders
     │           ├── MembersController.java      ← Full CRUD + search + filter + Guests/Families/Pending/Faithful Departed tabs
     │           ├── AddEditMemberController.java← Add/Edit member dialog
@@ -160,17 +165,18 @@ AFM_VFCC_CMS/
     │           ├── DeceasedMembersController.java← "Faithful Departed" tab
     │           ├── MemberPdfExporter.java      ← iText7 PDF generation
     │           ├── DocumentExporter.java       ← Shared branded PDF export helper
-    │           ├── AttendanceController.java   ← Sessions + marking + Excel export
+    │           ├── AttendanceController.java   ← Sessions + marking + Excel export + mobile-connect QR
     │           ├── BoardController.java        ← Board members + meetings + minutes
-    │           ├── CalendarController.java     ← Church events CRUD
+    │           ├── CalendarController.java     ← Church events CRUD, past days greyed out and locked
     │           ├── WelfareController.java      ← Welfare cases + workers
     │           ├── WelfarePdfExporter.java     ← PDF export for welfare cases
+    │           ├── InventoryController.java    ← Instruments/equipment/materials CRUD + Excel export
     │           ├── CommunicationsController.java← Compose/send Email, SMS & Announcements; Sent Log
     │           ├── WebsiteController.java      ← Website blogs + events
     │           ├── BroadcastController.java    ← Downloads a Facebook Live video, re-uploads to YouTube
     │           ├── CommemorationsController.java← Issues certificates (baptism, blessing, appreciation, death)
     │           ├── CertificateGenerator.java   ← PDF certificate rendering engine
-    │           ├── SettingsController.java     ← Backup/restore, website/GitHub, SMTP, BulkSMS settings
+    │           ├── SettingsController.java     ← Backup/restore, website/GitHub, SMTP/BulkSMS, mobile app connect QR, connected devices
     │           ├── AdminsController.java       ← Super admin: manage admins
     │           ├── AuditLogController.java     ← Read-only audit trail
     │           └── FinanceController.java      ← Placeholder (future)
@@ -187,6 +193,7 @@ AFM_VFCC_CMS/
             ├── board.fxml
             ├── calendar.fxml
             ├── welfare.fxml
+            ├── inventory.fxml
             ├── communications.fxml
             ├── website.fxml
             ├── broadcast.fxml
@@ -200,6 +207,13 @@ AFM_VFCC_CMS/
 ---
 
 ## 🔧 Module Guide
+
+### Notifications
+Every add/edit/delete/send action across the system (members, events,
+meetings, welfare cases, admins, announcements, inventory, etc.) shows a
+"Success" or "Failed" toast in the bottom-right corner — no separate
+confirmation dialogs to dismiss. Handled by `ToastManager`, attached once at
+startup in `MainLayoutController`.
 
 ### Login
 - BCrypt password verification
@@ -228,8 +242,11 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 - Mark All Present / Clear All buttons
 - Per-session Excel export via Apache POI
 - Session history with delete
+- Shows the server address the Android app should connect to (prefers the
+  Windows Mobile Hotspot adapter when it's on) with a QR code — tap it to
+  enlarge for scanning, see [Android App](#-android-app)
 - Sessions and attendance can also be taken from the Android app and synced
-  back here — see [Android App](#-android-app)
+  back here
 
 ### Church Board
 - Board member roles with start/end dates
@@ -240,6 +257,8 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 ### Calendar
 - Church events (separate from website events)
 - Category filter: Service, Meeting, Outreach, Youth, Other
+- Past days are greyed out and locked — no new events can be added on a date
+  that has already passed
 - Feeds the Dashboard 7-day reminder
 
 ### Welfare
@@ -247,6 +266,17 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 - Status: Pending → In Progress → Completed
 - Report field updated by assigned worker
 - Quick "Close" button on the table
+
+### Inventory
+- Tracks the church's musical instruments, office equipment, building
+  materials, furniture, and electronics in one place
+- Summary cards: total items, estimated total value, low-stock count, items
+  needing repair
+- Per item: category, quantity + unit, condition (New/Good/Fair/Needs
+  Repair/Damaged), location, custodian, purchase date + value, an optional
+  low-stock alert threshold, and free-text notes
+- Search and filter by category/condition; soft-delete keeps history
+- Excel export via Apache POI
 
 ### Communications
 - **Compose Message**: recipient groups (All Active, Full Time, Part Time, by
@@ -274,6 +304,13 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
   (see Website Integration below)
 - **Email/SMS**: SMTP host/port/credentials, BulkSMS API key — stored in
   `system_settings`
+- **Mobile App Connection**: shows the server address + a QR code for the
+  Android app to connect to (auto-prefers the Mobile Hotspot adapter when
+  it's on); ushers turn on Mobile Hotspot themselves in Windows Settings —
+  the CMS only displays the connection info, it doesn't toggle it
+- **Connected Devices**: lists every phone currently signed in to the
+  Android app (from `app_tokens`), with a one-click **Revoke** to sign a
+  device out immediately
 
 ### Website
 - Blog posts (title, author, content) and website events (separate from the

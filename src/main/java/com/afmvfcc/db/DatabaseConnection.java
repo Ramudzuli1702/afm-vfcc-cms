@@ -776,6 +776,25 @@ public class DatabaseConnection {
             "CREATE TABLE IF NOT EXISTS deceased_members (id INT AUTO_INCREMENT PRIMARY KEY, member_id INT NOT NULL UNIQUE, date_of_death DATE, obituary TEXT, recorded_by INT, recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE, FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS audit_log (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, action TEXT NOT NULL, performed_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS system_settings (id INT AUTO_INCREMENT PRIMARY KEY, setting_key VARCHAR(100) NOT NULL UNIQUE, setting_value TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS inventory_items (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "item_name VARCHAR(150) NOT NULL, " +
+                "category VARCHAR(50) NOT NULL DEFAULT 'Other', " +
+                "quantity INT NOT NULL DEFAULT 1, " +
+                "unit VARCHAR(30) DEFAULT 'pcs', " +
+                "item_condition VARCHAR(30) NOT NULL DEFAULT 'Good', " +
+                "location VARCHAR(150), " +
+                "custodian VARCHAR(150), " +
+                "purchase_date DATE, " +
+                "purchase_value DECIMAL(12,2), " +
+                "low_stock_threshold INT DEFAULT 0, " +
+                "notes TEXT, " +
+                "is_deleted TINYINT(1) DEFAULT 0, " +
+                "created_by INT, " +
+                "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
             // Default data
             "INSERT IGNORE INTO ministries (id, name, is_active) VALUES (1,'Women''s Ministry',1),(2,'Men''s Ministry',1),(3,'Youth',1),(4,'Sunday School',1)",

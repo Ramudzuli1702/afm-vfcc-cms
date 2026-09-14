@@ -61,14 +61,17 @@ public class CmsApiServer {
                 "  is_active   TINYINT(1) DEFAULT 1," +
                 "  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP" +
                 ")");
-            try {
+            // Plain MySQL (unlike MariaDB) has never supported
+            // "ADD COLUMN IF NOT EXISTS" - check via metadata instead,
+            // same pattern DatabaseConnection's own migrations use.
+            if (!columnExists(conn, "app_tokens", "stored_user")) {
                 conn.createStatement().executeUpdate(
-                    "ALTER TABLE app_tokens ADD COLUMN IF NOT EXISTS stored_user VARCHAR(50)");
-            } catch (Exception ignored) {}
-            try {
+                    "ALTER TABLE app_tokens ADD COLUMN stored_user VARCHAR(50)");
+            }
+            if (!columnExists(conn, "app_tokens", "user_id")) {
                 conn.createStatement().executeUpdate(
-                    "ALTER TABLE app_tokens ADD COLUMN IF NOT EXISTS user_id INT");
-            } catch (Exception ignored) {}
+                    "ALTER TABLE app_tokens ADD COLUMN user_id INT");
+            }
             conn.createStatement().executeUpdate(
                 "CREATE TABLE IF NOT EXISTS guests (" +
                 "  id               INT AUTO_INCREMENT PRIMARY KEY," +
@@ -556,6 +559,14 @@ public class CmsApiServer {
                 ps.setInt(2, userId);
                 ps.executeUpdate();
             }
+        }
+    }
+
+    private static boolean columnExists(Connection conn, String table, String column) {
+        try (ResultSet rs = conn.getMetaData().getColumns(null, null, table, column)) {
+            return rs.next();
+        } catch (SQLException e) {
+            return false;
         }
     }
 }

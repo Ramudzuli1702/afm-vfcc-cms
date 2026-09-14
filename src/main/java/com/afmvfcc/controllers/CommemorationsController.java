@@ -4,6 +4,7 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -575,12 +576,14 @@ public class CommemorationsController {
     }
 
     private void showError(String msg) {
+        ToastManager.error(msg);
         Alert a = new Alert(Alert.AlertType.ERROR);
         Main.applyStyles(a.getDialogPane());
         a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
 
     private void showInfo(String msg) {
+        ToastManager.success(msg);
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         Main.applyStyles(a.getDialogPane());
         a.setHeaderText(null); a.setContentText(msg); a.showAndWait();

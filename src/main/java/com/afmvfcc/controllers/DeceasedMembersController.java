@@ -3,6 +3,7 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -236,8 +237,10 @@ public class DeceasedMembersController {
 
                 loadDeceased();
                 stage.close();
+                ToastManager.success("Faithful Departed record updated.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                ToastManager.error("Failed to save record: " + ex.getMessage());
             }
         });
 
@@ -274,8 +277,10 @@ public class DeceasedMembersController {
                     );
 
                     loadDeceased();
+                    ToastManager.success(row[0] + " restored to the active member list.");
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    ToastManager.error("Failed to restore member: " + e.getMessage());
                 }
             }
         });
@@ -376,8 +381,10 @@ public class DeceasedMembersController {
 
                 stage.close();
                 if (onComplete != null) onComplete.run();
+                ToastManager.success(memberName + " recorded as Faithful Departed.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                ToastManager.error("Failed to record: " + ex.getMessage());
             }
         });
 

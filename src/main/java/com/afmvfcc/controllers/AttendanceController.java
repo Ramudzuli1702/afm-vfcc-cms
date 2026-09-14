@@ -4,13 +4,17 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.AttendanceSession;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.NetworkUtils;
+import com.afmvfcc.utils.QrCodeGenerator;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
@@ -31,6 +35,7 @@ public class AttendanceController {
     @FXML private HBox              syncBar;
     @FXML private Label             syncStatusLabel;
     @FXML private Label             ipAddressLabel;
+    @FXML private ImageView         attendanceQrThumb;
 
     // ── Session history tab controls ─────────────────────────
     @FXML private TabPane                                  attendanceTabs;
@@ -233,7 +238,11 @@ public class AttendanceController {
                 loadMembersForAttendance();
                 loadSessionHistory();
                 stage.close();
-            } catch (SQLException ex) { ex.printStackTrace(); }
+                ToastManager.success("Session \"" + name + "\" created.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                ToastManager.error("Failed to create session: " + ex.getMessage());
+            }
         });
 
         javafx.scene.Scene scene = new javafx.scene.Scene(root, 480, 340);
@@ -288,7 +297,11 @@ public class AttendanceController {
                             break;
                         }
                     }
-                } catch (SQLException ex) { ex.printStackTrace(); }
+                    ToastManager.success("Session closed successfully.");
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    ToastManager.error("Failed to close session: " + ex.getMessage());
+                }
             }
         });
     }
@@ -620,7 +633,11 @@ public class AttendanceController {
                     }
                     loadSessionCombo();
                     loadSessionHistory();
-                } catch (SQLException ex) { ex.printStackTrace(); }
+                    ToastManager.success("Session \"" + s.getSessionName() + "\" closed.");
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    ToastManager.error("Failed to close session: " + ex.getMessage());
+                }
             }
         });
     }
@@ -704,7 +721,11 @@ public class AttendanceController {
                     }
                     loadSessionCombo();
                     loadSessionHistory();
-                } catch (SQLException e) { e.printStackTrace(); }
+                    ToastManager.success("Session \"" + s.getSessionName() + "\" deleted.");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    ToastManager.error("Failed to delete session: " + e.getMessage());
+                }
             }
         });
     }
@@ -772,13 +793,54 @@ public class AttendanceController {
         return box;
     }
 
+    private static final int APP_SERVER_PORT = 8080;
+    private String currentQrPayload = null;
+
     private void detectAndShowIp() {
         if (ipAddressLabel == null) return;
-        try {
-            String ip = java.net.InetAddress.getLocalHost().getHostAddress();
-            ipAddressLabel.setText(ip);
-        } catch (Exception e) {
-            ipAddressLabel.setText("See ipconfig");
+        NetworkUtils.ServerAddress addr = NetworkUtils.findServerAddress();
+        if (addr == null) {
+            ipAddressLabel.setText("No network connection");
+            currentQrPayload = null;
+            if (attendanceQrThumb != null) attendanceQrThumb.setImage(null);
+            return;
         }
+        ipAddressLabel.setText(addr.ip + ":" + APP_SERVER_PORT);
+        currentQrPayload = "afmvfcc://connect?ip=" + addr.ip + "&port=" + APP_SERVER_PORT;
+        if (attendanceQrThumb != null) {
+            attendanceQrThumb.setImage(QrCodeGenerator.generate(currentQrPayload, 160));
+        }
+    }
+
+    @FXML
+    public void handleEnlargeQr() {
+        if (currentQrPayload == null) {
+            ToastManager.error("No active network connection to connect the app to.");
+            return;
+        }
+        Stage stage = new Stage();
+        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        stage.setTitle("Connect the Mobile App");
+
+        ImageView bigQr = new ImageView(QrCodeGenerator.generate(currentQrPayload, 360));
+        bigQr.setFitWidth(320);
+        bigQr.setFitHeight(320);
+
+        Label ipLabel = new Label(ipAddressLabel.getText());
+        ipLabel.setStyle("-fx-font-size:18px;-fx-font-weight:800;-fx-text-fill:#1E2130;" +
+                          "-fx-font-family:'Courier New';");
+        Label hint = new Label("Scan this from the Android app's Server Settings screen.");
+        hint.setStyle("-fx-font-size:12px;-fx-text-fill:#5A6275;");
+        hint.setWrapText(true);
+
+        VBox root = new VBox(14, bigQr, ipLabel, hint);
+        root.setAlignment(Pos.CENTER);
+        root.setStyle("-fx-padding:28;-fx-background-color:#FFFFFF;");
+
+        javafx.scene.Scene scene = new javafx.scene.Scene(root, 380, 420);
+        scene.getStylesheets().add(
+            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
+        stage.setScene(scene);
+        stage.showAndWait();
     }
 }

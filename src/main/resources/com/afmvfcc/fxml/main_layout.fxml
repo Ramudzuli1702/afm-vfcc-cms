@@ -4,9 +4,11 @@
 <?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
 
-<HBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.afmvfcc.controllers.MainLayoutController"
-      styleClass="root" prefWidth="1280" prefHeight="780">
+<StackPane xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.afmvfcc.controllers.MainLayoutController"
+           prefWidth="1280" prefHeight="780">
+
+<HBox styleClass="root" StackPane.alignment="CENTER">
 
     <!-- ── SIDEBAR ── -->
     <VBox styleClass="sidebar" prefWidth="220" minWidth="220">
@@ -39,6 +41,7 @@
                 <Button fx:id="btnCalendar"   text="⬛  Calendar"        styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
                 <Button fx:id="btnWelfare"    text="⬛  Welfare"         styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
                 <Button fx:id="btnFinance"    text="⬛  Finance"         styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button fx:id="btnInventory"  text="⬛  Inventory"       styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
 
                 <Label text="COMMUNICATIONS" styleClass="sidebar-section-label"/>
                 <Button fx:id="btnComms"      text="⬛  Communications"  styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
@@ -86,3 +89,14 @@
 
     </VBox>
 </HBox>
+
+    <!-- ── TOAST LAYER — floats above everything, bottom-right.
+         mouseTransparent is the key bit: StackPane stretches this VBox to
+         fill the whole window by default, so without it this invisible
+         layer would sit on top of the entire UI and swallow every click,
+         even while empty. pickOnBounds alone does NOT prevent that. ── -->
+    <VBox fx:id="toastContainer" spacing="10" mouseTransparent="true"
+          alignment="BOTTOM_RIGHT" StackPane.alignment="BOTTOM_RIGHT"
+          style="-fx-padding:0 24 24 0;"/>
+
+</StackPane>

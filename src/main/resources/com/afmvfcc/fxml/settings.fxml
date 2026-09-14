@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
 
 <ScrollPane fitToWidth="true" xmlns:fx="http://javafx.com/fxml"
@@ -286,6 +287,55 @@
             </HBox>
             <Label text="The local folder sync works alongside GitHub — both are updated on every save."
                    style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+        </VBox>
+
+        <!-- ── MOBILE APP CONNECTION ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="MOBILE APP" styleClass="section-label"/>
+            <Label text="Connect the Android App" styleClass="section-title"/>
+            <Label text="Ushers scan this QR code from the app's Server Settings screen to connect automatically — no typing an IP address."
+                   wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:13px;"/>
+
+            <HBox spacing="24" alignment="CENTER_LEFT">
+                <ImageView fx:id="connectQrImage" fitWidth="160" fitHeight="160"/>
+                <VBox spacing="10" HBox.hgrow="ALWAYS">
+                    <VBox spacing="4">
+                        <Label text="SERVER ADDRESS" styleClass="form-label"/>
+                        <Label fx:id="serverAddressLabel" text="Detecting..."
+                               style="-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+                        <Label fx:id="serverAdapterLabel" text="" wrapText="true"
+                               style="-fx-font-size:11px;-fx-text-fill:#9099AA;"/>
+                    </VBox>
+                    <HBox spacing="10">
+                        <Button text="📋  Copy Address" styleClass="btn-secondary" onAction="#handleCopyServerAddress"/>
+                        <Button text="🔄  Refresh" styleClass="btn-secondary" onAction="#handleRefreshServerAddress"/>
+                    </HBox>
+                    <Label fx:id="hotspotNoticeLabel" wrapText="true" style="-fx-text-fill:#C07800;-fx-font-size:11px;"/>
+                </VBox>
+            </HBox>
+
+            <Label wrapText="true" style="-fx-text-fill:#3A86C8;-fx-font-size:11px;"
+                   text="To let phones connect over Mobile Hotspot instead of your regular WiFi: Windows Settings → Network &amp; internet → Mobile hotspot → turn it on, then click Refresh above."/>
+        </VBox>
+
+        <!-- ── CONNECTED DEVICES ── -->
+        <VBox styleClass="page-card" spacing="16">
+            <Label text="MOBILE APP" styleClass="section-label"/>
+            <Label text="Connected Devices" styleClass="section-title"/>
+            <Label text="Devices currently signed in to the Android app. Revoking a device signs it out immediately — it will need to log in again."
+                   wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:13px;"/>
+
+            <TableView fx:id="devicesTable" prefHeight="200">
+                <columns>
+                    <TableColumn fx:id="colDeviceUser"    text="SIGNED IN AS"      prefWidth="180"/>
+                    <TableColumn fx:id="colDeviceName"    text="DEVICE"            prefWidth="180"/>
+                    <TableColumn fx:id="colDeviceSince"   text="CONNECTED SINCE"   prefWidth="180"/>
+                    <TableColumn fx:id="colDeviceActions" text=""                  prefWidth="110"/>
+                </columns>
+                <placeholder>
+                    <Label text="No devices are currently signed in." style="-fx-text-fill:#9099AA;"/>
+                </placeholder>
+            </TableView>
         </VBox>
 
         <!-- ── SAVE ALL ── -->
