@@ -1072,3 +1072,13 @@ ScrollPane > .viewport {
 
 .attendance-chart .default-color0.chart-series-line { -fx-stroke: #3A86C8; -fx-stroke-width: 2px; }
 .attendance-chart .default-color0.chart-line-symbol { -fx-background-color: #3A86C8, white; }
+
+/* Welfare status pie — same colours as the badge-pending/inprogress/completed
+   classes used everywhere else in the app, so the dashboard matches the
+   Welfare module exactly. Data is always added in this fixed order
+   (Pending, In Progress, Completed) so data0/data1/data2 map predictably. */
+.welfare-status-chart .data0.chart-pie { -fx-pie-color: #C07800; }
+.welfare-status-chart .data1.chart-pie { -fx-pie-color: #2A6BA8; }
+.welfare-status-chart .data2.chart-pie { -fx-pie-color: #2E7D4F; }
+
+.chart-legend-item { -fx-text-fill: #1E2130; -fx-font-size: 11px; }

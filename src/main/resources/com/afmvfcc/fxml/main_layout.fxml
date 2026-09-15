@@ -55,6 +55,7 @@
                 <Button fx:id="btnAdmins"     text="⬛  Admins"          styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
                 <Button fx:id="btnAuditLog"   text="⬛  Audit Log"       styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
                 <Button fx:id="btnSettings"   text="⬛  Settings"        styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button fx:id="btnDocumentation" text="⬛  Documentation" styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
 
             </VBox>
         </ScrollPane>

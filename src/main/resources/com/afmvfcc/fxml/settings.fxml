@@ -321,14 +321,15 @@
         <!-- ── CONNECTED DEVICES ── -->
         <VBox styleClass="page-card" spacing="16">
             <Label text="MOBILE APP" styleClass="section-label"/>
-            <Label text="Connected Devices" styleClass="section-title"/>
-            <Label text="Devices currently signed in to the Android app. Revoking a device signs it out immediately — it will need to log in again."
+            <Label text="Connected Devices &amp; Ushers" styleClass="section-title"/>
+            <Label text="Admins and ushers currently signed in to the Android app. Revoking a device signs it out immediately — it will need to log in again."
                    wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:13px;"/>
 
             <TableView fx:id="devicesTable" prefHeight="200">
                 <columns>
-                    <TableColumn fx:id="colDeviceUser"    text="SIGNED IN AS"      prefWidth="180"/>
-                    <TableColumn fx:id="colDeviceName"    text="DEVICE"            prefWidth="180"/>
+                    <TableColumn fx:id="colDeviceUser"    text="SIGNED IN AS"      prefWidth="160"/>
+                    <TableColumn fx:id="colDeviceRole"    text="ROLE"              prefWidth="90"/>
+                    <TableColumn fx:id="colDeviceName"    text="DEVICE"            prefWidth="160"/>
                     <TableColumn fx:id="colDeviceSince"   text="CONNECTED SINCE"   prefWidth="180"/>
                     <TableColumn fx:id="colDeviceActions" text=""                  prefWidth="110"/>
                 </columns>

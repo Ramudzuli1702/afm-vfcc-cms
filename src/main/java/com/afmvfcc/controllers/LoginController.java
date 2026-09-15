@@ -75,10 +75,20 @@ public class LoginController {
             int failedAttempts = rs.getInt("failed_attempts");
 
             if (PasswordUtil.verify(password, storedHash)) {
+                User user = mapUser(rs);
+
+                if (user.isUsher()) {
+                    // Correct credentials, but Usher accounts are app-only —
+                    // don't reset failed_attempts or grant a desktop session.
+                    showError("This is an Usher account for the mobile app only. " +
+                        "Please log in from the AFM VFCC mobile app instead.");
+                    AuditLogger.log(userId, "Usher account blocked from desktop login: " + username);
+                    return;
+                }
+
                 // Successful login — reset failed attempts
                 resetFailedAttempts(conn, userId);
 
-                User user = mapUser(rs);
                 SessionManager.getInstance().login(user, Main::showLogin);
                 Main.showMainLayout();
 
@@ -113,6 +123,7 @@ public class LoginController {
         user.setPhone(rs.getString("phone"));
         user.setRoleTitle(rs.getString("role_title"));
         user.setPhotoPath(rs.getString("photo_path"));
+        try { user.setAccountRole(rs.getString("account_role")); } catch (SQLException ignored) {}
         user.setSuperAdmin(rs.getInt("is_super_admin") == 1);
         user.setActive(rs.getInt("is_active") == 1);
         return user;

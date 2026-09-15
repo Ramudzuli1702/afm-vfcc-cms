@@ -60,40 +60,37 @@ this in the console:
 
 Before using the app for the first time, you need to tell it the IP address of the CMS computer.
 
-### Step 1 — Find the CMS computer's IP address
+### Step 1 — Scan the QR code (recommended)
 
-The easiest way: on the CMS computer, open **Settings** (or the **Attendance**
-tab) — both show a **Server Address** box with the current IP and a QR code.
-If Windows **Mobile Hotspot** is turned on, the CMS automatically shows that
-adapter's address instead of the regular WiFi one, so phones can connect
-directly to the church computer's hotspot with no router needed.
+1. On the CMS computer, open **Settings** (or the **Attendance** tab) — both
+   show a **Server Address** box with the current IP and a QR code.
+   If Windows **Mobile Hotspot** is turned on, the CMS automatically shows
+   that adapter's address instead of the regular WiFi one, so phones can
+   connect directly to the church computer's hotspot with no router needed.
+2. Open the **AFM VFCC** app on the phone, tap **Server Settings**, then
+   **Scan QR Code** (grant the camera permission if asked).
+3. Point the camera at the CMS's QR code — the IP and port fill in
+   automatically. Tap **Save Settings**.
 
-> The IP address may change if the router restarts (or the Mobile Hotspot is
-> toggled off/on). If the app stops connecting, check the CMS's Settings or
-> Attendance screen again for the current address.
+> The address may change if the router restarts (or the Mobile Hotspot is
+> toggled off/on). If the app stops connecting, just re-scan the QR code.
 
 <details>
-<summary>Manual method (ipconfig)</summary>
+<summary>Manual entry (no camera / can't scan)</summary>
 
-1. On the CMS computer, press `Windows + R`, type `cmd` and press Enter.
-2. In the black window, type `ipconfig` and press Enter.
-3. Look for **"IPv4 Address"** under your WiFi (or "Local Area Connection\*")
-   adapter. It will look something like `192.168.1.5`.
+1. On the CMS computer, the same Settings/Attendance screen shows the
+   address as plain text next to the QR code (e.g. `192.168.1.5:8080`) —
+   or run `ipconfig` on the CMS computer and look for **"IPv4 Address"**.
+2. In the app, tap **Server Settings**, enter the IP address, leave the
+   port as `8080`, tap **Test Connection**, then **Save Settings**.
 
 </details>
 
-### Step 2 — Enter the server address in the app
+### Step 2 — Log in
 
-1. Open the **AFM VFCC** app on the phone.
-2. On the login screen, tap **Server Settings** at the bottom.
-3. Enter the IP address you found (e.g. `192.168.1.5`).
-4. Leave the port as `8080` (default).
-5. Tap **Test Connection** — you should see "Connected successfully".
-6. Tap **Save Settings**.
-
-### Step 3 — Log in
-
-Use the same username and password you use to log into the CMS desktop application.
+Use the same username and password you use to log into the CMS desktop
+application (or the Usher account an admin created for you in Admins →
+Add Admin → Account Type: Usher).
 
 ---
 

@@ -11,6 +11,7 @@ public class User {
     private String phone;
     private String roleTitle;
     private String photoPath;
+    private String accountRole = "admin";
     private boolean superAdmin;
     private boolean active;
     private int failedAttempts;
@@ -58,6 +59,10 @@ public class User {
 
     public String getPhotoPath()                { return photoPath; }
     public void setPhotoPath(String photoPath)  { this.photoPath = photoPath; }
+
+    public String getAccountRole()              { return accountRole; }
+    public void setAccountRole(String r)        { this.accountRole = r; }
+    public boolean isUsher()                    { return "usher".equalsIgnoreCase(accountRole); }
 
     public boolean isSuperAdmin()               { return superAdmin; }
     public void setSuperAdmin(boolean superAdmin){ this.superAdmin = superAdmin; }

@@ -199,6 +199,34 @@ public class DocumentExporter {
         });
     }
 
+    // ── Documentation (User Guide + Policy) ─────────────────────
+    record DocSection(String heading, List<String> body) {}
+
+    public static void exportUserGuide() {
+        String fmt = pickFormat(false);
+        if (fmt == null) return;
+        File out = chooseSave("AFM_VFCC_User_Guide_" + today(), fmt);
+        if (out == null) return;
+        List<DocSection> sections = UserGuideContent.sections().stream()
+                .map(s -> new DocSection(s.heading(), s.body())).toList();
+        bg(() -> {
+            if ("pdf".equals(fmt)) userGuidePdf(sections, out);
+            else userGuideDocx(sections, out);
+            showOk("User Guide saved to:\n" + out.getAbsolutePath());
+        });
+    }
+
+    public static void exportPolicy() {
+        File out = chooseSave("AFM_VFCC_System_Usage_Policy_" + today(), "pdf");
+        if (out == null) return;
+        List<DocSection> sections = PolicyContent.sections().stream()
+                .map(s -> new DocSection(s.heading(), s.body())).toList();
+        bg(() -> {
+            policyPdf(sections, out);
+            showOk("Policy document saved to:\n" + out.getAbsolutePath());
+        });
+    }
+
     // ══════════════════════════════════════════════════════════
     // PDF — iText7
     // ══════════════════════════════════════════════════════════
@@ -356,6 +384,61 @@ public class DocumentExporter {
 
         doc.add(t);
         footer(doc, r, null);
+        doc.close();
+    }
+
+    private static void userGuidePdf(List<DocSection> sections, File out) throws Exception {
+        Document doc = openDoc(out, false);
+        PdfFont b = bold(), r = reg();
+        letterhead(doc, b, r, "User Guide");
+        doc.add(new Paragraph("A complete guide to every module in the AFM VFCC Church Management System.")
+                .setFont(r).setFontSize(10).setFontColor(MUTED).setMarginBottom(16));
+        for (DocSection s : sections) {
+            doc.add(new Paragraph(s.heading())
+                    .setFont(b).setFontSize(13).setFontColor(NAVY)
+                    .setMarginTop(14).setMarginBottom(6));
+            for (String line : s.body()) {
+                boolean bullet = line.startsWith("- ");
+                Paragraph p = new Paragraph(bullet ? "•  " + line.substring(2) : line)
+                        .setFont(r).setFontSize(10.5f).setFontColor(BODY)
+                        .setMarginBottom(bullet ? 3 : 8);
+                if (bullet) p.setMarginLeft(14);
+                doc.add(p);
+            }
+        }
+        footer(doc, r, null);
+        doc.close();
+    }
+
+    private static void policyPdf(List<DocSection> sections, File out) throws Exception {
+        Document doc = openDoc(out, false);
+        PdfFont b = bold(), r = reg();
+        DeviceRgb black = new DeviceRgb(0, 0, 0);
+
+        doc.add(new Paragraph("AFM VFCC CHURCH MANAGEMENT SYSTEM")
+                .setFont(b).setFontSize(14).setFontColor(black).setMarginBottom(0));
+        doc.add(new Paragraph("SYSTEM USAGE POLICY")
+                .setFont(b).setFontSize(18).setFontColor(black).setMarginBottom(4));
+        doc.add(new Paragraph()
+                .setBorderBottom(new SolidBorder(black, 1f))
+                .setMarginTop(4).setMarginBottom(14));
+
+        for (DocSection s : sections) {
+            doc.add(new Paragraph(s.heading())
+                    .setFont(b).setFontSize(12).setFontColor(black)
+                    .setMarginTop(12).setMarginBottom(6));
+            for (String line : s.body()) {
+                boolean bullet = line.startsWith("- ");
+                Paragraph p = new Paragraph(bullet ? "•  " + line.substring(2) : line)
+                        .setFont(r).setFontSize(10.5f).setFontColor(black)
+                        .setMarginBottom(bullet ? 3 : 8);
+                if (bullet) p.setMarginLeft(14);
+                doc.add(p);
+            }
+        }
+        doc.add(new Paragraph("Generated: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")))
+                .setFont(r).setFontSize(8).setFontColor(black)
+                .setTextAlignment(TextAlignment.RIGHT).setMarginTop(16));
         doc.close();
     }
 
@@ -619,6 +702,36 @@ public class DocumentExporter {
                 dxDat(t.getRow(i + 1).getCell(5), nvl(ev.getDescription()), ws[5], sh, "9099AA");
             }
             docxFooter(doc, "Total events: " + events.size());
+            try (FileOutputStream f = new FileOutputStream(out)) {
+                doc.write(f);
+            }
+        }
+    }
+
+    private static void userGuideDocx(List<DocSection> sections, File out) throws Exception {
+        try (XWPFDocument doc = new XWPFDocument()) {
+            docxLetterhead(doc, "User Guide");
+            XWPFRun sub = doc.createParagraph().createRun();
+            sub.setText("A complete guide to every module in the AFM VFCC Church Management System.");
+            sub.setColor("9099AA");
+            sub.setFontSize(10);
+            sub.setItalic(true);
+
+            for (DocSection s : sections) {
+                XWPFParagraph hp = doc.createParagraph();
+                hp.setSpacingBefore(280);
+                hp.setSpacingAfter(120);
+                dxRun(hp, s.heading(), POI_NAVY, 14, true);
+
+                for (String line : s.body()) {
+                    boolean bullet = line.startsWith("- ");
+                    XWPFParagraph p = doc.createParagraph();
+                    p.setSpacingAfter(bullet ? 60 : 160);
+                    if (bullet) p.setIndentationLeft(280);
+                    dxRun(p, bullet ? "•  " + line.substring(2) : line, POI_BODY, 11, false);
+                }
+            }
+            docxFooter(doc, null);
             try (FileOutputStream f = new FileOutputStream(out)) {
                 doc.write(f);
             }

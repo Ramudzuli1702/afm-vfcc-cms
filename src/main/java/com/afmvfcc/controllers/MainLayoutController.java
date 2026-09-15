@@ -3,6 +3,7 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.Main;
 import com.afmvfcc.models.User;
 import com.afmvfcc.utils.GitHubSync;
+import com.afmvfcc.utils.NavigationBus;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
@@ -39,6 +40,7 @@ public class MainLayoutController {
     @FXML private Button btnAdmins;
     @FXML private Button btnAuditLog;
     @FXML private Button btnSettings;
+    @FXML private Button btnDocumentation;
     @FXML private Button btnCommems;
     @FXML private Button btnViewWebsite;
     @FXML private Button btnBroadcast;
@@ -65,6 +67,7 @@ public class MainLayoutController {
         pageMap.put("btnAdmins",     new String[]{"admins.fxml",          "Admins",          "Manage system users"});
         pageMap.put("btnAuditLog",   new String[]{"audit_log.fxml",       "Audit Log",       "System activity trail"});
         pageMap.put("btnSettings",   new String[]{"settings.fxml",        "Settings",        "Backup, email & SMS"});
+        pageMap.put("btnDocumentation", new String[]{"documentation.fxml", "Documentation",  "User guide & usage policy"});
         pageMap.put("btnCommems",    new String[]{"commemorations.fxml",  "Commemorations",  "Issue certificates"});
         pageMap.put("btnBroadcast",  new String[]{"broadcast.fxml",       "Broadcast",       "Facebook → YouTube"});
 
@@ -77,6 +80,31 @@ public class MainLayoutController {
 
         setNavIcons();
         loadPage(btnDashboard);
+
+        buttonsById.put("btnDashboard", btnDashboard);
+        buttonsById.put("btnMembers", btnMembers);
+        buttonsById.put("btnAttendance", btnAttendance);
+        buttonsById.put("btnBoard", btnBoard);
+        buttonsById.put("btnCalendar", btnCalendar);
+        buttonsById.put("btnWelfare", btnWelfare);
+        buttonsById.put("btnFinance", btnFinance);
+        buttonsById.put("btnInventory", btnInventory);
+        buttonsById.put("btnComms", btnComms);
+        buttonsById.put("btnWebsite", btnWebsite);
+        buttonsById.put("btnAdmins", btnAdmins);
+        buttonsById.put("btnAuditLog", btnAuditLog);
+        buttonsById.put("btnSettings", btnSettings);
+        buttonsById.put("btnDocumentation", btnDocumentation);
+        buttonsById.put("btnCommems", btnCommems);
+        buttonsById.put("btnBroadcast", btnBroadcast);
+        NavigationBus.attach(this::navigateById);
+    }
+
+    private final Map<String, Button> buttonsById = new HashMap<>();
+
+    private void navigateById(String btnId) {
+        Button btn = buttonsById.get(btnId);
+        if (btn != null && btn != activeBtn) loadPage(btn);
     }
 
     @FXML
@@ -192,6 +220,7 @@ public class MainLayoutController {
         btnAdmins.setText("⚙  Admins");
         btnAuditLog.setText("📋  Audit Log");
         btnSettings.setText("🔧  Settings");
+        btnDocumentation.setText("📖  Documentation");
         btnCommems.setText("🎖  Commemorations");
     }
 }

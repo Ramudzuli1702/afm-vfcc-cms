@@ -73,9 +73,9 @@
                             style="-fx-text-fill:#D94040;"
                             onAction="#handleCloseSession"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="📱  Merge Android"  styleClass="btn-secondary"
+                    <Button text="🔄  Sync with App"  styleClass="btn-secondary"
                             style="-fx-padding:6 12;-fx-font-size:11px;"
-                            onAction="#handleMergeAndroid"/>
+                            onAction="#handleSyncWithApp"/>
                 </HBox>
 
                 <!-- ── Sync status bar ── -->

@@ -707,7 +707,7 @@ public class DatabaseConnection {
             "CREATE TABLE IF NOT EXISTS sub_branches (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, is_active TINYINT(1) DEFAULT 1) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS families (id INT AUTO_INCREMENT PRIMARY KEY, family_name VARCHAR(100) NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS ministries (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, description TEXT, is_active TINYINT(1) DEFAULT 1) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
-            "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, full_name VARCHAR(100) NOT NULL, username VARCHAR(50) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, email VARCHAR(100), phone VARCHAR(20), role_title VARCHAR(50), photo_path VARCHAR(255), is_super_admin TINYINT(1) DEFAULT 0, is_active TINYINT(1) DEFAULT 1, failed_attempts INT DEFAULT 0, locked_until DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, full_name VARCHAR(100) NOT NULL, username VARCHAR(50) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, email VARCHAR(100), phone VARCHAR(20), role_title VARCHAR(50), photo_path VARCHAR(255), account_role VARCHAR(20) NOT NULL DEFAULT 'admin', is_super_admin TINYINT(1) DEFAULT 0, is_active TINYINT(1) DEFAULT 1, failed_attempts INT DEFAULT 0, locked_until DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS members (" +
                 "id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "full_name VARCHAR(100) NOT NULL, " +
@@ -840,6 +840,7 @@ public class DatabaseConnection {
 
                 ensureAttendanceSessionsMigration(connection);
                 ensureGitHubSettingsMigration(connection);
+                ensureUserAccountRoleMigration(connection);
             }
         } catch (ClassNotFoundException e) {
             System.err.println("[DB] JDBC Driver not found."); e.printStackTrace();
@@ -882,6 +883,21 @@ public class DatabaseConnection {
             }
         } catch (SQLException e) {
             System.err.println("[DB] Index migration skipped: " + e.getMessage());
+        }
+    }
+
+    private static void ensureUserAccountRoleMigration(Connection conn) {
+        try {
+            ResultSet rs = conn.getMetaData().getColumns(null, null, "users", "account_role");
+            if (!rs.next()) {
+                conn.createStatement().executeUpdate(
+                    "ALTER TABLE users ADD COLUMN account_role VARCHAR(20) NOT NULL DEFAULT 'admin' " +
+                    "COMMENT 'admin = full desktop + app access, usher = mobile app only'");
+                System.out.println("[DB] Migration: added account_role to users");
+            }
+            rs.close();
+        } catch (SQLException e) {
+            System.err.println("[DB] Migration check failed: " + e.getMessage());
         }
     }
 

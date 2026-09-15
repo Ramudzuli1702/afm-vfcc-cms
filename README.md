@@ -7,13 +7,13 @@
 
 | File count | Category |
 |---|---|
-| 23 Java controllers | `src/main/java/com/afmvfcc/controllers/` |
+| 24 Java controllers (+ 2 documentation content classes) | `src/main/java/com/afmvfcc/controllers/` |
 | 10 Java models | `src/main/java/com/afmvfcc/models/` |
-| 14 Java utilities | `src/main/java/com/afmvfcc/utils/` |
+| 15 Java utilities | `src/main/java/com/afmvfcc/utils/` |
 | 1 DB connection class | `src/main/java/com/afmvfcc/db/` |
 | 1 embedded REST API | `src/main/java/com/afmvfcc/api/` — serves the Android app, see [Android App](#-android-app) |
 | 1 Main entry point | `src/main/java/com/afmvfcc/` |
-| 18 FXML layouts | `src/main/resources/com/afmvfcc/fxml/` |
+| 19 FXML layouts | `src/main/resources/com/afmvfcc/fxml/` |
 | 1 CSS stylesheet | `src/main/resources/com/afmvfcc/css/` |
 | 1 reference schema | `afm_vfcc_setup.sql` (kept for documentation — the app builds its own schema automatically, see below) |
 | 1 Android companion app | `android-app/` — see [Android App](#-android-app) |
@@ -154,7 +154,8 @@ AFM_VFCC_CMS/
     │       │   ├── YtdlpUpdater.java           ← Auto-updates bundled yt-dlp every ~90 days
     │       │   ├── NetworkUtils.java           ← Finds the LAN/Mobile-Hotspot IP for the Android app
     │       │   ├── QrCodeGenerator.java        ← Renders a connect-QR (ZXing) for the Android app
-    │       │   └── ToastManager.java           ← App-wide Success/Failed toast notifications
+    │       │   ├── ToastManager.java           ← App-wide Success/Failed toast notifications
+    │       │   └── NavigationBus.java          ← Lets any page jump the sidebar (e.g. clickable Dashboard cards)
     │       └── controllers/
     │           ├── LoginController.java        ← Auth + lockout
     │           ├── MainLayoutController.java   ← Sidebar navigation + toast layer
@@ -177,8 +178,11 @@ AFM_VFCC_CMS/
     │           ├── CommemorationsController.java← Issues certificates (baptism, blessing, appreciation, death)
     │           ├── CertificateGenerator.java   ← PDF certificate rendering engine
     │           ├── SettingsController.java     ← Backup/restore, website/GitHub, SMTP/BulkSMS, mobile app connect QR, connected devices
-    │           ├── AdminsController.java       ← Super admin: manage admins
+    │           ├── AdminsController.java       ← Super admin: manage admins & ushers
     │           ├── AuditLogController.java     ← Read-only audit trail
+    │           ├── DocumentationController.java← Exports the User Guide (PDF/Word) and System Usage Policy (PDF)
+    │           ├── UserGuideContent.java       ← User Guide copy (rendered with the letterhead)
+    │           ├── PolicyContent.java          ← Usage Policy copy (rendered plain, no letterhead)
     │           └── FinanceController.java      ← Placeholder (future)
     └── resources/com/afmvfcc/
         ├── css/
@@ -201,6 +205,7 @@ AFM_VFCC_CMS/
             ├── settings.fxml
             ├── admins.fxml
             ├── audit_log.fxml
+            ├── documentation.fxml
             └── finance.fxml
 ```
 
@@ -222,10 +227,12 @@ startup in `MainLayoutController`.
 - Session timeout: 15 minutes of inactivity → auto-logout
 
 ### Dashboard
-- 8 stat cards pulled live from DB
-- Upcoming events in next 7 days
-- Pending welfare cases
-- Pending member approvals with count badge
+- Stat cards pulled live from the DB — click one to jump straight to the related module
+- A ministry-involvement bar chart, a 6-week attendance line chart, and a Welfare Cases by
+  Status pie chart (click it to jump to Welfare)
+- A Recent Activity feed showing the latest actions across the system, pulled from the Audit Log
+- Upcoming events in next 7 days, birthdays this week, pending welfare cases, and pending
+  member approvals with a count badge
 
 ### Members
 Seven tabs in one module: **All Members** (full CRUD with soft delete, search
@@ -245,6 +252,9 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 - Shows the server address the Android app should connect to (prefers the
   Windows Mobile Hotspot adapter when it's on) with a QR code — tap it to
   enlarge for scanning, see [Android App](#-android-app)
+- **Sync with App** button refreshes the current session from the database,
+  so attendance/guest records an usher just synced from their phone show up
+  immediately without reselecting the session
 - Sessions and attendance can also be taken from the Android app and synced
   back here
 
@@ -309,8 +319,9 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
   it's on); ushers turn on Mobile Hotspot themselves in Windows Settings —
   the CMS only displays the connection info, it doesn't toggle it
 - **Connected Devices**: lists every phone currently signed in to the
-  Android app (from `app_tokens`), with a one-click **Revoke** to sign a
-  device out immediately
+  Android app (from `app_tokens`), showing whether each is an Admin or
+  Usher account, with a one-click **Revoke** to sign a device out
+  immediately
 
 ### Website
 - Blog posts (title, author, content) and website events (separate from the
@@ -323,11 +334,26 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 - BCrypt password hashing on save
 - Account unlock button for locked accounts
 - Super admin cannot be deleted or demoted
+- **Account Type**: Admin (full desktop + mobile app access) or Usher
+  (mobile app only — attendance/guests — blocked from the desktop login
+  with a clear message)
 
 ### Audit Log (Super Admin Only)
 - Read-only table of all admin actions
 - 500 most recent entries
 - Searchable by admin name or action text
+
+### Documentation
+- **User Guide** and **System Usage Policy** are both readable directly in the app — two tabs,
+  each showing the full text so nothing needs to be downloaded just to read it
+- **User Guide**: a complete, step-by-step guide to every module in the system. The Download
+  button exports it as PDF or Word with the same church letterhead used across every other export
+- **System Usage Policy**: acceptable use, Admin/Usher access levels, password security, data
+  privacy and confidentiality, backup and retention, and incident reporting. The Download button
+  exports it as a plain, black-and-white PDF with no letterhead, ready to print and sign
+- Content lives as plain data (`UserGuideContent.java` / `PolicyContent.java`), rendered once for
+  the in-app tabs and again through `DocumentExporter`'s letterhead/plain-text renderers for the
+  download — so the on-screen text and the exported document are always identical
 
 ---
 
@@ -344,11 +370,16 @@ church WiFi — no internet connection is used. It:
   user, expires after 90 days, and is revoked immediately if that user is
   deactivated in Admins)
 - Applies the same 5-failed-attempt lockout as the desktop login
+- Works for both Admin and Usher accounts (Ushers are app-only — see Admins
+  above)
 - Lists open attendance sessions and lets the app create new ones
 - Serves the ministry-filtered member list for marking attendance
 - Accepts synced attendance records (rejected if the session has since been
-  closed) and guest registrations, which land in the **Guests** tab under
-  Members for an admin to promote or dismiss
+  closed) and guest registrations, scoped to the session they were recorded
+  in, which land in the **Guests** tab under Members for an admin to
+  promote or dismiss
+- The app can scan the QR code shown in the CMS's Settings/Attendance
+  screens to connect instead of typing the IP address
 
 ---
 

@@ -26,22 +26,26 @@
                 <ColumnConstraints percentWidth="25"/>
             </columnConstraints>
 
-            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
+            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6"
+                  onMouseClicked="#handleStatMembersClick" style="-fx-cursor:hand;">
                 <Label text="👥" styleClass="stat-icon"/>
                 <Label text="TOTAL MEMBERS" styleClass="stat-label"/>
                 <Label fx:id="statTotal" text="0" styleClass="stat-number"/>
             </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
+            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6"
+                  onMouseClicked="#handleStatMembersClick" style="-fx-cursor:hand;">
                 <Label text="✅" styleClass="stat-icon"/>
                 <Label text="ACTIVE (FULL TIME)" styleClass="stat-label"/>
                 <Label fx:id="statActive" text="0" styleClass="stat-number"/>
             </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
+            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6"
+                  onMouseClicked="#handleStatMembersClick" style="-fx-cursor:hand;">
                 <Label text="🕓" styleClass="stat-icon"/>
                 <Label text="PART TIME" styleClass="stat-label"/>
                 <Label fx:id="statPartTime" text="0" styleClass="stat-number"/>
             </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
+            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6"
+                  onMouseClicked="#handleStatAttendanceClick" style="-fx-cursor:hand;">
                 <Label text="📊" styleClass="stat-icon"/>
                 <Label text="LAST WEEK ATTENDANCE" styleClass="stat-label"/>
                 <HBox spacing="8" alignment="CENTER_LEFT">
@@ -82,7 +86,22 @@
                 </LineChart>
             </VBox>
 
+            <VBox styleClass="chart-card" spacing="10" HBox.hgrow="ALWAYS" onMouseClicked="#handleWelfareChartClick" style="-fx-cursor:hand;">
+                <Label text="WELFARE CASES BY STATUS" styleClass="section-label"/>
+                <PieChart fx:id="welfareStatusChart" legendVisible="true" legendSide="BOTTOM"
+                          animated="false" prefHeight="240" labelsVisible="false" VBox.vgrow="ALWAYS"
+                          styleClass="welfare-status-chart"/>
+            </VBox>
+
         </HBox>
+
+        <!-- ── RECENT ACTIVITY ── -->
+        <VBox styleClass="reminder-card" spacing="12">
+            <Label text="RECENT ACTIVITY" styleClass="section-label"/>
+            <VBox fx:id="recentActivityBox" spacing="8">
+                <Label text="No recent activity." styleClass="reminder-item"/>
+            </VBox>
+        </VBox>
 
         <!-- ── REMINDERS GRID (2x2) ── -->
         <GridPane hgap="14" vgap="14">

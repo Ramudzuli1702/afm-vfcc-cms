@@ -1,23 +1,29 @@
 package com.afmvfcc.controllers;
 
 import com.afmvfcc.db.DatabaseConnection;
+import com.afmvfcc.utils.NavigationBus;
 import com.afmvfcc.utils.SessionManager;
 import javafx.fxml.FXML;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.LineChart;
+import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 
 import java.sql.*;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.MonthDay;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DashboardController {
 
@@ -32,12 +38,14 @@ public class DashboardController {
 
     @FXML private BarChart<String, Number> ministryChart;
     @FXML private LineChart<String, Number> attendanceChart;
+    @FXML private PieChart welfareStatusChart;
 
     @FXML private VBox eventsRemindersBox;
     @FXML private VBox birthdaysBox;
     @FXML private VBox welfareRemindersBox;
     @FXML private VBox pendingBox;
     @FXML private Label pendingBadge;
+    @FXML private VBox recentActivityBox;
 
     private static final DateTimeFormatter FMT       = DateTimeFormatter.ofPattern("dd MMM yyyy");
     private static final DateTimeFormatter SUBTITLE_FMT = DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy");
@@ -48,11 +56,19 @@ public class DashboardController {
         loadGreeting();
         loadStats();
         loadAttendanceTrend();
+        loadWelfareStatusChart();
+        loadRecentActivity();
         loadUpcomingEvents();
         loadBirthdays();
         loadWelfareDue();
         loadPendingMembers();
     }
+
+    // ── INTERACTIVITY — clickable stat cards / charts ───────────
+
+    @FXML public void handleStatMembersClick()    { NavigationBus.goTo("btnMembers"); }
+    @FXML public void handleStatAttendanceClick()  { NavigationBus.goTo("btnAttendance"); }
+    @FXML public void handleWelfareChartClick()    { NavigationBus.goTo("btnWelfare"); }
 
     // ── GREETING ───────────────────────────────────────────────
 
@@ -165,11 +181,17 @@ public class DashboardController {
     private void loadMinistryChart(int youth, int sundaySchool, int women, int men) {
         ministryChart.getData().clear();
         XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.getData().add(new XYChart.Data<>("Youth", youth));
-        series.getData().add(new XYChart.Data<>("Sunday School", sundaySchool));
-        series.getData().add(new XYChart.Data<>("Women's", women));
-        series.getData().add(new XYChart.Data<>("Men's", men));
+        series.getData().add(ministryPoint("Youth", youth));
+        series.getData().add(ministryPoint("Sunday School", sundaySchool));
+        series.getData().add(ministryPoint("Women's", women));
+        series.getData().add(ministryPoint("Men's", men));
         ministryChart.getData().add(series);
+    }
+
+    private XYChart.Data<String, Number> ministryPoint(String ministry, int count) {
+        XYChart.Data<String, Number> d = new XYChart.Data<>(ministry, count);
+        installTooltip(d.nodeProperty(), ministry + ": " + count + (count == 1 ? " member" : " members"));
+        return d;
     }
 
     // ── ATTENDANCE TREND CHART ────────────────────────────────
@@ -184,12 +206,105 @@ public class DashboardController {
             for (int weeksAgo = 5; weeksAgo >= 0; weeksAgo--) {
                 LocalDate end = LocalDate.now().minusDays((long) weeksAgo * 7);
                 int weekCount = weeklyAttendance(conn, weeksAgo * 7);
-                series.getData().add(new XYChart.Data<>(end.format(WEEK_LABEL_FMT), weekCount));
+                XYChart.Data<String, Number> d = new XYChart.Data<>(end.format(WEEK_LABEL_FMT), weekCount);
+                installTooltip(d.nodeProperty(),
+                    "Week ending " + end.format(FMT) + ": " + weekCount +
+                    (weekCount == 1 ? " person present" : " people present"));
+                series.getData().add(d);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         attendanceChart.getData().add(series);
+    }
+
+    // ── WELFARE STATUS CHART ──────────────────────────────────
+
+    // Fixed order — matches the .data0/.data1/.data2 CSS rules in styles.css
+    // (.welfare-status-chart), which are what actually colour the pie slices
+    // AND their legend swatches, so the two always stay in sync. Always
+    // adding all three (even at 0) keeps that position -> colour mapping
+    // stable no matter which statuses currently have cases.
+    private static final String[] WELFARE_STATUSES = { "Pending", "In Progress", "Completed" };
+
+    private void loadWelfareStatusChart() {
+        welfareStatusChart.getData().clear();
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String s : WELFARE_STATUSES) counts.put(s, 0);
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT status, COUNT(*) AS c FROM welfare_cases GROUP BY status");
+            while (rs.next()) {
+                counts.put(rs.getString("status"), rs.getInt("c"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        if (counts.values().stream().allMatch(c -> c == 0)) {
+            welfareStatusChart.setData(javafx.collections.FXCollections.observableArrayList(
+                new PieChart.Data("No cases yet", 1)));
+            return;
+        }
+
+        for (String status : WELFARE_STATUSES) {
+            int count = counts.get(status);
+            PieChart.Data slice = new PieChart.Data(status + " (" + count + ")", count);
+            welfareStatusChart.getData().add(slice);
+            installTooltip(slice.nodeProperty(), status + ": " + count + (count == 1 ? " case" : " cases"));
+        }
+    }
+
+    // ── RECENT ACTIVITY ────────────────────────────────────────
+
+    private void loadRecentActivity() {
+        recentActivityBox.getChildren().clear();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            String sql = """
+                SELECT al.action, al.performed_at, u.full_name
+                FROM audit_log al
+                LEFT JOIN users u ON u.id = al.user_id
+                ORDER BY al.performed_at DESC
+                LIMIT 8
+                """;
+            ResultSet rs = conn.createStatement().executeQuery(sql);
+
+            boolean any = false;
+            while (rs.next()) {
+                any = true;
+                VBox item = new VBox(2);
+                Label action = new Label(rs.getString("action"));
+                action.getStyleClass().add("reminder-title");
+                String who = rs.getString("full_name") != null ? rs.getString("full_name") : "System";
+                Timestamp ts = rs.getTimestamp("performed_at");
+                Label sub = new Label(who + "  ·  " + relativeTime(ts));
+                sub.getStyleClass().add("reminder-item-date");
+                item.getChildren().addAll(action, sub);
+                recentActivityBox.getChildren().add(item);
+            }
+
+            if (!any) {
+                recentActivityBox.getChildren().add(makeEmpty("No recent activity."));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String relativeTime(Timestamp ts) {
+        if (ts == null) return "";
+        Duration d = Duration.between(ts.toLocalDateTime(), LocalDateTime.now());
+        long minutes = d.toMinutes();
+        if (minutes < 1) return "just now";
+        if (minutes < 60) return minutes + " min ago";
+        long hours = d.toHours();
+        if (hours < 24) return hours + " hour" + (hours == 1 ? "" : "s") + " ago";
+        long days = d.toDays();
+        if (days < 7) return days + " day" + (days == 1 ? "" : "s") + " ago";
+        return ts.toLocalDateTime().format(FMT);
     }
 
     // ── UPCOMING EVENTS ────────────────────────────────────────
@@ -399,5 +514,23 @@ public class DashboardController {
         Label l = new Label(text);
         l.getStyleClass().add("reminder-item");
         return l;
+    }
+
+    /**
+     * Attaches a hover Tooltip to a chart data point (bar, line-chart symbol,
+     * or pie slice). The underlying Node doesn't exist until the chart has
+     * laid the data out, so this waits on the nodeProperty rather than
+     * requiring the caller to know when that happens.
+     */
+    private void installTooltip(javafx.beans.value.ObservableValue<javafx.scene.Node> nodeProperty, String text) {
+        Tooltip tooltip = new Tooltip(text);
+        javafx.scene.Node existing = nodeProperty.getValue();
+        if (existing != null) {
+            Tooltip.install(existing, tooltip);
+        } else {
+            nodeProperty.addListener((obs, oldNode, newNode) -> {
+                if (newNode != null) Tooltip.install(newNode, tooltip);
+            });
+        }
     }
 }

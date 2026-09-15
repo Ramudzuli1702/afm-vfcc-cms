@@ -1,5 +1,10 @@
 package com.afmvfcc.app.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,12 +16,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.afmvfcc.app.ui.AppViewModel
 import com.afmvfcc.app.ui.theme.*
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +40,60 @@ fun SettingsScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     var saved      by remember { mutableStateOf(false) }
     var testing    by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<String?>(null) }
+    var scanError  by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+
+    // Parses the CMS's connect QR payload: afmvfcc://connect?ip=192.168.1.5&port=8080
+    fun applyScannedContent(content: String?) {
+        if (content.isNullOrBlank()) return
+        try {
+            val uri = Uri.parse(content)
+            val scannedIp   = uri.getQueryParameter("ip")
+            val scannedPort = uri.getQueryParameter("port")
+            if (uri.scheme == "afmvfcc" && !scannedIp.isNullOrBlank()) {
+                ip = scannedIp
+                port = scannedPort?.takeIf { it.isNotBlank() } ?: "8080"
+                saved = false
+                testResult = null
+                scanError = null
+            } else {
+                scanError = "That QR code isn't an AFM VFCC connect code."
+            }
+        } catch (e: Exception) {
+            scanError = "Couldn't read that QR code. Please try again."
+        }
+    }
+
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        applyScannedContent(result.contents)
+    }
+
+    fun launchScanner() {
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt("Scan the QR code from the CMS's Settings or Attendance screen")
+                .setBeepEnabled(false)
+                .setOrientationLocked(true)
+        )
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) launchScanner()
+        else scanError = "Camera permission is needed to scan the QR code."
+    }
+
+    fun handleScanClick() {
+        scanError = null
+        val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) launchScanner()
+        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
 
     Scaffold(
         topBar = {
@@ -69,19 +131,45 @@ fun SettingsScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                         Text("How to connect",
                             fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Navy)
                         Spacer(Modifier.height(4.dp))
-                        Text("1. On your phone, enable Mobile Hotspot (Settings > Hotspot).",
+                        Text("1. On the CMS computer, open Settings or Attendance - a QR code is shown next to the server address.",
                             fontSize = 12.sp, color = TextGrey)
-                        Text("2. On the CMS computer, connect to your phone hotspot via WiFi.",
+                        Text("2. Tap \"Scan QR Code\" below and point the camera at it - the address fills in automatically.",
                             fontSize = 12.sp, color = TextGrey)
-                        Text("3. In the CMS, open the Attendance page - the IP address is shown next to APP SERVER IP at the top.",
+                        Text("3. No camera handy? Enter the IP address shown on the CMS manually instead, then tap Save Settings.",
                             fontSize = 12.sp, color = TextGrey)
-                        Text("4. Enter that IP address below and tap Save Settings.",
+                        Text("4. If Mobile Hotspot is on for the CMS computer, connect your phone's WiFi to that hotspot first.",
                             fontSize = 12.sp, color = TextGrey)
                     }
                 }
             }
 
-            Text("CMS Server Address", fontWeight = FontWeight.Bold,
+            // Scan QR button
+            Button(
+                onClick = { handleScanClick() },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Gold)
+            ) {
+                Icon(Icons.Default.QrCodeScanner, null, tint = Navy)
+                Spacer(Modifier.width(8.dp))
+                Text("Scan QR Code", fontWeight = FontWeight.Bold, color = Navy)
+            }
+
+            scanError?.let { err ->
+                Surface(
+                    color = DangerRed.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Error, null, tint = DangerRed, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(err, fontSize = 13.sp, color = DangerRed)
+                    }
+                }
+            }
+
+            Text("Or enter it manually", fontWeight = FontWeight.Bold,
                 fontSize = 16.sp, color = TextDark)
 
             OutlinedTextField(

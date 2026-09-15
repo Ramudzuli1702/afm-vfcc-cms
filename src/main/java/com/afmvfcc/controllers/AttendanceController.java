@@ -512,12 +512,26 @@ public class AttendanceController {
         DocumentExporter.exportAttendance(sessionName, sessionDate, rows);
     }
 
-    // Android merge placeholder
+    // Re-pulls the current session's attendance + history from the DB, so
+    // records synced from the Android app (which writes straight to the DB
+    // via the REST API) show up here without needing to re-select the
+    // session or restart the desktop app.
     @FXML
-    public void handleMergeAndroid() {
-        Alert a = new Alert(Alert.AlertType.INFORMATION,
-            "Android merge will be available once the Android app is configured.");
-        Main.applyStyles(a.getDialogPane()); a.showAndWait();
+    public void handleSyncWithApp() {
+        if (currentSessionId < 0) {
+            ToastManager.error("Select a session first, then sync.");
+            return;
+        }
+        loadMembersForAttendance();
+        loadSessionHistory();
+        loadSessionCombo();
+        for (String item : sessionCombo.getItems()) {
+            if (item.contains("[id:" + currentSessionId + "]")) {
+                sessionCombo.setValue(item);
+                break;
+            }
+        }
+        ToastManager.success("Synced with the mobile app.");
     }
 
     // ══════════════════════════════════════════════════════════

@@ -14,6 +14,7 @@
             <columns>
                 <TableColumn fx:id="colAdminName"     text="FULL NAME"  prefWidth="200"/>
                 <TableColumn fx:id="colAdminUsername" text="USERNAME"   prefWidth="150"/>
+                <TableColumn fx:id="colAdminType"     text="TYPE"       prefWidth="90"/>
                 <TableColumn fx:id="colAdminRole"     text="ROLE"       prefWidth="160"/>
                 <TableColumn fx:id="colAdminEmail"    text="EMAIL"      prefWidth="200"/>
                 <TableColumn fx:id="colAdminStatus"   text="STATUS"     prefWidth="100"/>

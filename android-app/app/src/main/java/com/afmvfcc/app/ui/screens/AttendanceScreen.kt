@@ -43,6 +43,14 @@ fun AttendanceScreen(
     val syncResult     by viewModel.syncResult.collectAsState()
     val pendingGuests  by viewModel.pendingGuests.collectAsState()
 
+    // Guests are recorded against a specific session (GuestRecord.sessionId) but
+    // pendingGuests holds every not-yet-synced guest across ALL sessions on the
+    // device — scope it down to this session so switching sessions doesn't show
+    // a leftover count/list from whatever was last recorded elsewhere.
+    val sessionGuests = remember(pendingGuests, sessionId) {
+        pendingGuests.filter { it.sessionId == sessionId }
+    }
+
     var search           by remember { mutableStateOf("") }
     var selectedMinistry by remember { mutableStateOf("All") }
     var showSyncDialog   by remember { mutableStateOf(false) }
@@ -85,7 +93,7 @@ fun AttendanceScreen(
     // ── Guest list bottom sheet ───────────────────────────────
     if (showGuestsSheet) {
         GuestsBottomSheet(
-            guests    = pendingGuests,
+            guests    = sessionGuests,
             onDismiss = { showGuestsSheet = false }
         )
     }
@@ -226,63 +234,70 @@ fun AttendanceScreen(
         },
         bottomBar = {
             BottomAppBar(containerColor = White, tonalElevation = 8.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // ── View Guests button — only shown when this session has guests ──
+                    if (sessionGuests.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { showGuestsSheet = true },
+                            shape   = RoundedCornerShape(10.dp),
+                            colors  = ButtonDefaults.outlinedButtonColors(contentColor = Gold),
+                            border  = androidx.compose.foundation.BorderStroke(1.5.dp, Gold),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PeopleAlt, null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Gold
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "${sessionGuests.size}",
+                                fontWeight = FontWeight.Bold,
+                                color = Gold
+                            )
+                        }
+                    }
 
-                // ── View Guests button — only shown when guests exist ──
-                if (pendingGuests.isNotEmpty()) {
+                    Spacer(Modifier.weight(1f))
+
+                    // Add guest button
                     OutlinedButton(
-                        onClick = { showGuestsSheet = true },
-                        shape  = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Gold),
-                        modifier = Modifier.padding(start = 12.dp)
+                        onClick = onAddGuest,
+                        shape   = RoundedCornerShape(10.dp),
+                        colors  = ButtonDefaults.outlinedButtonColors(contentColor = Navy),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Icon(
-                            Icons.Default.PeopleAlt, null,
-                            modifier = Modifier.size(16.dp),
-                            tint = Gold
-                        )
+                        Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            "${pendingGuests.size} Guest${if (pendingGuests.size != 1) "s" else ""}",
-                            fontWeight = FontWeight.Bold,
-                            color = Gold
-                        )
+                        Text("Add Guest")
                     }
-                }
 
-                Spacer(Modifier.weight(1f))
-
-                // Add guest button
-                OutlinedButton(
-                    onClick = onAddGuest,
-                    shape  = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Navy),
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Add Guest")
-                }
-
-                // Sync button
-                Button(
-                    onClick  = { showSyncDialog = true },
-                    enabled  = !isSyncing,
-                    colors   = ButtonDefaults.buttonColors(containerColor = Navy),
-                    shape    = RoundedCornerShape(10.dp),
-                    modifier = Modifier.padding(end = 12.dp)
-                ) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(
-                            modifier    = Modifier.size(16.dp),
-                            color       = White,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(18.dp))
+                    // Sync button
+                    Button(
+                        onClick  = { showSyncDialog = true },
+                        enabled  = !isSyncing,
+                        colors   = ButtonDefaults.buttonColors(containerColor = Navy),
+                        shape    = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        if (isSyncing) {
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(16.dp),
+                                color       = White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (isSyncing) "Syncing..." else "Sync")
                     }
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (isSyncing) "Syncing..." else "Sync to CMS")
                 }
             }
         }
@@ -337,9 +352,9 @@ fun AttendanceScreen(
                         "  - ${viewModel.presentCount} of ${viewModel.totalCount} members marked present",
                         color = TextGrey, fontSize = 13.sp
                     )
-                    if (pendingGuests.isNotEmpty()) {
+                    if (sessionGuests.isNotEmpty()) {
                         Text(
-                            "  - ${pendingGuests.size} guest record(s)",
+                            "  - ${sessionGuests.size} guest record(s)",
                             color = TextGrey, fontSize = 13.sp
                         )
                     }

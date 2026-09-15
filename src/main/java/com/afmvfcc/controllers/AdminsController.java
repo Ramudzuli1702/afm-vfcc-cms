@@ -24,7 +24,7 @@ import java.sql.*;
 public class AdminsController {
 
     @FXML private TableView<User>           adminsTable;
-    @FXML private TableColumn<User, String> colAdminName, colAdminUsername,
+    @FXML private TableColumn<User, String> colAdminName, colAdminUsername, colAdminType,
                                              colAdminRole, colAdminEmail, colAdminStatus;
     @FXML private TableColumn<User, Void>   colAdminActions;
     @FXML private TextField                 adminSearchField;
@@ -48,6 +48,17 @@ public class AdminsController {
     private void setupTable() {
         colAdminName.setCellValueFactory(d     -> new SimpleStringProperty(d.getValue().getFullName()));
         colAdminUsername.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getUsername()));
+        colAdminType.setCellValueFactory(d     -> new SimpleStringProperty(
+            d.getValue().isUsher() ? "Usher" : "Admin"));
+        colAdminType.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); return; }
+                Label badge = new Label(item);
+                badge.getStyleClass().add("Usher".equals(item) ? "badge-pending" : "badge-flat");
+                setGraphic(badge); setText(null);
+            }
+        });
         colAdminRole.setCellValueFactory(d     -> new SimpleStringProperty(
             d.getValue().getRoleTitle() != null ? d.getValue().getRoleTitle() : "-"));
         colAdminEmail.setCellValueFactory(d    -> new SimpleStringProperty(
@@ -166,6 +177,15 @@ public class AdminsController {
         TextField emailField    = field("email@example.com");
         TextField phoneField    = field("e.g. 0712345678");
         TextField roleField     = field("e.g. Secretary");
+        ComboBox<String> accountTypeCombo = new ComboBox<>();
+        accountTypeCombo.getStyleClass().add("form-combo");
+        accountTypeCombo.getItems().addAll("Admin", "Usher");
+        accountTypeCombo.setValue("Admin");
+        accountTypeCombo.setMaxWidth(Double.MAX_VALUE);
+        Label accountTypeHint = new Label(
+            "Admin: full desktop + mobile app access.  Usher: mobile app only (attendance/guests) — cannot log into the desktop system.");
+        accountTypeHint.setWrapText(true);
+        accountTypeHint.setStyle("-fx-font-size:10px;-fx-text-fill:#9099AA;");
         ComboBox<String> statusCombo = new ComboBox<>();
         statusCombo.getStyleClass().add("form-combo");
         statusCombo.getItems().addAll("Active", "Inactive");
@@ -179,14 +199,16 @@ public class AdminsController {
             emailField.setText(nvl(existing.getEmail()));
             phoneField.setText(nvl(existing.getPhone()));
             roleField.setText(nvl(existing.getRoleTitle()));
+            accountTypeCombo.setValue(existing.isUsher() ? "Usher" : "Admin");
+            accountTypeCombo.setDisable(existing.isSuperAdmin());
             statusCombo.setValue(existing.isActive() ? "Active" : "Inactive");
         }
 
         String[] labels = {"FULL NAME *", "USERNAME *",
             existing == null ? "PASSWORD *" : "NEW PASSWORD",
-            "EMAIL", "PHONE", "ROLE / TITLE", "STATUS"};
+            "EMAIL", "PHONE", "ROLE / TITLE", "ACCOUNT TYPE *", "", "STATUS"};
         javafx.scene.Node[] controls = {fullNameField, usernameField, passField,
-            emailField, phoneField, roleField, statusCombo};
+            emailField, phoneField, roleField, accountTypeCombo, accountTypeHint, statusCombo};
 
         for (int i = 0; i < labels.length; i++) {
             Label lbl = new Label(labels[i]);
@@ -252,30 +274,33 @@ public class AdminsController {
                         errLabel.setVisible(true); return;
                     }
                     PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO users (full_name, username, password_hash, email, phone, role_title, is_active) " +
-                        "VALUES (?,?,?,?,?,?,?)");
+                        "INSERT INTO users (full_name, username, password_hash, email, phone, role_title, account_role, is_active) " +
+                        "VALUES (?,?,?,?,?,?,?,?)");
                     ps.setString(1, name);
                     ps.setString(2, user);
                     ps.setString(3, PasswordUtil.hash(pass));
                     ps.setString(4, emailField.getText().trim());
                     ps.setString(5, phoneField.getText().trim());
                     ps.setString(6, roleField.getText().trim());
-                    ps.setInt(7, "Active".equals(statusCombo.getValue()) ? 1 : 0);
+                    ps.setString(7, "Usher".equals(accountTypeCombo.getValue()) ? "usher" : "admin");
+                    ps.setInt(8, "Active".equals(statusCombo.getValue()) ? 1 : 0);
                     ps.executeUpdate();
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Created admin: " + user);
                     ToastManager.success("Admin \"" + name + "\" added successfully.");
                 } else {
                     String sql = "UPDATE users SET full_name=?, email=?, phone=?, " +
-                        "role_title=?, is_active=?" +
+                        "role_title=?, account_role=?, is_active=?" +
                         (!pass.isEmpty() ? ", password_hash=?" : "") + " WHERE id=?";
                     PreparedStatement ps = conn.prepareStatement(sql);
                     ps.setString(1, name);
                     ps.setString(2, emailField.getText().trim());
                     ps.setString(3, phoneField.getText().trim());
                     ps.setString(4, roleField.getText().trim());
-                    ps.setInt(5, "Active".equals(statusCombo.getValue()) ? 1 : 0);
-                    int idx = 6;
+                    ps.setString(5, existing.isSuperAdmin() ? "admin" :
+                        ("Usher".equals(accountTypeCombo.getValue()) ? "usher" : "admin"));
+                    ps.setInt(6, "Active".equals(statusCombo.getValue()) ? 1 : 0);
+                    int idx = 7;
                     if (!pass.isEmpty()) ps.setString(idx++, PasswordUtil.hash(pass));
                     ps.setInt(idx, existing.getId());
                     ps.executeUpdate();
@@ -363,6 +388,7 @@ public class AdminsController {
         u.setEmail(rs.getString("email"));
         u.setPhone(rs.getString("phone"));
         u.setRoleTitle(rs.getString("role_title"));
+        try { u.setAccountRole(rs.getString("account_role")); } catch (SQLException ignored) {}
         u.setSuperAdmin(rs.getInt("is_super_admin") == 1);
         u.setActive(rs.getInt("is_active") == 1);
         try { java.sql.Timestamp ts = rs.getTimestamp("locked_until"); if (ts != null) u.setLockedUntil(ts.toLocalDateTime()); } catch (Exception ignored) {}

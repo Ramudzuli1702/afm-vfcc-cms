@@ -80,6 +80,7 @@ public class SettingsController {
     // Connected devices
     @FXML private TableView<String[]>           devicesTable;
     @FXML private TableColumn<String[], String> colDeviceUser;
+    @FXML private TableColumn<String[], String> colDeviceRole;
     @FXML private TableColumn<String[], String> colDeviceName;
     @FXML private TableColumn<String[], String> colDeviceSince;
     @FXML private TableColumn<String[], Void>   colDeviceActions;
@@ -149,8 +150,18 @@ public class SettingsController {
 
     private void setupDevicesTable() {
         colDeviceUser.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[0]));
-        colDeviceName.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[1]));
-        colDeviceSince.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[2]));
+        colDeviceRole.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[1]));
+        colDeviceRole.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); return; }
+                Label badge = new Label(item);
+                badge.getStyleClass().add("Usher".equals(item) ? "badge-pending" : "badge-flat");
+                setGraphic(badge); setText(null);
+            }
+        });
+        colDeviceName.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[2]));
+        colDeviceSince.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue()[3]));
 
         colDeviceActions.setCellFactory(col -> new TableCell<>() {
             private final Button revokeBtn = new Button("Revoke");
@@ -159,7 +170,7 @@ public class SettingsController {
                 revokeBtn.setStyle("-fx-font-size:11px;-fx-padding:4 10;");
                 revokeBtn.setOnAction(e -> {
                     String[] row = getTableView().getItems().get(getIndex());
-                    revokeDevice(Integer.parseInt(row[3]), row[0]);
+                    revokeDevice(Integer.parseInt(row[4]), row[0]);
                 });
             }
             @Override
@@ -175,13 +186,16 @@ public class SettingsController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.createStatement().executeQuery(
-                "SELECT id, stored_user, device_name, created_at FROM app_tokens " +
-                "WHERE is_active = 1 ORDER BY created_at DESC"
+                "SELECT t.id, t.stored_user, t.device_name, t.created_at, " +
+                "IFNULL(u.account_role,'admin') AS account_role " +
+                "FROM app_tokens t LEFT JOIN users u ON u.id = t.user_id " +
+                "WHERE t.is_active = 1 ORDER BY t.created_at DESC"
             );
             while (rs.next()) {
                 Timestamp created = rs.getTimestamp("created_at");
                 rows.add(new String[]{
                     rs.getString("stored_user") != null ? rs.getString("stored_user") : "Unknown",
+                    "usher".equalsIgnoreCase(rs.getString("account_role")) ? "Usher" : "Admin",
                     rs.getString("device_name") != null ? rs.getString("device_name") : "Unknown device",
                     created != null ? created.toLocalDateTime().format(FMT) : "",
                     String.valueOf(rs.getInt("id"))

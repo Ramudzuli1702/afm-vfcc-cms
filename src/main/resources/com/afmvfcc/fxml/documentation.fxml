@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox styleClass="root" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.afmvfcc.controllers.DocumentationController"
+      spacing="0" VBox.vgrow="ALWAYS">
+
+    <TabPane fx:id="docTabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- ── USER GUIDE ── -->
+        <Tab text="📘  User Guide">
+            <VBox spacing="0" VBox.vgrow="ALWAYS">
+                <HBox spacing="12" alignment="CENTER_LEFT"
+                      style="-fx-padding:16 20;-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;">
+                    <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <Label text="User Guide" styleClass="section-title"/>
+                        <Label text="A complete, step-by-step guide to every module in the system."
+                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+                    </VBox>
+                    <Button text="⬇  Download"  styleClass="btn-primary" onAction="#handleExportUserGuide"/>
+                </HBox>
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                            style="-fx-background-color:transparent;-fx-background:transparent;">
+                    <VBox fx:id="userGuideContentBox" spacing="18" style="-fx-padding:24 32 48 32;"/>
+                </ScrollPane>
+            </VBox>
+        </Tab>
+
+        <!-- ── SYSTEM USAGE POLICY ── -->
+        <Tab text="📄  System Usage Policy">
+            <VBox spacing="0" VBox.vgrow="ALWAYS">
+                <HBox spacing="12" alignment="CENTER_LEFT"
+                      style="-fx-padding:16 20;-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;">
+                    <VBox spacing="2" HBox.hgrow="ALWAYS">
+                        <Label text="System Usage Policy" styleClass="section-title"/>
+                        <Label text="Acceptable use, access levels, data privacy, and security — no church letterhead, by design."
+                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
+                    </VBox>
+                    <Button text="⬇  Download"  styleClass="btn-secondary" onAction="#handleExportPolicy"/>
+                </HBox>
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                            style="-fx-background-color:transparent;-fx-background:transparent;">
+                    <VBox fx:id="policyContentBox" spacing="16" style="-fx-padding:24 32 48 32;"/>
+                </ScrollPane>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>
