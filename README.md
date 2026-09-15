@@ -20,6 +20,27 @@
 
 ---
 
+## 🚀 Try the Demo
+
+Want to see it running before setting anything up yourself? Grab the latest
+release: **[github.com/Ramudzuli1702/afm-vfcc-cms/releases](https://github.com/Ramudzuli1702/afm-vfcc-cms/releases)**
+
+It includes:
+- **`AFM_VFCC_CMS_Setup.exe`** — the full Windows installer (bundles MySQL
+  Server and its own Java runtime, nothing else to install)
+- **`app-debug.apk`** — the Android companion app (sideload it, or install
+  via Android Studio from `android-app/`)
+- **`demo_data.sql`** — ~40 fictional members, a handful of welfare cases,
+  calendar events, and inventory items, so the system isn't empty on first
+  look. **Entirely made-up data — no real church or member information.**
+  After installing, run the first-time setup wizard, then in the CMS go to
+  **Settings → Backup → Restore Backup…** and select this file.
+  Demo logins: `demo_admin` / `Demo@1234` (desktop + app) and
+  `demo_usher` / `Usher@1234` (mobile app only) — change or remove these
+  before using the system for real.
+
+---
+
 ## 🛠 Prerequisites
 
 **For a client / production install:** none. Run `gradle createFullInstaller`
