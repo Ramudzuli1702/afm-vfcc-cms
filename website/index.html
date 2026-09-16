@@ -89,18 +89,22 @@ section{padding:6rem 2rem}
 .mlink{display:inline-flex;align-items:center;gap:.5rem;color:var(--gold);text-decoration:none;font-weight:600;font-size:.9rem;padding:.58rem 1.3rem;border:1px solid rgba(212,160,23,.3);border-radius:100px;transition:background var(--T),color var(--T)}
 .mlink:hover{background:var(--gold);color:var(--dark)}
 .leaders{background:var(--dark)}
-.ldr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
-.lcard{background:var(--d3);border-radius:16px;padding:2.1rem 1.7rem;text-align:center;border:1px solid rgba(255,255,255,.04);transition:transform var(--T),border-color var(--T);position:relative;overflow:hidden}
-.lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity var(--T)}
-.lcard:hover{transform:translateY(-7px);border-color:rgba(212,160,23,.2)}
-.lcard:hover::before{opacity:1}
-.lring{position:relative;display:inline-block;margin-bottom:1.15rem}
-.lring::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(var(--gold) 0deg,transparent 180deg,var(--gold) 360deg);z-index:-1;animation:sr 8s linear infinite}
-@keyframes sr{to{transform:rotate(360deg)}}
-.limg{width:115px;height:115px;border-radius:50%;overflow:hidden;border:4px solid var(--d3)}
-.limg img{width:100%;height:100%;object-fit:cover}
-.lcard h4{font-size:1rem;font-weight:600;color:var(--w);margin-bottom:.22rem}
+.leaders-card{max-width:380px;margin:0 auto;text-align:center}
+.leaders-photo{width:100%;aspect-ratio:1/1;border-radius:20px;overflow:hidden;background:var(--d3);border:1px solid rgba(255,255,255,.06);margin-bottom:1.5rem;box-shadow:0 22px 55px rgba(0,0,0,.4)}
+.leaders-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.leaders-names{display:flex;flex-direction:column;gap:.85rem}
+.lname-row h4{font-size:1.05rem;font-weight:600;color:var(--w);margin-bottom:.2rem}
+.lname-divider{width:34px;height:1px;background:rgba(212,160,23,.35);margin:0 auto}
 .lrole{font-size:.72rem;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;font-weight:500}
+.board-block{margin:3rem auto 0;max-width:900px;background:var(--d3);border-radius:16px;padding:2.2rem;display:grid;grid-template-columns:240px 1fr;gap:2.2rem;align-items:center;border:1px solid rgba(255,255,255,.04)}
+.board-photo{width:100%;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:var(--d4)}
+.board-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.board-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:2rem}
+.board-copy h4{font-size:1.05rem;font-weight:600;color:var(--w);margin-bottom:.2rem}
+.board-copy .lrole{display:block;margin-bottom:1rem}
+.board-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.3rem 1rem}
+.board-list li{font-size:.86rem;color:rgba(232,224,208,.75);padding:.42rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
+@media(max-width:700px){.board-block{grid-template-columns:1fr}.board-photo{max-width:260px;margin:0 auto}}
 .events{background:var(--d2)}
 .evt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1.5rem}
 .ecard{background:var(--d3);border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.04);transition:transform var(--T);display:flex;flex-direction:column}
@@ -236,11 +240,8 @@ footer{background:var(--dark);border-top:1px solid rgba(255,255,255,.05);padding
 <section class="leaders" id="leaders">
   <div class="container">
     <span class="slabel rv">The Team</span><h2 class="stitle c rv d1">Meet Our <span class="acc">Leaders</span></h2>
-    <div class="ldr-grid">
-      <div class="lcard rv"><div class="lring"><div class="limg"><img src="Bishop.png" alt="Bishop Ramatshimbila MG"></div></div><h4>Bishop Ramatshimbila MG</h4><p class="lrole">Senior Bishop</p></div>
-      <div class="lcard rv d1"><div class="lring"><div class="limg"><img src="Maliaga_HP.jpg" alt="Mr Maliaga HP"></div></div><h4>Mr Maliaga HP</h4><p class="lrole">Board Chairperson &amp; Evangelist</p></div>
-      <div class="lcard rv d2"><div class="lring"><div class="limg"><img src="Bishop.png" alt="Mr Delekisa I"></div></div><h4>Mr Delekisa I</h4><p class="lrole">Board Member &amp; Minister</p></div>
-    </div>
+    <div class="leaders-card rv" id="ldrC"></div>
+    <div class="board-block rv" id="boardBlock"></div>
   </div>
 </section>
 
@@ -261,13 +262,7 @@ footer{background:var(--dark);border-top:1px solid rgba(255,255,255,.05);padding
 <section class="contact" id="contact">
   <div class="container">
     <span class="slabel rv">Get in Touch</span><h2 class="stitle c rv d1">Contact <span class="acc">Us</span></h2>
-    <div class="cgrid">
-      <div class="citem rv"><div class="cico"><i class="fas fa-map-marker-alt"></i></div><h5>Location</h5><p>Ha-Kutama Tshikwarani<br>Limpopo, South Africa</p></div>
-      <a href="tel:+27823998785" class="citem rv d1"><div class="cico"><i class="fas fa-phone-alt"></i></div><h5>Phone</h5><p>+27 82 399 8785</p></a>
-      <a href="https://www.facebook.com/profile.php?id=100069834021973" target="_blank" class="citem rv d2"><div class="cico"><i class="fab fa-facebook-f"></i></div><h5>Facebook</h5><p>Kutama AFM: Victory Fellowship</p></a>
-      <a href="https://youtu.be/cIpcUKd-R5I?si=A_wTPaskzR3Ncf1T" target="_blank" class="citem rv d3"><div class="cico"><i class="fab fa-youtube"></i></div><h5>YouTube</h5><p>Watch our services &amp; sermons</p></a>
-      <a href="mailto:info@afmvfcc.co.za" class="citem rv d4"><div class="cico"><i class="fas fa-envelope"></i></div><h5>Email</h5><p>info@afmvfcc.co.za</p></a>
-    </div>
+    <div class="cgrid" id="contactC"></div>
   </div>
 </section>
 
@@ -376,10 +371,35 @@ function openLightbox(src) { lightboxImg.src = src; lightbox.classList.add('open
 // data.js is written by the CMS when you publish events/blogs
 // It sets window.churchData = { events: [...], blogs: [...] }
 // The page works fine without it — events section just shows "no events"
+// Fallback content — shown until the CMS has published its own leaders/board/contact
+// data into data.js. Keeps the page looking right even before that's set up.
+var DEFAULT_LEADERS_PHOTO = 'leaders.jpg';
+var DEFAULT_LEADERS = [
+  {name:'Bishop Ramatshimbila', role:'Senior Bishop'},
+  {name:'Mom Bishop Ramatshimbila', role:'Mom Bishop'}
+];
+var DEFAULT_BOARD_PHOTO = 'board-photo.jpg';
+var DEFAULT_BOARD_MEMBERS = ['Mr Maliaga HP — Board Chairperson & Evangelist', 'Mr Delekisa I — Board Member & Minister'];
+var DEFAULT_CONTACT = {
+  address: 'Ha-Kutama Tshikwarani<br>Limpopo, South Africa',
+  phone: '+27 82 399 8785',
+  phoneHref: 'tel:+27823998785',
+  facebookLabel: 'Kutama AFM: Victory Fellowship',
+  facebookUrl: 'https://www.facebook.com/profile.php?id=100069834021973',
+  youtubeLabel: 'Watch our services & sermons',
+  youtubeUrl: 'https://youtu.be/cIpcUKd-R5I?si=A_wTPaskzR3Ncf1T',
+  email: 'info@afmvfcc.co.za'
+};
+
 function renderData() {
   var cd = (typeof window.churchData !== 'undefined') ? window.churchData : {};
   var evts = cd.events || [];
   var blgs = cd.blogs  || [];
+  var leaders = (cd.leaders && cd.leaders.length > 0) ? cd.leaders : DEFAULT_LEADERS;
+  var leadersPhoto = cd.leadersPhoto || DEFAULT_LEADERS_PHOTO;
+  var boardPhoto = cd.boardPhoto || DEFAULT_BOARD_PHOTO;
+  var boardMembers = (cd.boardMembers && cd.boardMembers.length > 0) ? cd.boardMembers : DEFAULT_BOARD_MEMBERS;
+  var contact = cd.contact || DEFAULT_CONTACT;
 
   var evtHTML = '';
   if (evts.length > 0) {
@@ -417,6 +437,38 @@ function renderData() {
     blgHTML = '<div class="bempty"><i class="far fa-newspaper"></i>No posts yet &mdash; check back soon!</div>';
   }
   document.getElementById('blgC').innerHTML = blgHTML;
+
+  // ── LEADERS — one combined photo of Bishop & Mom Bishop together ──
+  var ldrNamesHTML = '';
+  for (var k = 0; k < leaders.length; k++) {
+    var l = leaders[k];
+    if (k > 0) ldrNamesHTML += '<div class="lname-divider"></div>';
+    ldrNamesHTML += '<div class="lname-row"><h4>' + l.name + '</h4><p class="lrole">' + l.role + '</p></div>';
+  }
+  document.getElementById('ldrC').innerHTML =
+    '<div class="leaders-photo"><img src="' + leadersPhoto + '" alt="Bishop and Mom Bishop" ' +
+    'onerror="this.parentElement.innerHTML=\'<div class=&quot;board-photo-placeholder&quot;><i class=&quot;fas fa-user-friends&quot;></i></div>\'"></div>' +
+    '<div class="leaders-names">' + ldrNamesHTML + '</div>';
+
+  // ── CHURCH BOARD ──
+  var boardNamesHTML = '';
+  for (var m = 0; m < boardMembers.length; m++) {
+    boardNamesHTML += '<li>' + boardMembers[m] + '</li>';
+  }
+  document.getElementById('boardBlock').innerHTML =
+    '<div class="board-photo"><img src="' + boardPhoto + '" alt="Church Board" ' +
+    'onerror="this.parentElement.innerHTML=\'<div class=&quot;board-photo-placeholder&quot;><i class=&quot;fas fa-users&quot;></i></div>\'"></div>' +
+    '<div class="board-copy"><h4>Church Board</h4><p class="lrole">Serving Our Congregation</p>' +
+    '<ul class="board-list">' + boardNamesHTML + '</ul></div>';
+
+  // ── CONTACT ──
+  var contactHTML =
+    '<div class="citem rv"><div class="cico"><i class="fas fa-map-marker-alt"></i></div><h5>Location</h5><p>' + contact.address + '</p></div>' +
+    '<a href="' + (contact.phoneHref || ('tel:' + contact.phone)) + '" class="citem rv d1"><div class="cico"><i class="fas fa-phone-alt"></i></div><h5>Phone</h5><p>' + contact.phone + '</p></a>' +
+    '<a href="' + contact.facebookUrl + '" target="_blank" class="citem rv d2"><div class="cico"><i class="fab fa-facebook-f"></i></div><h5>Facebook</h5><p>' + contact.facebookLabel + '</p></a>' +
+    '<a href="' + contact.youtubeUrl + '" target="_blank" class="citem rv d3"><div class="cico"><i class="fab fa-youtube"></i></div><h5>YouTube</h5><p>' + contact.youtubeLabel + '</p></a>' +
+    '<a href="mailto:' + contact.email + '" class="citem rv d4"><div class="cico"><i class="fas fa-envelope"></i></div><h5>Email</h5><p>' + contact.email + '</p></a>';
+  document.getElementById('contactC').innerHTML = contactHTML;
 
   // Re-observe new rv elements
   document.querySelectorAll('.rv:not(.on)').forEach(function(el) { rvObs.observe(el); });

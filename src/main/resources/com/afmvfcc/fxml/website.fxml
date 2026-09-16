@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.afmvfcc.controllers.WebsiteController" spacing="16">
 
@@ -38,6 +40,102 @@
                     </columns>
                 </TableView>
             </VBox>
+        </Tab>
+
+        <!-- MEET OUR LEADERS -->
+        <Tab text="Meet Our Leaders">
+            <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
+                <VBox spacing="16" style="-fx-padding:20;">
+
+                    <Label text="Bishop and Mom Bishop are shown together in ONE photo, with both their names listed underneath it. Recommended photo: square, at least 400×400px."
+                           wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+
+                    <VBox spacing="10" style="-fx-background-color:#FFFFFF;-fx-padding:16;-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-background-radius:10;">
+                        <Label text="BISHOP &amp; MOM BISHOP — ONE PHOTO" styleClass="form-label"/>
+                        <ImageView fx:id="leadersPhotoPreview" fitWidth="160" fitHeight="160" preserveRatio="true"/>
+                        <Button text="Choose Photo..." styleClass="btn-secondary" onAction="#handleChooseLeadersPhoto"/>
+                        <HBox spacing="16">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="NAME 1 (BISHOP)" styleClass="form-label"/>
+                                <TextField fx:id="leader1NameField" styleClass="form-field" promptText="e.g. Bishop Ramatshimbila" maxWidth="Infinity"/>
+                                <TextField fx:id="leader1RoleField" styleClass="form-field" promptText="e.g. Senior Bishop" maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="NAME 2 (MOM BISHOP)" styleClass="form-label"/>
+                                <TextField fx:id="leader2NameField" styleClass="form-field" promptText="e.g. Mom Bishop Ramatshimbila" maxWidth="Infinity"/>
+                                <TextField fx:id="leader2RoleField" styleClass="form-field" promptText="e.g. Mom Bishop" maxWidth="Infinity"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <VBox spacing="10" style="-fx-background-color:#FFFFFF;-fx-padding:16;-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-background-radius:10;">
+                        <Label text="CHURCH BOARD" styleClass="form-label"/>
+                        <Label text="One group photo, with member names listed underneath automatically — names are pulled live from the Church Board module, nothing to type here."
+                               wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                        <ImageView fx:id="boardPhotoPreview" fitWidth="160" fitHeight="120" preserveRatio="true"/>
+                        <Button text="Choose Board Photo..." styleClass="btn-secondary" onAction="#handleChooseBoardPhoto"/>
+                        <Label text="CURRENT ACTIVE BOARD MEMBERS (from Church Board)" styleClass="form-label" style="-fx-padding:10 0 0 0;"/>
+                        <ListView fx:id="boardMembersPreviewList" prefHeight="120"/>
+                    </VBox>
+
+                    <HBox alignment="CENTER_RIGHT">
+                        <Button text="Save &amp; Publish Leaders" styleClass="btn-primary" onAction="#handleSaveLeaders"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
+        <!-- CONTACT DETAILS -->
+        <Tab text="Contact Details">
+            <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
+                <VBox spacing="14" style="-fx-padding:20;-fx-max-width:520;">
+                    <Label text="Shown in the Contact Us section of the public website."
+                           wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+
+                    <VBox spacing="6">
+                        <Label text="ADDRESS" styleClass="form-label"/>
+                        <TextArea fx:id="contactAddressField" prefHeight="60" wrapText="true" maxWidth="Infinity"/>
+                    </VBox>
+                    <HBox spacing="16">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="PHONE (displayed)" styleClass="form-label"/>
+                            <TextField fx:id="contactPhoneField" styleClass="form-field" promptText="+27 82 399 8785" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="PHONE LINK (tel:...)" styleClass="form-label"/>
+                            <TextField fx:id="contactPhoneHrefField" styleClass="form-field" promptText="tel:+27823998785" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
+                    <HBox spacing="16">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="FACEBOOK URL" styleClass="form-label"/>
+                            <TextField fx:id="contactFacebookUrlField" styleClass="form-field" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="FACEBOOK LABEL" styleClass="form-label"/>
+                            <TextField fx:id="contactFacebookLabelField" styleClass="form-field" promptText="Kutama AFM: Victory Fellowship" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
+                    <HBox spacing="16">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="YOUTUBE URL" styleClass="form-label"/>
+                            <TextField fx:id="contactYoutubeUrlField" styleClass="form-field" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="YOUTUBE LABEL" styleClass="form-label"/>
+                            <TextField fx:id="contactYoutubeLabelField" styleClass="form-field" promptText="Watch our services &amp; sermons" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="6">
+                        <Label text="EMAIL" styleClass="form-label"/>
+                        <TextField fx:id="contactEmailField" styleClass="form-field" promptText="info@afmvfcc.co.za" maxWidth="Infinity"/>
+                    </VBox>
+
+                    <HBox alignment="CENTER_RIGHT">
+                        <Button text="Save &amp; Publish Contact Details" styleClass="btn-primary" onAction="#handleSaveContact"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
         </Tab>
 
     </TabPane>

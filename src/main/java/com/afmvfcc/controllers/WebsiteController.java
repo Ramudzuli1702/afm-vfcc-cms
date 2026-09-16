@@ -46,7 +46,21 @@ public class WebsiteController {
     @FXML private TableColumn<String[], String> colWebEvTitle, colWebEvDate, colWebEvPoster;
     @FXML private TableColumn<String[], Void>   colWebEvActions;
 
+    // Leaders & Board tab
+    @FXML private ImageView leadersPhotoPreview, boardPhotoPreview;
+    @FXML private TextField leader1NameField, leader1RoleField, leader2NameField, leader2RoleField;
+    @FXML private ListView<String> boardMembersPreviewList;
+
+    // Contact Details tab
+    @FXML private TextArea  contactAddressField;
+    @FXML private TextField contactPhoneField, contactPhoneHrefField,
+                             contactFacebookUrlField, contactFacebookLabelField,
+                             contactYoutubeUrlField, contactYoutubeLabelField,
+                             contactEmailField;
+
     private static final String POSTER_DIR = "posters";
+
+    private File pendingLeadersPhoto, pendingBoardPhoto;
 
     @FXML
     public void initialize() {
@@ -55,6 +69,11 @@ public class WebsiteController {
         setupWebEventsTable();
         loadBlogs();
         loadWebEvents();
+        if (leader1NameField != null) {
+            loadLeadersTab();
+            loadBoardMembersPreview();
+        }
+        if (contactAddressField != null) loadContactTab();
     }
 
     private void ensurePosterDir() { new File(POSTER_DIR).mkdirs(); }
@@ -375,7 +394,7 @@ public class WebsiteController {
 
         removePosterBtn.setOnAction(e -> {
             // If there was an existing GitHub poster, schedule deletion
-            if (!selectedPosterUrl[0].isEmpty() && selectedPosterUrl[0].contains("github.io")) {
+            if (!selectedPosterUrl[0].isEmpty()) {
                 String repoPath = githubPagesUrlToRepoPath(selectedPosterUrl[0]);
                 if (repoPath != null) {
                     new Thread(() -> GitHubSync.deletePoster(repoPath)).start();
@@ -436,6 +455,7 @@ public class WebsiteController {
 
                     // 1. Copy to local posters/ folder as a fallback cache
                     String finalPosterUrl;
+                    String posterUploadError = null;
                     try {
                         new File(POSTER_DIR).mkdirs();
                         String destName = System.currentTimeMillis() + "_" + localFile.getName();
@@ -444,13 +464,24 @@ public class WebsiteController {
 
                         // 2. Upload to GitHub
                         String[] result = GitHubSync.uploadPoster(dest.toFile(), destName);
-                        finalPosterUrl = (result[0] != null) ? result[0] : "posters/" + destName;
+                        if (result[0] != null) {
+                            finalPosterUrl = result[0];
+                        } else {
+                            // GitHub upload failed — fall back to the local relative
+                            // path so it at least resolves for a local-folder-served
+                            // site, but make sure the user is told it didn't reach
+                            // GitHub, since the live site otherwise won't show it.
+                            finalPosterUrl = "posters/" + destName;
+                            posterUploadError = result[1];
+                        }
                     } catch (IOException ex) {
                         ex.printStackTrace();
                         finalPosterUrl = "";
+                        posterUploadError = ex.getMessage();
                     }
 
                     final String posterUrlToSave = finalPosterUrl;
+                    final String finalPosterUploadError = posterUploadError;
 
                     // 3. Write to DB on the FX thread — THEN export
                     javafx.application.Platform.runLater(() -> {
@@ -462,6 +493,10 @@ public class WebsiteController {
                             triggerExport();
                             stage.close();
                             ToastManager.success(existing == null ? "Event published." : "Event updated.");
+                            if (finalPosterUploadError != null) {
+                                ToastManager.error("Poster image could not be uploaded to GitHub: " +
+                                    finalPosterUploadError + " — it won't appear on the live site until this is fixed.");
+                            }
                         } catch (SQLException ex) {
                             ex.printStackTrace();
                             saveBtn.setDisable(false);
@@ -570,8 +605,7 @@ public class WebsiteController {
                         .executeUpdate("DELETE FROM website_events WHERE id=" + id);
 
                     // Delete poster from GitHub
-                    if (posterUrl != null && !posterUrl.isEmpty()
-                            && posterUrl.contains("github.io")) {
+                    if (posterUrl != null && !posterUrl.isEmpty()) {
                         String repoPath = githubPagesUrlToRepoPath(posterUrl);
                         if (repoPath != null) {
                             final String rp = repoPath;
@@ -630,18 +664,31 @@ public class WebsiteController {
     }
 
     /**
-     * Convert a GitHub Pages URL back to its repo-relative path.
-     * e.g. https://ramudzuli1702.github.io/afm_vfcc/posters/foo.png → posters/foo.png
-     * Returns null if the pattern doesn't match.
+     * Convert a stored poster reference back to its repo-relative path, so it
+     * can be deleted from GitHub. Handles all three shapes image_filename can
+     * hold: a GitHub Pages URL (owner.github.io/repo/posters/x.png), a custom
+     * domain URL (configured in Settings — previously not recognised at all,
+     * silently skipping deletion for anyone using a custom domain), or an
+     * already-relative local fallback path ("posters/x.png", saved when a
+     * GitHub upload failed). Returns null only if none of these match.
      */
     private static String githubPagesUrlToRepoPath(String url) {
-        if (url == null || !url.contains("github.io")) return null;
-        try {
-            String path = new URI(url).getPath(); // /<repo>/<path...>
-            int second = path.indexOf('/', 1);    // position after /<repo>
-            if (second < 0) return null;
-            return path.substring(second + 1);   // posters/foo.png
-        } catch (Exception e) { return null; }
+        if (url == null || url.isEmpty()) return null;
+        if (url.startsWith("posters/")) return url;
+        if (url.contains("github.io")) {
+            try {
+                String path = new URI(url).getPath(); // /<repo>/<path...>
+                int second = path.indexOf('/', 1);    // position after /<repo>
+                if (second < 0) return null;
+                return path.substring(second + 1);   // posters/foo.png
+            } catch (Exception e) { return null; }
+        }
+        String customDomain = GitHubSync.loadSetting("website_custom_domain");
+        if (customDomain != null && !customDomain.isEmpty() && url.contains("/posters/")) {
+            int idx = url.indexOf("/posters/");
+            return url.substring(idx + 1); // posters/foo.png
+        }
+        return null;
     }
 
     /** Extract filename from a URL or file path. */
@@ -759,16 +806,30 @@ public class WebsiteController {
      * Must only be called once the DB write for the triggering change is done,
      * so the export reads the updated rows and data.js reflects the new state.
      */
+    // Single-thread executor so concurrent saves can't run two exports at once
+    // against the app's one shared DB connection, and so publishes apply in
+    // the order they were triggered rather than racing each other.
+    private static final java.util.concurrent.ExecutorService EXPORT_EXECUTOR =
+        java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "website-export");
+            t.setDaemon(true);
+            return t;
+        });
+
     private void triggerExport() {
-        new Thread(() -> {
+        EXPORT_EXECUTOR.submit(() -> {
             try {
                 String localFolder = GitHubSync.loadSetting("website_folder");
                 WebsiteExporter.exportAll(localFolder != null ? localFolder : "");
+                if (GitHubSync.isConfigured()) {
+                    javafx.application.Platform.runLater(() ->
+                        ToastManager.success("Website updated — the change is now live on GitHub."));
+                }
             } catch (Exception ex) {
                 javafx.application.Platform.runLater(() ->
-                    showError("Export warning: " + ex.getMessage()));
+                    showError(ex.getMessage()));
             }
-        }, "website-export").start();
+        });
     }
 
     private void showError(String msg) {
@@ -781,4 +842,170 @@ public class WebsiteController {
             alert.showAndWait();
         });
     }
+
+    // =========================================================
+    // MEET OUR LEADERS
+    // =========================================================
+
+    private void loadLeadersTab() {
+        leader1NameField.setText(nvl(setting("website_leader1_name")));
+        leader1RoleField.setText(nvl(setting("website_leader1_role")));
+        leader2NameField.setText(nvl(setting("website_leader2_name")));
+        leader2RoleField.setText(nvl(setting("website_leader2_role")));
+        setPreview(leadersPhotoPreview, setting("website_leaders_photo"));
+        setPreview(boardPhotoPreview, setting("website_board_photo"));
+    }
+
+    private void loadBoardMembersPreview() {
+        ObservableList<String> names = FXCollections.observableArrayList();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            ResultSet rs = conn.createStatement().executeQuery(
+                "SELECT m.full_name, bm.role_title FROM board_members bm " +
+                "JOIN members m ON m.id = bm.member_id " +
+                "WHERE bm.is_active = 1 ORDER BY bm.start_date ASC, m.full_name ASC");
+            while (rs.next()) {
+                String role = rs.getString(2);
+                names.add((role != null && !role.isBlank())
+                    ? rs.getString(1) + " — " + role : rs.getString(1));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        if (names.isEmpty()) names.add("(No active board members yet — add them in Church Board.)");
+        boardMembersPreviewList.setItems(names);
+    }
+
+    @FXML public void handleChooseLeadersPhoto() {
+        File f = choosePhoto();
+        if (f != null) { pendingLeadersPhoto = f; leadersPhotoPreview.setImage(new Image(f.toURI().toString())); }
+    }
+    @FXML public void handleChooseBoardPhoto() {
+        File f = choosePhoto();
+        if (f != null) { pendingBoardPhoto = f; boardPhotoPreview.setImage(new Image(f.toURI().toString())); }
+    }
+
+    private File choosePhoto() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Select Photo");
+        fc.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("Images", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp"));
+        return fc.showOpenDialog(null);
+    }
+
+    @FXML
+    public void handleSaveLeaders() {
+        String n1 = leader1NameField.getText().trim(), r1 = leader1RoleField.getText().trim();
+        String n2 = leader2NameField.getText().trim(), r2 = leader2RoleField.getText().trim();
+
+        new Thread(() -> {
+            String ldrPhoto = uploadIfChosen(pendingLeadersPhoto, "leaders.jpg");
+            String bPhoto  = uploadIfChosen(pendingBoardPhoto, "board-photo.jpg");
+
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    Connection conn = DatabaseConnection.getConnection();
+                    saveSetting(conn, "website_leader1_name", n1);
+                    saveSetting(conn, "website_leader1_role", r1);
+                    saveSetting(conn, "website_leader2_name", n2);
+                    saveSetting(conn, "website_leader2_role", r2);
+                    if (ldrPhoto != null) saveSetting(conn, "website_leaders_photo", ldrPhoto);
+                    if (bPhoto != null) saveSetting(conn, "website_board_photo", bPhoto);
+
+                    pendingLeadersPhoto = pendingBoardPhoto = null;
+                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                        "Updated website leaders & board");
+                    triggerExport();
+                    ToastManager.success("Leaders & Board saved.");
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    ToastManager.error("Failed to save: " + ex.getMessage());
+                }
+            });
+        }, "leaders-save").start();
+    }
+
+    /**
+     * Uploads a locally-chosen photo to GitHub under a fixed filename (so
+     * re-uploading a leader's photo overwrites the same file rather than
+     * piling up timestamped copies), returning the public URL — or, if
+     * nothing new was chosen, null (caller then leaves the stored setting
+     * untouched). On a GitHub upload failure, falls back to the bare
+     * repo-relative path and reports the error via a toast.
+     */
+    private String uploadIfChosen(File localFile, String fixedName) {
+        if (localFile == null) return null;
+        try {
+            new File(POSTER_DIR).mkdirs();
+            Path dest = Paths.get(POSTER_DIR, fixedName);
+            Files.copy(localFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
+            String[] result = GitHubSync.uploadPoster(dest.toFile(), fixedName);
+            if (result[0] != null) return result[0];
+            final String err = result[1];
+            javafx.application.Platform.runLater(() -> ToastManager.error(
+                "Could not upload " + fixedName + " to GitHub: " + err));
+            return "posters/" + fixedName;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            javafx.application.Platform.runLater(() -> ToastManager.error(
+                "Could not upload " + fixedName + ": " + ex.getMessage()));
+            return null;
+        }
+    }
+
+    // =========================================================
+    // CONTACT DETAILS
+    // =========================================================
+
+    private void loadContactTab() {
+        contactAddressField.setText(nvl(setting("website_contact_address")));
+        contactPhoneField.setText(nvl(setting("website_contact_phone")));
+        contactPhoneHrefField.setText(nvl(setting("website_contact_phone_href")));
+        contactFacebookUrlField.setText(nvl(setting("website_contact_facebook_url")));
+        contactFacebookLabelField.setText(nvl(setting("website_contact_facebook_label")));
+        contactYoutubeUrlField.setText(nvl(setting("website_contact_youtube_url")));
+        contactYoutubeLabelField.setText(nvl(setting("website_contact_youtube_label")));
+        contactEmailField.setText(nvl(setting("website_contact_email")));
+    }
+
+    @FXML
+    public void handleSaveContact() {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            saveSetting(conn, "website_contact_address", contactAddressField.getText().trim());
+            saveSetting(conn, "website_contact_phone", contactPhoneField.getText().trim());
+            saveSetting(conn, "website_contact_phone_href", contactPhoneHrefField.getText().trim());
+            saveSetting(conn, "website_contact_facebook_url", contactFacebookUrlField.getText().trim());
+            saveSetting(conn, "website_contact_facebook_label", contactFacebookLabelField.getText().trim());
+            saveSetting(conn, "website_contact_youtube_url", contactYoutubeUrlField.getText().trim());
+            saveSetting(conn, "website_contact_youtube_label", contactYoutubeLabelField.getText().trim());
+            saveSetting(conn, "website_contact_email", contactEmailField.getText().trim());
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(), "Updated website contact details");
+            triggerExport();
+            ToastManager.success("Contact details saved.");
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            ToastManager.error("Failed to save contact details: " + ex.getMessage());
+        }
+    }
+
+    // =========================================================
+    // SETTINGS HELPERS (shared by Leaders & Contact tabs)
+    // =========================================================
+
+    private String setting(String key) { return GitHubSync.loadSetting(key); }
+
+    private void saveSetting(Connection conn, String key, String value) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO system_settings (setting_key, setting_value) VALUES (?,?) " +
+            "ON DUPLICATE KEY UPDATE setting_value=?");
+        ps.setString(1, key); ps.setString(2, value); ps.setString(3, value);
+        ps.executeUpdate();
+    }
+
+    private void setPreview(ImageView view, String pathOrUrl) {
+        if (view == null) return;
+        Image img = loadImageFromPathOrUrl(pathOrUrl);
+        if (img != null) view.setImage(img);
+    }
+
+    private static String nvl(String s) { return s != null ? s : ""; }
 }

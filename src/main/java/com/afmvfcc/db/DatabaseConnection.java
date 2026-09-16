@@ -908,6 +908,20 @@ public class DatabaseConnection {
             { "github_repo",           "" },
             { "github_branch",         "main" },
             { "website_custom_domain", "" },
+            { "website_leader1_name",  "" },
+            { "website_leader1_role",  "" },
+            { "website_leader2_name",  "" },
+            { "website_leader2_role",  "" },
+            { "website_leaders_photo", "" },
+            { "website_board_photo",   "" },
+            { "website_contact_address",        "" },
+            { "website_contact_phone",           "" },
+            { "website_contact_phone_href",      "" },
+            { "website_contact_facebook_url",    "" },
+            { "website_contact_facebook_label",  "" },
+            { "website_contact_youtube_url",     "" },
+            { "website_contact_youtube_label",   "" },
+            { "website_contact_email",           "" },
         };
         for (String[] kv : settings) {
             try {

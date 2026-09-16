@@ -30,8 +30,11 @@ public class GitHubSync {
 
     private static final Logger LOG = Logger.getLogger(GitHubSync.class.getName());
     private static final String API = "https://api.github.com";
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(15))
+            .build();
     private static final Gson GSON = new Gson();
+    private static final java.time.Duration REQUEST_TIMEOUT = java.time.Duration.ofSeconds(30);
 
     // ---------------------------------------------------------------
     // Public entry points
@@ -96,11 +99,40 @@ public class GitHubSync {
             HttpRequest req = baseRequest(cfg, "repos/" + cfg.owner + "/" + cfg.repo)
                     .GET().build();
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) return null;
-            return "HTTP " + resp.statusCode() + ": " + extractMessage(resp.body());
+            if (resp.statusCode() != 200) {
+                return "HTTP " + resp.statusCode() + ": " + extractMessage(resp.body());
+            }
+
+            // A 200 here only proves the token can READ the repo — it says
+            // nothing about write access or whether the configured branch
+            // exists, both of which every actual publish depends on. Check
+            // both explicitly so "✓ Connected" is a real guarantee, not just
+            // a repo-visibility check.
+            JsonObject repoObj = JsonParser.parseString(resp.body()).getAsJsonObject();
+            if (repoObj.has("permissions")) {
+                JsonObject perms = repoObj.getAsJsonObject("permissions");
+                if (perms.has("push") && !perms.get("push").getAsBoolean()) {
+                    return "Connected, but this token does not have push access to "
+                            + cfg.owner + "/" + cfg.repo + " — publishing will fail.";
+                }
+            }
+
+            HttpRequest branchReq = baseRequest(cfg, "repos/" + cfg.owner + "/" + cfg.repo
+                    + "/branches/" + cfg.branch).GET().build();
+            HttpResponse<String> branchResp = HTTP.send(branchReq, HttpResponse.BodyHandlers.ofString());
+            if (branchResp.statusCode() != 200) {
+                return "Repo found, but branch \"" + cfg.branch + "\" does not exist.";
+            }
+
+            return null;
         } catch (Exception e) {
             return e.getMessage();
         }
+    }
+
+    /** True if enough settings are present for GitHub sync to be attempted at all. */
+    public static boolean isConfigured() {
+        return loadConfig() != null;
     }
 
     // ---------------------------------------------------------------
@@ -159,13 +191,24 @@ public class GitHubSync {
         }
     }
 
-    /** Returns the blob SHA of a file in the repo, or null if it does not exist. */
+    /**
+     * Returns the blob SHA of a file in the repo, or null if it genuinely does
+     * not exist yet (404). Any other non-200 status (401 bad token, 403
+     * rate-limited/no access, 5xx, etc.) is a real failure and must NOT be
+     * treated as "file doesn't exist" — doing so previously caused putFile to
+     * attempt a create-style PUT with no sha, which GitHub then rejected with
+     * a confusing 422 that masked the actual auth/permission problem.
+     */
     private static String getFileSha(Config cfg, String path) throws Exception {
         HttpRequest req = baseRequest(cfg, "repos/" + cfg.owner + "/" + cfg.repo
                 + "/contents/" + path + "?ref=" + cfg.branch)
                 .GET().build();
         HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-        if (resp.statusCode() != 200) return null;
+        if (resp.statusCode() == 404) return null;
+        if (resp.statusCode() != 200) {
+            throw new IOException("GitHub GET " + path + " → HTTP " + resp.statusCode()
+                    + ": " + extractMessage(resp.body()));
+        }
         JsonObject obj = JsonParser.parseString(resp.body()).getAsJsonObject();
         return obj.has("sha") ? obj.get("sha").getAsString() : null;
     }
@@ -174,6 +217,7 @@ public class GitHubSync {
     private static HttpRequest.Builder baseRequest(Config cfg, String apiPath) {
         return HttpRequest.newBuilder()
                 .uri(URI.create(API + "/" + apiPath))
+                .timeout(REQUEST_TIMEOUT)
                 .header("Authorization", "Bearer " + cfg.token)
                 .header("Accept", "application/vnd.github+json")
                 .header("X-GitHub-Api-Version", "2022-11-28")
