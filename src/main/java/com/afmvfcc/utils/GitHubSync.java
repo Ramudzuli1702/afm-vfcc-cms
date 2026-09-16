@@ -61,15 +61,21 @@ public class GitHubSync {
      *                   (check second element of returned String[2] for error)
      */
     public static String[] uploadPoster(File localFile, String repoName) {
+        return uploadFile(localFile, "posters/" + repoName);
+    }
+
+    /**
+     * Upload any local file (image, video, etc.) to an arbitrary path in the repo.
+     * Returns {publicUrl, null} on success or {null, errorMessage} on failure.
+     */
+    public static String[] uploadFile(File localFile, String repoPath) {
         Config cfg = loadConfig();
         if (cfg == null)
             return new String[]{null, "GitHub settings not configured."};
         try {
             byte[] bytes = Files.readAllBytes(localFile.toPath());
-            String repoPath = "posters/" + repoName;
-            String err = putFile(cfg, repoPath, bytes, "Upload poster via AFM VFCC CMS");
+            String err = putFile(cfg, repoPath, bytes, "Upload " + repoPath + " via AFM VFCC CMS");
             if (err != null) return new String[]{null, err};
-            // Return public GitHub Pages URL
             String url = buildPagesUrl(cfg, repoPath);
             return new String[]{url, null};
         } catch (IOException e) {

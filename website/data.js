@@ -9,9 +9,18 @@ window.churchData = {
       "content": "It is important that we always equip ourselves with prayer."
     }
   ],
-  "leadersPhoto": "",
-  "leaders": [],
-  "boardPhoto": "",
+  "leadersPhoto": "https://ramudzuli1702.github.io/afm_vfcc_web/posters/leaders.jpg",
+  "leaders": [
+    {
+      "name": "Bishop Ramatshimbila",
+      "role": "Senior Bishop"
+    },
+    {
+      "name": "Mom Bishop Ramatshimbila",
+      "role": "Mom Bishop"
+    }
+  ],
+  "boardPhoto": "https://ramudzuli1702.github.io/afm_vfcc_web/posters/board-photo.jpg",
   "boardMembers": [
     "Abraham Ratshibvumo — Chairperson",
     "Andrew Mavhungu — Deputy Treasurer",
@@ -22,5 +31,15 @@ window.churchData = {
     "Nokuthula Ledwaba — Additional Board Member",
     "Nomvula Mulaudzi — Additional Board Member",
     "Pfunzo Nematandani — Deputy Secretary"
-  ]
+  ],
+  "contact": {
+    "address": "Kutama Tshikwarani\nKutama\n0940",
+    "phone": "+27636202691",
+    "phoneHref": "tel:+27636202691",
+    "facebookUrl": "",
+    "facebookLabel": "",
+    "youtubeUrl": "",
+    "youtubeLabel": "",
+    "email": ""
+  }
 };

@@ -231,9 +231,7 @@ footer{background:var(--dark);border-top:1px solid rgba(255,255,255,.05);padding
 <section class="message" id="message">
   <div class="container msg-inner">
     <span class="slabel rv">From Our Bishop</span><h2 class="stitle c rv d1">A Special <span class="acc">Message</span></h2>
-    <div class="vwrap rv d2"><video controls poster="Bishop.png"><source src="Message.mp4" type="video/mp4">Your browser does not support video.</video></div>
-    <p style="color:var(--muted);margin-bottom:1.15rem;font-size:.9rem" class="rv d3">Watch Bishop Ramatshimbila MG preach live every Sunday</p>
-    <a href="https://www.facebook.com/profile.php?id=100069834021973" target="_blank" class="mlink rv d4"><i class="fab fa-facebook"></i> Watch on Facebook</a>
+    <div id="msgC"></div>
   </div>
 </section>
 
@@ -380,6 +378,11 @@ var DEFAULT_LEADERS = [
 ];
 var DEFAULT_BOARD_PHOTO = 'board-photo.jpg';
 var DEFAULT_BOARD_MEMBERS = ['Mr Maliaga HP — Board Chairperson & Evangelist', 'Mr Delekisa I — Board Member & Minister'];
+var DEFAULT_MESSAGE = {
+  video: 'Message.mp4',
+  poster: 'Bishop.png',
+  caption: 'Watch Bishop Ramatshimbila MG preach live every Sunday'
+};
 var DEFAULT_CONTACT = {
   address: 'Ha-Kutama Tshikwarani<br>Limpopo, South Africa',
   phone: '+27 82 399 8785',
@@ -391,6 +394,15 @@ var DEFAULT_CONTACT = {
   email: 'info@afmvfcc.co.za'
 };
 
+// Guarantees a working tel: link even if phoneHref is blank or missing the
+// "tel:" prefix (e.g. older/hand-typed data) — a bad href here used to
+// produce a Phone card that looked right but didn't actually dial.
+function telHref(phoneHref, phone) {
+  var h = (phoneHref || phone || '').trim();
+  if (!h) return '#';
+  return h.indexOf('tel:') === 0 ? h : 'tel:' + h;
+}
+
 function renderData() {
   var cd = (typeof window.churchData !== 'undefined') ? window.churchData : {};
   var evts = cd.events || [];
@@ -400,6 +412,11 @@ function renderData() {
   var boardPhoto = cd.boardPhoto || DEFAULT_BOARD_PHOTO;
   var boardMembers = (cd.boardMembers && cd.boardMembers.length > 0) ? cd.boardMembers : DEFAULT_BOARD_MEMBERS;
   var contact = cd.contact || DEFAULT_CONTACT;
+  var message = {
+    video:   (cd.message && cd.message.video)   || DEFAULT_MESSAGE.video,
+    poster:  (cd.message && cd.message.poster)  || DEFAULT_MESSAGE.poster,
+    caption: (cd.message && cd.message.caption) || DEFAULT_MESSAGE.caption
+  };
 
   var evtHTML = '';
   if (evts.length > 0) {
@@ -438,6 +455,14 @@ function renderData() {
   }
   document.getElementById('blgC').innerHTML = blgHTML;
 
+  // ── BISHOP'S MESSAGE ──
+  var fbUrl = contact.facebookUrl || DEFAULT_CONTACT.facebookUrl;
+  document.getElementById('msgC').innerHTML =
+    '<div class="vwrap rv d2"><video controls poster="' + message.poster + '">' +
+    '<source src="' + message.video + '" type="video/mp4">Your browser does not support video.</video></div>' +
+    '<p style="color:var(--muted);margin-bottom:1.15rem;font-size:.9rem" class="rv d3">' + message.caption + '</p>' +
+    '<a href="' + fbUrl + '" target="_blank" class="mlink rv d4"><i class="fab fa-facebook"></i> Watch on Facebook</a>';
+
   // ── LEADERS — one combined photo of Bishop & Mom Bishop together ──
   var ldrNamesHTML = '';
   for (var k = 0; k < leaders.length; k++) {
@@ -464,7 +489,7 @@ function renderData() {
   // ── CONTACT ──
   var contactHTML =
     '<div class="citem rv"><div class="cico"><i class="fas fa-map-marker-alt"></i></div><h5>Location</h5><p>' + contact.address + '</p></div>' +
-    '<a href="' + (contact.phoneHref || ('tel:' + contact.phone)) + '" class="citem rv d1"><div class="cico"><i class="fas fa-phone-alt"></i></div><h5>Phone</h5><p>' + contact.phone + '</p></a>' +
+    '<a href="' + telHref(contact.phoneHref, contact.phone) + '" class="citem rv d1"><div class="cico"><i class="fas fa-phone-alt"></i></div><h5>Phone</h5><p>' + contact.phone + '</p></a>' +
     '<a href="' + contact.facebookUrl + '" target="_blank" class="citem rv d2"><div class="cico"><i class="fab fa-facebook-f"></i></div><h5>Facebook</h5><p>' + contact.facebookLabel + '</p></a>' +
     '<a href="' + contact.youtubeUrl + '" target="_blank" class="citem rv d3"><div class="cico"><i class="fab fa-youtube"></i></div><h5>YouTube</h5><p>' + contact.youtubeLabel + '</p></a>' +
     '<a href="mailto:' + contact.email + '" class="citem rv d4"><div class="cico"><i class="fas fa-envelope"></i></div><h5>Email</h5><p>' + contact.email + '</p></a>';

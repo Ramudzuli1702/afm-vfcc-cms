@@ -46,6 +46,11 @@ public class WebsiteController {
     @FXML private TableColumn<String[], String> colWebEvTitle, colWebEvDate, colWebEvPoster;
     @FXML private TableColumn<String[], Void>   colWebEvActions;
 
+    // Bishop's Message tab
+    @FXML private Label     messageVideoStatusLabel;
+    @FXML private ImageView messagePosterPreview;
+    @FXML private TextField messageCaptionField;
+
     // Leaders & Board tab
     @FXML private ImageView leadersPhotoPreview, boardPhotoPreview;
     @FXML private TextField leader1NameField, leader1RoleField, leader2NameField, leader2RoleField;
@@ -53,7 +58,7 @@ public class WebsiteController {
 
     // Contact Details tab
     @FXML private TextArea  contactAddressField;
-    @FXML private TextField contactPhoneField, contactPhoneHrefField,
+    @FXML private TextField contactPhoneField,
                              contactFacebookUrlField, contactFacebookLabelField,
                              contactYoutubeUrlField, contactYoutubeLabelField,
                              contactEmailField;
@@ -61,6 +66,7 @@ public class WebsiteController {
     private static final String POSTER_DIR = "posters";
 
     private File pendingLeadersPhoto, pendingBoardPhoto;
+    private File pendingMessageVideo, pendingMessagePoster;
 
     @FXML
     public void initialize() {
@@ -74,6 +80,7 @@ public class WebsiteController {
             loadBoardMembersPreview();
         }
         if (contactAddressField != null) loadContactTab();
+        if (messageCaptionField != null) loadMessageTab();
     }
 
     private void ensurePosterDir() { new File(POSTER_DIR).mkdirs(); }
@@ -844,6 +851,66 @@ public class WebsiteController {
     }
 
     // =========================================================
+    // BISHOP'S MESSAGE
+    // =========================================================
+
+    private void loadMessageTab() {
+        String video = setting("website_message_video");
+        messageVideoStatusLabel.setText((video != null && !video.isEmpty())
+            ? "Current video: " + fileNameFromUrl(video)
+            : "No video chosen — the site currently shows the default demo video.");
+        messageCaptionField.setText(nvl(setting("website_message_caption")));
+        setPreview(messagePosterPreview, setting("website_message_poster"));
+    }
+
+    @FXML public void handleChooseMessageVideo() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Select Message Video");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Video", "*.mp4"));
+        File f = fc.showOpenDialog(null);
+        if (f != null) {
+            pendingMessageVideo = f;
+            messageVideoStatusLabel.setText("Will upload on save: " + f.getName());
+        }
+    }
+
+    @FXML public void handleChooseMessagePoster() {
+        File f = choosePhoto();
+        if (f != null) { pendingMessagePoster = f; messagePosterPreview.setImage(new Image(f.toURI().toString())); }
+    }
+
+    @FXML
+    public void handleSaveMessage() {
+        String caption = messageCaptionField.getText().trim();
+        messageVideoStatusLabel.setText(pendingMessageVideo != null
+            ? "Uploading " + pendingMessageVideo.getName() + "…" : messageVideoStatusLabel.getText());
+
+        new Thread(() -> {
+            String videoUrl  = uploadIfChosen(pendingMessageVideo, "message.mp4");
+            String posterUrl = uploadIfChosen(pendingMessagePoster, "message-poster.jpg");
+
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    Connection conn = DatabaseConnection.getConnection();
+                    saveSetting(conn, "website_message_caption", caption);
+                    if (videoUrl != null) saveSetting(conn, "website_message_video", videoUrl);
+                    if (posterUrl != null) saveSetting(conn, "website_message_poster", posterUrl);
+
+                    pendingMessageVideo = pendingMessagePoster = null;
+                    loadMessageTab();
+                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                        "Updated website Bishop's Message");
+                    triggerExport();
+                    ToastManager.success("Bishop's Message saved.");
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    ToastManager.error("Failed to save: " + ex.getMessage());
+                }
+            });
+        }, "message-save").start();
+    }
+
+    // =========================================================
     // MEET OUR LEADERS
     // =========================================================
 
@@ -958,7 +1025,6 @@ public class WebsiteController {
     private void loadContactTab() {
         contactAddressField.setText(nvl(setting("website_contact_address")));
         contactPhoneField.setText(nvl(setting("website_contact_phone")));
-        contactPhoneHrefField.setText(nvl(setting("website_contact_phone_href")));
         contactFacebookUrlField.setText(nvl(setting("website_contact_facebook_url")));
         contactFacebookLabelField.setText(nvl(setting("website_contact_facebook_label")));
         contactYoutubeUrlField.setText(nvl(setting("website_contact_youtube_url")));
@@ -970,9 +1036,10 @@ public class WebsiteController {
     public void handleSaveContact() {
         try {
             Connection conn = DatabaseConnection.getConnection();
+            String phone = contactPhoneField.getText().trim();
             saveSetting(conn, "website_contact_address", contactAddressField.getText().trim());
-            saveSetting(conn, "website_contact_phone", contactPhoneField.getText().trim());
-            saveSetting(conn, "website_contact_phone_href", contactPhoneHrefField.getText().trim());
+            saveSetting(conn, "website_contact_phone", phone);
+            saveSetting(conn, "website_contact_phone_href", phoneToTelHref(phone));
             saveSetting(conn, "website_contact_facebook_url", contactFacebookUrlField.getText().trim());
             saveSetting(conn, "website_contact_facebook_label", contactFacebookLabelField.getText().trim());
             saveSetting(conn, "website_contact_youtube_url", contactYoutubeUrlField.getText().trim());
@@ -1005,6 +1072,18 @@ public class WebsiteController {
         if (view == null) return;
         Image img = loadImageFromPathOrUrl(pathOrUrl);
         if (img != null) view.setImage(img);
+    }
+
+    /**
+     * Turns a human-typed phone number (spaces, dashes, brackets and all)
+     * into a proper "tel:" link — no separate raw-href field to fill in and
+     * potentially get wrong (a blank/malformed href previously produced a
+     * "Call" button on the live site that didn't actually dial anything).
+     */
+    private static String phoneToTelHref(String phone) {
+        if (phone == null || phone.isBlank()) return "";
+        String digits = phone.replaceAll("[^0-9+]", "");
+        return digits.isEmpty() ? "" : "tel:" + digits;
     }
 
     private static String nvl(String s) { return s != null ? s : ""; }

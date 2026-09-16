@@ -125,6 +125,13 @@ public class WebsiteExporter {
             boardMembers.add((role != null && !role.isBlank()) ? name + " — " + role : name);
         }
 
+        // ── Bishop's Message (video) ──
+        Map<String, String> message = new LinkedHashMap<>();
+        message.put("video",   nvl(loadSetting(conn, "website_message_video")));
+        message.put("poster",  nvl(loadSetting(conn, "website_message_poster")));
+        message.put("caption", nvl(loadSetting(conn, "website_message_caption")));
+        boolean messageIsSet = message.values().stream().anyMatch(v -> !v.isEmpty());
+
         // ── Contact details ──
         Map<String, String> contact = new LinkedHashMap<>();
         contact.put("address",       nvl(loadSetting(conn, "website_contact_address")));
@@ -145,6 +152,7 @@ public class WebsiteExporter {
         root.put("leaders", leaders);
         root.put("boardPhoto", boardPhoto);
         root.put("boardMembers", boardMembers);
+        if (messageIsSet) root.put("message", message);
         if (contactIsSet) root.put("contact", contact);
 
         StringBuilder sb = new StringBuilder();

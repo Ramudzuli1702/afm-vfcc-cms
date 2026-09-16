@@ -42,6 +42,37 @@
             </VBox>
         </Tab>
 
+        <!-- BISHOP'S MESSAGE -->
+        <Tab text="Bishop's Message">
+            <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
+                <VBox spacing="16" style="-fx-padding:20;-fx-max-width:520;">
+                    <Label text="The short video and caption shown in the &quot;A Special Message&quot; section on the homepage. Uploading a new video replaces the one currently live."
+                           wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+
+                    <VBox spacing="10" style="-fx-background-color:#FFFFFF;-fx-padding:16;-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-background-radius:10;">
+                        <Label text="VIDEO" styleClass="form-label"/>
+                        <Label fx:id="messageVideoStatusLabel" text="No video chosen." wrapText="true"
+                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                        <Button text="Choose Video (.mp4)..." styleClass="btn-secondary" onAction="#handleChooseMessageVideo"/>
+
+                        <Label text="POSTER / THUMBNAIL IMAGE" styleClass="form-label" style="-fx-padding:10 0 0 0;"/>
+                        <ImageView fx:id="messagePosterPreview" fitWidth="140" fitHeight="140" preserveRatio="true"/>
+                        <Button text="Choose Poster Image..." styleClass="btn-secondary" onAction="#handleChooseMessagePoster"/>
+
+                        <Label text="CAPTION" styleClass="form-label" style="-fx-padding:10 0 0 0;"/>
+                        <TextField fx:id="messageCaptionField" styleClass="form-field"
+                                   promptText="e.g. Watch Bishop Ramatshimbila preach live every Sunday" maxWidth="Infinity"/>
+                        <Label text="The Facebook link below the video uses the Facebook URL set in Contact Details."
+                               wrapText="true" style="-fx-text-fill:#9099AA;-fx-font-size:11px;"/>
+                    </VBox>
+
+                    <HBox alignment="CENTER_RIGHT">
+                        <Button text="Save &amp; Publish Message" styleClass="btn-primary" onAction="#handleSaveMessage"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
         <!-- MEET OUR LEADERS -->
         <Tab text="Meet Our Leaders">
             <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
@@ -96,16 +127,10 @@
                         <Label text="ADDRESS" styleClass="form-label"/>
                         <TextArea fx:id="contactAddressField" prefHeight="60" wrapText="true" maxWidth="Infinity"/>
                     </VBox>
-                    <HBox spacing="16">
-                        <VBox spacing="6" HBox.hgrow="ALWAYS">
-                            <Label text="PHONE (displayed)" styleClass="form-label"/>
-                            <TextField fx:id="contactPhoneField" styleClass="form-field" promptText="+27 82 399 8785" maxWidth="Infinity"/>
-                        </VBox>
-                        <VBox spacing="6" HBox.hgrow="ALWAYS">
-                            <Label text="PHONE LINK (tel:...)" styleClass="form-label"/>
-                            <TextField fx:id="contactPhoneHrefField" styleClass="form-field" promptText="tel:+27823998785" maxWidth="Infinity"/>
-                        </VBox>
-                    </HBox>
+                    <VBox spacing="6">
+                        <Label text="PHONE" styleClass="form-label"/>
+                        <TextField fx:id="contactPhoneField" styleClass="form-field" promptText="+27 82 399 8785" maxWidth="Infinity"/>
+                    </VBox>
                     <HBox spacing="16">
                         <VBox spacing="6" HBox.hgrow="ALWAYS">
                             <Label text="FACEBOOK URL" styleClass="form-label"/>
