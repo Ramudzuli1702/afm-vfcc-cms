@@ -428,9 +428,17 @@
     -fx-padding: 7 12;
 }
 
-.form-combo .list-cell:hover    { -fx-background-color: #EEF5FF; }
-.form-combo .list-cell:selected { -fx-background-color: #3A86C8; -fx-text-fill: white; }
+/* The box's own display cell is plain text — highlight colours belong only to
+   the drop-down list (styled under .combo-box-popup below). Without this the
+   chosen value showed as a solid blue pill inside every combo. */
+.combo-box > .list-cell,
+.combo-box > .list-cell:selected,
+.combo-box > .list-cell:hover {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1E2130;
+}
 
+.date-picker,
 .form-date-picker {
     -fx-background-color: #FFFFFF;
     -fx-border-color: #DDE1EA;
@@ -438,14 +446,40 @@
     -fx-background-radius: 8;
 }
 
+.date-picker .text-field,
 .form-date-picker .text-field {
     -fx-background-color: transparent;
     -fx-text-fill: #1E2130;
     -fx-font-size: 13px;
     -fx-padding: 10 14;
+    -fx-border-width: 0;
+    -fx-background-insets: 0;
 }
 
-.form-date-picker:focused { -fx-border-color: #3A86C8; }
+.date-picker .arrow-button,
+.form-date-picker .arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 8 8 0;
+    -fx-padding: 0 10 0 4;
+    -fx-border-width: 0;
+}
+
+.date-picker .arrow-button .arrow,
+.form-date-picker .arrow-button .arrow {
+    -fx-background-color: #5A6275;
+    -fx-background-insets: 0;
+}
+
+.date-picker:hover .arrow-button .arrow,
+.form-date-picker:hover .arrow-button .arrow {
+    -fx-background-color: #3A86C8;
+}
+
+.date-picker:focused,
+.form-date-picker:focused {
+    -fx-border-color: #3A86C8;
+    -fx-effect: dropshadow(gaussian, rgba(58,134,200,0.14), 6, 0, 0, 0);
+}
 
 .form-textarea {
     -fx-background-color: #FFFFFF;
@@ -1004,7 +1038,23 @@ ScrollPane > .viewport {
 
 .stat-icon {
     -fx-font-size: 18px;
+    -fx-icon-size: 18;
+    -fx-icon-color: #3A86C8;
 }
+
+/* Circular tinted backdrop behind each stat card's icon — keeps the same
+   four palette colours used elsewhere (blue / blue-dark / amber / green),
+   no new hues introduced. */
+.stat-icon-chip {
+    -fx-min-width: 40; -fx-min-height: 40;
+    -fx-max-width: 40; -fx-max-height: 40;
+    -fx-background-radius: 100;
+}
+.stat-icon-chip.chip-blue      { -fx-background-color: rgba(58,134,200,0.12); }
+.stat-icon-chip.chip-blue-dark { -fx-background-color: rgba(42,107,168,0.12); }
+.stat-icon-chip.chip-amber     { -fx-background-color: rgba(192,120,0,0.12); }
+.stat-icon-chip.chip-green     { -fx-background-color: rgba(46,125,79,0.12); }
+.stat-icon-chip.chip-red       { -fx-background-color: rgba(217,64,64,0.12); }
 
 /* Trend badges — same pill shape/sizing as the existing .badge-* family */
 .badge-up {
@@ -1082,3 +1132,95 @@ ScrollPane > .viewport {
 .welfare-status-chart .data2.chart-pie { -fx-pie-color: #2E7D4F; }
 
 .chart-legend-item { -fx-text-fill: #1E2130; -fx-font-size: 11px; }
+/* ══════════════════════════════════════
+   READ-ONLY DOCUMENT VIEW (utils/DocumentViewer)
+   Completed meetings, closed welfare cases and finished tasks open as a
+   page rather than a form, so nothing changes until Edit is clicked.
+══════════════════════════════════════ */
+.doc-page {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 6;
+    -fx-border-color: #DDE1EA;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 36 44 44 44;
+    -fx-effect: dropshadow(gaussian, rgba(42,53,80,0.10), 18, 0, 0, 4);
+}
+
+.doc-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1E2130;
+}
+
+.doc-meta {
+    -fx-padding: 14 0 16 0;
+    -fx-border-color: #C9A84C transparent #DDE1EA transparent;
+    -fx-border-width: 2 0 1 0;
+}
+
+.doc-meta-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #1E2130;
+}
+
+.doc-section-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #3A86C8;
+    -fx-letter-spacing: 1.5px;
+}
+
+.doc-body {
+    -fx-font-size: 14px;
+    -fx-text-fill: #1E2130;
+    -fx-line-spacing: 4;
+}
+
+.doc-empty {
+    -fx-font-size: 13px;
+    -fx-font-style: italic;
+    -fx-text-fill: #9099AA;
+}
+
+.badge-overdue {
+    -fx-background-color: #FFF0F0;
+    -fx-text-fill: #D94040;
+    -fx-background-radius: 100;
+    -fx-padding: 3 10;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+/* ── Grouped form sections (member form) ── */
+.form-section {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 12;
+    -fx-border-color: #DDE1EA;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 16 18;
+}
+
+.form-section-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #3A86C8;
+    -fx-letter-spacing: 1.5px;
+}
+
+.form-section .check-box { -fx-text-fill: #1E2130; -fx-font-size: 13px; }
+
+/* Compact stat cards (module pages): icon beside the text, so the cards take
+   roughly half the height and leave room for the tables/registers below.
+   The Dashboard keeps the larger .stat-card layout. */
+.stat-card-compact {
+    -fx-padding: 12 18;
+}
+.stat-card-compact .stat-number {
+    -fx-font-size: 24px;
+}
+.stat-card-compact .stat-label {
+    -fx-font-size: 10px;
+}

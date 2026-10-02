@@ -6,6 +6,7 @@ public class WelfareCase {
     private int id;
     private int memberId;
     private String memberName;
+    private String memberPhotoPath;
     private String reason;
     private int assignedWorkerId;
     private String assignedWorkerName;
@@ -22,6 +23,8 @@ public class WelfareCase {
     public void setMemberId(int id)                 { this.memberId = id; }
     public String getMemberName()                   { return memberName; }
     public void setMemberName(String name)          { this.memberName = name; }
+    public String getMemberPhotoPath()              { return memberPhotoPath; }
+    public void setMemberPhotoPath(String p)        { this.memberPhotoPath = p; }
     public String getReason()                       { return reason; }
     public void setReason(String reason)            { this.reason = reason; }
     public int getAssignedWorkerId()                { return assignedWorkerId; }

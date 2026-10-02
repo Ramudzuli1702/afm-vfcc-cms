@@ -2,8 +2,9 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<ScrollPane fitToWidth="true" styleClass="root"
+<ScrollPane fitToWidth="true" fitToHeight="true" styleClass="root"
             style="-fx-background-color:transparent;-fx-background:transparent;"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.afmvfcc.controllers.InventoryController">
@@ -19,43 +20,64 @@
                 <ColumnConstraints percentWidth="25"/>
             </columnConstraints>
 
-            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6">
-                <Label text="📦" styleClass="stat-icon"/>
-                <Label text="TOTAL ITEMS" styleClass="stat-label"/>
-                <Label fx:id="statTotalItems" text="0" styleClass="stat-number"/>
-            </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6">
-                <Label text="💰" styleClass="stat-icon"/>
-                <Label text="ESTIMATED VALUE" styleClass="stat-label"/>
-                <Label fx:id="statTotalValue" text="R0" styleClass="stat-number"/>
-            </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6">
-                <Label text="⚠" styleClass="stat-icon"/>
-                <Label text="LOW STOCK" styleClass="stat-label"/>
-                <Label fx:id="statLowStock" text="0" styleClass="stat-number"/>
-            </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6">
-                <Label text="🔧" styleClass="stat-icon"/>
-                <Label text="NEEDS REPAIR" styleClass="stat-label"/>
-                <Label fx:id="statNeedsRepair" text="0" styleClass="stat-number"/>
-            </VBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="0" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-blue">
+                    <FontIcon iconLiteral="fas-boxes" styleClass="stat-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="TOTAL ITEMS" styleClass="stat-label"/>
+                    <Label fx:id="statTotalItems" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="1" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-green">
+                    <FontIcon iconLiteral="fas-coins" styleClass="stat-icon" iconColor="#2E7D4F"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="ESTIMATED VALUE" styleClass="stat-label"/>
+                    <Label fx:id="statTotalValue" text="R0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="2" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-amber">
+                    <FontIcon iconLiteral="fas-exclamation-triangle" styleClass="stat-icon" iconColor="#C07800"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="LOW STOCK" styleClass="stat-label"/>
+                    <Label fx:id="statLowStock" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="3" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-red">
+                    <FontIcon iconLiteral="fas-wrench" styleClass="stat-icon" iconColor="#D94040"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="NEEDS REPAIR" styleClass="stat-label"/>
+                    <Label fx:id="statNeedsRepair" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
         </GridPane>
 
         <!-- ── TOOLBAR ── -->
         <HBox spacing="10" alignment="CENTER_LEFT">
             <TextField fx:id="inventorySearchField" styleClass="search-field"
-                       promptText="🔍  Search items..." onKeyReleased="#handleSearch"
+                       promptText="Search items..." onKeyReleased="#handleSearch"
                        HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
             <ComboBox fx:id="categoryFilterCombo" styleClass="form-combo"
                       promptText="All Categories" onAction="#handleFilter"/>
             <ComboBox fx:id="conditionFilterCombo" styleClass="form-combo"
                       promptText="All Conditions" onAction="#handleFilter"/>
-            <Button text="⬇  Export"    styleClass="btn-secondary" onAction="#handleExport"/>
-            <Button text="＋  Add Item" styleClass="btn-primary"   onAction="#handleAddItem"/>
+            <Button minWidth="-Infinity" text="Export" graphicTextGap="8" styleClass="btn-secondary" onAction="#handleExport">
+                <graphic><FontIcon iconLiteral="fas-file-export" iconSize="13" iconColor="#1E2130"/></graphic>
+            </Button>
+            <Button minWidth="-Infinity" text="Add Item" graphicTextGap="8" styleClass="btn-primary" onAction="#handleAddItem">
+                <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+            </Button>
         </HBox>
 
         <!-- ── TABLE ── -->
-        <TableView fx:id="inventoryTable" style="-fx-min-height:520px;">
+        <TableView fx:id="inventoryTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+            <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
             <columns>
                 <TableColumn fx:id="colItemName"   text="ITEM"       prefWidth="200"/>
                 <TableColumn fx:id="colCategory"   text="CATEGORY"   prefWidth="140"/>
@@ -64,7 +86,7 @@
                 <TableColumn fx:id="colLocation"   text="LOCATION"   prefWidth="140"/>
                 <TableColumn fx:id="colCustodian"  text="CUSTODIAN"  prefWidth="140"/>
                 <TableColumn fx:id="colValue"      text="VALUE"      prefWidth="100"/>
-                <TableColumn fx:id="colActions"    text="ACTIONS"    prefWidth="150"/>
+                <TableColumn fx:id="colActions"    text="ACTIONS"    prefWidth="110"/>
             </columns>
             <placeholder>
                 <Label text="No inventory items recorded yet. Click &quot;Add Item&quot; to get started."

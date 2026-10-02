@@ -4,7 +4,13 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.WelfareCase;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Avatars;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.Icons;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -36,6 +42,9 @@ public class WelfareController {
     @FXML private TableColumn<String[], Void>    colAgentActions;
     @FXML private TextField                      agentSearchField;
 
+    // ── Stat cards ─────────────────────────────────────────────
+    @FXML private Label statPending, statInProgress, statCompleted, statAgents;
+
     private final ObservableList<WelfareCase> allCases  = FXCollections.observableArrayList();
     private final ObservableList<String[]>    allAgents = FXCollections.observableArrayList();
     private final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -58,6 +67,7 @@ public class WelfareController {
     private void setupTable() {
         colWMember.setCellValueFactory(d ->
             new SimpleStringProperty(d.getValue().getMemberName()));
+        Avatars.nameColumn(colWMember, WelfareCase::getMemberPhotoPath);
 
         colWReason.setCellValueFactory(d ->
             new SimpleStringProperty(d.getValue().getReason()));
@@ -94,42 +104,78 @@ public class WelfareController {
             return new SimpleStringProperty(val);
         });
 
-        colWActions.setCellFactory(col -> new TableCell<WelfareCase, Void>() {
-            private final Button viewBtn  = new Button("View");
-            private final Button closeBtn = new Button("Close");
-            private final HBox   box      = new HBox(6, viewBtn, closeBtn);
-            {
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                closeBtn.getStyleClass().add("btn-primary");
-                closeBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                viewBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        openCaseDialog(getTableView().getItems().get(idx));
-                });
-                closeBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        closeCase(getTableView().getItems().get(idx));
-                });
-            }
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(welfareTable, colWActions, this::openCase);
 
         welfareTable.setItems(allCases);
+    }
+
+    private static boolean isCompleted(WelfareCase wc) { return "Completed".equals(wc.getStatus()); }
+
+    private void refreshStats() {
+        statPending.setText(String.valueOf(allCases.stream().filter(c -> "Pending".equals(c.getStatus())).count()));
+        statInProgress.setText(String.valueOf(allCases.stream().filter(c -> "In Progress".equals(c.getStatus())).count()));
+        statCompleted.setText(String.valueOf(allCases.stream().filter(WelfareController::isCompleted).count()));
+        statAgents.setText(String.valueOf(allAgents.size()));
+    }
+
+    private void openCase(WelfareCase wc) {
+        if (wc == null) return;
+        DateTimeFormatter stamp = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm");
+        DocumentViewer v = new DocumentViewer("Welfare Case", wc.getMemberName())
+            .icon("fas-hand-holding-heart")
+            .avatar(Avatars.of(wc.getMemberPhotoPath(), 64))
+            .status(wc.getStatus(), switch (wc.getStatus()) {
+                case "Completed"   -> "badge-completed";
+                case "In Progress" -> "badge-inprogress";
+                default            -> "badge-pending";
+            })
+            .width(720)
+            .meta("Member",         wc.getMemberName())
+            .meta("Assigned Agent", wc.getAssignedWorkerName())
+            .meta("Opened",         wc.getOpenedAt()    != null ? wc.getOpenedAt().format(stamp)    : null)
+            .meta("Completed",      wc.getCompletedAt() != null ? wc.getCompletedAt().format(stamp) : null)
+            .section("Reason for Visit", wc.getReason(), "No reason recorded.")
+            .section("Agent Report",     wc.getReport(), "No report was submitted for this case.")
+            .action("Print", "fas-print", () -> WelfarePdfExporter.export(java.util.List.of(wc)));
+        if (!isCompleted(wc))
+            v.closingAction("Mark Completed", "fas-check", "btn-secondary", () -> closeCase(wc));
+        v.onEdit(() -> openCaseDialog(wc))
+         .onDelete(() -> deleteCase(wc))
+         .show();
+    }
+
+    /** Confirms, then deletes. Returns true if the case was removed. */
+    private boolean deleteCase(WelfareCase wc) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
+        confirm.setTitle("Delete Welfare Case");
+        confirm.setHeaderText("Delete the welfare case for " + wc.getMemberName() + "?");
+        confirm.setContentText("The reason and agent report are deleted permanently. This cannot be undone.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection()
+                .prepareStatement("DELETE FROM welfare_cases WHERE id=?");
+            ps.setInt(1, wc.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted welfare case for: " + wc.getMemberName());
+            loadCases();
+            loadAgents(); // case counts per agent change
+            ToastManager.success("Welfare case deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete welfare case: " + e.getMessage());
+            return false;
+        }
     }
 
     private void loadCases() {
         allCases.clear();
         try {
             Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT wc.*, m.full_name AS member_name, wm.full_name AS worker_name " +
+            String sql = "SELECT wc.*, m.full_name AS member_name, m.photo_path AS member_photo, " +
+                         "wm.full_name AS worker_name " +
                          "FROM welfare_cases wc " +
                          "JOIN members m ON m.id = wc.member_id " +
                          "LEFT JOIN welfare_workers ww ON ww.id = wc.assigned_worker_id " +
@@ -141,6 +187,7 @@ public class WelfareController {
                 wc.setId(rs.getInt("id"));
                 wc.setMemberId(rs.getInt("member_id"));
                 wc.setMemberName(rs.getString("member_name"));
+                wc.setMemberPhotoPath(rs.getString("member_photo"));
                 wc.setReason(rs.getString("reason"));
                 wc.setAssignedWorkerId(rs.getInt("assigned_worker_id"));
                 wc.setAssignedWorkerName(rs.getString("worker_name"));
@@ -148,10 +195,13 @@ public class WelfareController {
                 wc.setStatus(rs.getString("status"));
                 if (rs.getTimestamp("opened_at") != null)
                     wc.setOpenedAt(rs.getTimestamp("opened_at").toLocalDateTime());
+                if (rs.getTimestamp("completed_at") != null)
+                    wc.setCompletedAt(rs.getTimestamp("completed_at").toLocalDateTime());
                 allCases.add(wc);
             }
         } catch (SQLException e) { e.printStackTrace(); }
         applyFilter();
+        refreshStats();
     }
 
     @FXML public void handleSearch() { applyFilter(); }
@@ -177,43 +227,18 @@ public class WelfareController {
     @FXML public void handleExportPdf() { WelfarePdfExporter.export(allCases); }
 
     private void openCaseDialog(WelfareCase existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null ? "New Welfare Case" : "Welfare Case: " + existing.getMemberName());
+        FormBuilder f = new FormBuilder(existing == null ? "New Welfare Case" : "Edit Welfare Case").icon("fas-hand-holding-heart");
 
-        VBox root = new VBox(16);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        ComboBox<String> memberCombo = new ComboBox<>();
-        memberCombo.getStyleClass().add("form-combo");
+        ComboBox<String> memberCombo = FormBuilder.combo("Search and select member...");
         memberCombo.setEditable(true);
-        memberCombo.setPromptText("Select member...");
-        memberCombo.setMaxWidth(Double.MAX_VALUE);
         loadMembersInto(memberCombo);
-
-        ComboBox<String> workerCombo = new ComboBox<>();
-        workerCombo.getStyleClass().add("form-combo");
-        workerCombo.setPromptText("Assign welfare agent...");
-        workerCombo.setMaxWidth(Double.MAX_VALUE);
+        ComboBox<String> workerCombo = FormBuilder.combo("Assign welfare agent...");
         loadWorkersInto(workerCombo);
-
-        TextArea reasonArea = new TextArea();
-        reasonArea.getStyleClass().add("form-textarea");
-        reasonArea.setPromptText("Reason for welfare visit...");
-        reasonArea.setPrefHeight(80);
-        reasonArea.setMaxWidth(Double.MAX_VALUE);
-
-        TextArea reportArea = new TextArea();
-        reportArea.getStyleClass().add("form-textarea");
-        reportArea.setPromptText("Welfare agent report...");
-        reportArea.setPrefHeight(100);
-        reportArea.setMaxWidth(Double.MAX_VALUE);
-
-        ComboBox<String> statusCombo = new ComboBox<>();
-        statusCombo.getStyleClass().add("form-combo");
+        TextArea reasonArea = FormBuilder.area("Why does this member need a welfare visit?", 80);
+        TextArea reportArea = FormBuilder.area("What the agent found and did on their visits...", 110);
+        ComboBox<String> statusCombo = FormBuilder.combo(null);
         statusCombo.getItems().addAll("Pending", "In Progress", "Completed");
         statusCombo.setValue("Pending");
-        statusCombo.setMaxWidth(Double.MAX_VALUE);
 
         if (existing != null) {
             memberCombo.setValue(existing.getMemberName());
@@ -225,40 +250,25 @@ public class WelfareController {
             statusCombo.setValue(existing.getStatus());
         }
 
-        Button saveBtn   = new Button("Save");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox btns = new HBox(10, cancelBtn, saveBtn);
-        btns.setAlignment(Pos.CENTER_RIGHT);
+        f.section("Case")
+         .field("MEMBER *", memberCombo)
+         .field("REASON *", reasonArea);
+        f.section("Follow-up")
+         .row("ASSIGNED AGENT", workerCombo, "STATUS", statusCombo)
+         .field("AGENT REPORT", reportArea);
 
-        VBox formBody = new VBox(14);
-        formBody.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
-        formBody.getChildren().addAll(
-            formRow("MEMBER *",          memberCombo),
-            formRow("ASSIGNED AGENT",    workerCombo),
-            formRow("REASON *",          reasonArea),
-            formRow("AGENT REPORT",      reportArea),
-            formRow("STATUS",            statusCombo)
-        );
-
-        ScrollPane bodyScroll = new ScrollPane(formBody);
-        bodyScroll.setFitToWidth(true);
-        bodyScroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;");
-        VBox.setVgrow(bodyScroll, Priority.ALWAYS);
-
-        btns.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-        btns.setMaxWidth(Double.MAX_VALUE);
-        root.getChildren().addAll(bodyScroll, btns);
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing == null ? "Open Case" : "Save Changes");
         saveBtn.setOnAction(e -> {
             String member = memberCombo.getValue();
             String reason = reasonArea.getText().trim();
-            if (member == null || member.isEmpty() || reason.isEmpty()) return;
+            if (member == null || member.isBlank() || reason.isEmpty()) {
+                f.showError("Please choose the member and enter the reason for the visit.");
+                return;
+            }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 int memberId = getMemberIdByName(conn, member);
+                if (memberId <= 0) { f.showError("\"" + member + "\" is not a member — pick a name from the list."); return; }
                 int workerId = getWorkerIdByName(conn, workerCombo.getValue());
 
                 if (existing == null) {
@@ -277,56 +287,55 @@ public class WelfareController {
                 } else {
                     String extra = "Completed".equals(statusCombo.getValue()) ? ", completed_at=NOW() " : " ";
                     PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE welfare_cases SET assigned_worker_id=?, report=?, status=?" +
+                        "UPDATE welfare_cases SET reason=?, assigned_worker_id=?, report=?, status=?" +
                         extra + "WHERE id=?"
                     );
-                    if (workerId > 0) ps.setInt(1, workerId); else ps.setNull(1, Types.INTEGER);
-                    ps.setString(2, reportArea.getText().trim());
-                    ps.setString(3, statusCombo.getValue());
-                    ps.setInt(4, existing.getId());
+                    ps.setString(1, reason);
+                    if (workerId > 0) ps.setInt(2, workerId); else ps.setNull(2, Types.INTEGER);
+                    ps.setString(3, reportArea.getText().trim());
+                    ps.setString(4, statusCombo.getValue());
+                    ps.setInt(5, existing.getId());
                     ps.executeUpdate();
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Updated welfare case for: " + member + " -> " + statusCombo.getValue());
                 }
                 loadCases();
-                stage.close();
+                loadAgents(); // case counts per agent
+                f.close();
                 ToastManager.success(existing == null ? "Welfare case added successfully." : "Welfare case updated successfully.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                f.showError("Could not save the case: " + ex.getMessage());
                 ToastManager.error("Failed to save welfare case: " + ex.getMessage());
             }
         });
-
-        Scene scene = new Scene(root, 520, 580);
-        scene.setFill(javafx.scene.paint.Color.web("#F5F6FA"));
-        scene.getStylesheets().add(getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(620);
     }
 
-    private void closeCase(WelfareCase wc) {
+    /** Confirms, then marks the case Completed. Returns true if it was closed. */
+    private boolean closeCase(WelfareCase wc) {
+        if (wc == null) return false;
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Close Case");
         confirm.setHeaderText(null);
         confirm.setContentText("Mark welfare case for " + wc.getMemberName() + " as Completed?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    conn.createStatement().executeUpdate(
-                        "UPDATE welfare_cases SET status='Completed', completed_at=NOW() WHERE id=" + wc.getId()
-                    );
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Closed welfare case for: " + wc.getMemberName());
-                    loadCases();
-                    ToastManager.success("Welfare case closed successfully.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to close welfare case: " + e.getMessage());
-                }
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection().prepareStatement(
+                "UPDATE welfare_cases SET status='Completed', completed_at=NOW() WHERE id=?");
+            ps.setInt(1, wc.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Closed welfare case for: " + wc.getMemberName());
+            loadCases();
+            ToastManager.success("Welfare case closed successfully.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to close welfare case: " + e.getMessage());
+            return false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -335,27 +344,11 @@ public class WelfareController {
 
     private void setupAgentsTable() {
         colAgentName.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
+        Avatars.nameColumn(colAgentName, row -> row[4]);
         colAgentPhone.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
         colAgentCases.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
 
-        colAgentActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button removeBtn = new Button("Remove Agent");
-            {
-                removeBtn.getStyleClass().add("btn-danger");
-                removeBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                removeBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        removeAgent(Integer.parseInt(row[3]), row[0]);
-                    }
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : removeBtn);
-            }
-        });
+        TableActions.viewOnly(agentsTable, colAgentActions, this::showAgent);
         agentsTable.setItems(allAgents);
     }
 
@@ -364,7 +357,7 @@ public class WelfareController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.createStatement().executeQuery(
-                "SELECT ww.id, m.full_name, IFNULL(m.phone,'—') AS phone, " +
+                "SELECT ww.id, m.full_name, m.photo_path, IFNULL(m.phone,'—') AS phone, " +
                 "(SELECT COUNT(*) FROM welfare_cases wc WHERE wc.assigned_worker_id = ww.id) AS case_count " +
                 "FROM welfare_workers ww " +
                 "JOIN members m ON m.id = ww.member_id " +
@@ -375,78 +368,70 @@ public class WelfareController {
                     rs.getString("full_name"),
                     rs.getString("phone"),
                     rs.getString("case_count"),
-                    rs.getString("id")         // hidden: welfare_workers.id
+                    rs.getString("id"),        // hidden: welfare_workers.id
+                    rs.getString("photo_path") // hidden: photo
                 });
             }
         } catch (SQLException e) { e.printStackTrace(); }
         applyAgentSearch();
+        refreshStats();
+    }
+
+    private void showAgent(String[] row) {
+        int workerId = Integer.parseInt(row[3]);
+        java.util.List<String> cases = new java.util.ArrayList<>();
+        for (WelfareCase wc : allCases)
+            if (wc.getAssignedWorkerId() == workerId)
+                cases.add(wc.getMemberName() + "  —  " + wc.getStatus());
+        new DocumentViewer("Welfare Agent", row[0])
+            .icon("fas-hands-helping")
+            .avatar(Avatars.of(row[4], 64))
+            .width(640)
+            .meta("Phone", row[1])
+            .meta("Cases Assigned", row[2])
+            .section("Cases", DocumentViewer.bulletList(cases, "No cases assigned yet."))
+            .deleteLabel("Remove Agent")
+            .onDelete(() -> removeAgent(workerId, row[0]))
+            .show();
     }
 
     /** Called by the "Add Agent" button in the Agents tab. */
     @FXML
     public void handleAddAgent() {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Designate Welfare Agent");
+        FormBuilder f = new FormBuilder("Designate Welfare Agent").icon("fas-hands-helping");
 
-        VBox root = new VBox(16);
-        root.setStyle("-fx-background-color:#F5F6FA;-fx-padding:24;");
-
-        Label hint = new Label("Select a church member to designate as a welfare agent.\n" +
-                               "Agents can be assigned to welfare cases.");
-        hint.setStyle("-fx-font-size:12px;-fx-text-fill:#6B7280;");
-        hint.setWrapText(true);
-
-        ComboBox<String> memberCombo = new ComboBox<>();
-        memberCombo.getStyleClass().add("form-combo");
+        ComboBox<String> memberCombo = FormBuilder.combo("Search and select member...");
         memberCombo.setEditable(true);
-        memberCombo.setPromptText("Search and select member...");
-        memberCombo.setMaxWidth(Double.MAX_VALUE);
-
-        // Only show members who are NOT already agents
+        // Only members who are not already agents
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.createStatement().executeQuery(
                 "SELECT full_name FROM members " +
-                "WHERE is_deleted=0 " +
+                "WHERE is_deleted=0 AND is_deceased=0 " +
                 "  AND id NOT IN (SELECT member_id FROM welfare_workers) " +
                 "ORDER BY full_name"
             );
             while (rs.next()) memberCombo.getItems().add(rs.getString("full_name"));
         } catch (SQLException e) { e.printStackTrace(); }
 
-        Button saveBtn   = new Button("Designate as Agent");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox btns = new HBox(10, cancelBtn, saveBtn);
-        btns.setAlignment(Pos.CENTER_RIGHT);
+        f.section("Agent")
+         .field("MEMBER *", memberCombo)
+         .hint("Agents are members who visit and support those in need. They can then be assigned to welfare cases.");
 
-        root.getChildren().addAll(
-            hint,
-            makeRow("SELECT MEMBER *", memberCombo),
-            btns
-        );
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton("Designate as Agent");
         saveBtn.setOnAction(e -> {
             String selected = memberCombo.getValue();
-            if (selected == null || selected.isEmpty()) return;
+            if (selected == null || selected.isBlank()) { f.showError("Please choose a member."); return; }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 int memberId = getMemberIdByName(conn, selected);
-                if (memberId <= 0) return;
+                if (memberId <= 0) { f.showError("\"" + selected + "\" is not a member — pick a name from the list."); return; }
 
-                // Check not already an agent
                 PreparedStatement check = conn.prepareStatement(
                     "SELECT id FROM welfare_workers WHERE member_id=?"
                 );
                 check.setInt(1, memberId);
-                if (check.executeQuery().next()) {
-                    new Alert(Alert.AlertType.INFORMATION,
-                        selected + " is already a welfare agent.").showAndWait();
-                    return;
-                }
+                if (check.executeQuery().next()) { f.showError(selected + " is already a welfare agent."); return; }
 
                 PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO welfare_workers (member_id) VALUES (?)"
@@ -456,16 +441,14 @@ public class WelfareController {
                 AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                     "Designated welfare agent: " + selected);
                 loadAgents();
-                stage.close();
-            } catch (SQLException ex) { ex.printStackTrace(); }
+                f.close();
+                ToastManager.success(selected + " is now a welfare agent.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                f.showError("Could not save: " + ex.getMessage());
+            }
         });
-
-        Scene scene = new Scene(root, 440, 240);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm()
-        );
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(520);
     }
 
     /** Search handler wired to agentSearchField in FXML. */
@@ -488,45 +471,38 @@ public class WelfareController {
         agentsTable.setItems(filtered);
     }
 
-    private void removeAgent(int welfareWorkerId, String name) {
+    /** Confirms, then removes the agent (their open cases become unassigned). Returns true if removed. */
+    private boolean removeAgent(int welfareWorkerId, String name) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Remove Welfare Agent");
         confirm.setHeaderText("Remove " + name + " as a welfare agent?");
-        confirm.setContentText("Their existing cases will become unassigned.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    // Unassign their open cases first
-                    conn.createStatement().executeUpdate(
-                        "UPDATE welfare_cases SET assigned_worker_id=NULL " +
-                        "WHERE assigned_worker_id=" + welfareWorkerId +
-                        "  AND status != 'Completed'"
-                    );
-                    // Remove agent record
-                    conn.createStatement().executeUpdate(
-                        "DELETE FROM welfare_workers WHERE id=" + welfareWorkerId
-                    );
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Removed welfare agent: " + name);
-                    loadAgents();
-                    loadCases(); // refresh case list (agent column changes)
-                } catch (SQLException e) { e.printStackTrace(); }
-            }
-        });
+        confirm.setContentText("Their open cases will become unassigned.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement unassign = conn.prepareStatement(
+                "UPDATE welfare_cases SET assigned_worker_id=NULL " +
+                "WHERE assigned_worker_id=? AND status != 'Completed'");
+            unassign.setInt(1, welfareWorkerId);
+            unassign.executeUpdate();
+            PreparedStatement del = conn.prepareStatement("DELETE FROM welfare_workers WHERE id=?");
+            del.setInt(1, welfareWorkerId);
+            del.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Removed welfare agent: " + name);
+            loadAgents();
+            loadCases(); // refresh case list (agent column changes)
+            ToastManager.success(name + " removed as a welfare agent.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to remove agent: " + e.getMessage());
+            return false;
+        }
     }
 
     // ── HELPERS ────────────────────────────────────────────────
-
-    private VBox makeRow(String labelText, javafx.scene.Node field) {
-        VBox box = new VBox(6);
-        Label lbl = new Label(labelText);
-        lbl.getStyleClass().add("form-label");
-        box.getChildren().addAll(lbl, field);
-        if (field instanceof Control) ((Control) field).setMaxWidth(Double.MAX_VALUE);
-        return box;
-    }
 
     private void loadMembersInto(ComboBox<String> combo) {
         try {
@@ -573,7 +549,4 @@ public class WelfareController {
         } catch (SQLException e) { return 0; }
     }
 
-    private VBox formRow(String labelText, javafx.scene.Node field) {
-        return makeRow(labelText, field);
-    }
 }

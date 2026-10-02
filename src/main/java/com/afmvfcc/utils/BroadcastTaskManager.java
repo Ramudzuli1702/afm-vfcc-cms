@@ -166,7 +166,7 @@ public class BroadcastTaskManager {
         this.downloadedFile  = file;
         this.downloadPhase   = Phase.SUCCEEDED;
         this.downloadProgress = 1.0;
-        this.downloadStatus  = "✓ File selected";
+        this.downloadStatus  = "File selected";
         this.downloadError   = false;
     }
 

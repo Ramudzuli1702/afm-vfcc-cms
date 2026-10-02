@@ -2,51 +2,111 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.afmvfcc.controllers.CommunicationsController" spacing="0">
+      fx:controller="com.afmvfcc.controllers.CommunicationsController" spacing="16">
+
+    <!-- ── STAT CARDS ── -->
+    <GridPane hgap="14" vgap="14">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+        </columnConstraints>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="0" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue">
+                <FontIcon iconLiteral="fas-envelope" styleClass="stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="EMAILS SENT" styleClass="stat-label"/>
+                <Label fx:id="statEmails" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="1" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-green">
+                <FontIcon iconLiteral="fas-sms" styleClass="stat-icon" iconColor="#2E7D4F"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="SMS SENT" styleClass="stat-label"/>
+                <Label fx:id="statSms" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="2" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-amber">
+                <FontIcon iconLiteral="fas-bullhorn" styleClass="stat-icon" iconColor="#C07800"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="ANNOUNCEMENTS" styleClass="stat-label"/>
+                <Label fx:id="statAnnouncements" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="3" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue-dark">
+                <FontIcon iconLiteral="fas-calendar-alt" styleClass="stat-icon" iconColor="#2A6BA8"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="SENT THIS MONTH" styleClass="stat-label"/>
+                <Label fx:id="statThisMonth" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+    </GridPane>
+
     <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
 
         <!-- ── COMPOSE TAB ── -->
         <Tab text="Compose Message">
-            <VBox spacing="18" style="-fx-padding:24;-fx-background-color:#F5F6FA;">
-                <HBox spacing="16">
-                    <VBox spacing="6" HBox.hgrow="ALWAYS">
-                        <Label text="RECIPIENT GROUP" styleClass="form-label"/>
-                        <ComboBox fx:id="recipientGroup" styleClass="form-combo" maxWidth="Infinity"/>
+            <ScrollPane fitToWidth="true" fitToHeight="true"
+                        style="-fx-background-color:transparent;-fx-background:transparent;">
+            <VBox spacing="16" style="-fx-padding:16 0 16 0;">
+                <VBox styleClass="page-card" spacing="16" VBox.vgrow="ALWAYS">
+                    <Label text="MESSAGE" styleClass="section-label"/>
+                    <Label text="Email or SMS to Members" styleClass="section-title"/>
+                    <Label text="Choose who should receive it and how, then write the message. You can check the recipients before sending."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:13px;" wrapText="true"/>
+                    <HBox spacing="14" alignment="BOTTOM_LEFT">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="RECIPIENT GROUP" styleClass="form-label"/>
+                            <ComboBox fx:id="recipientGroup" styleClass="form-combo" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" prefWidth="160">
+                            <Label text="CHANNEL" styleClass="form-label"/>
+                            <ComboBox fx:id="channelCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                        </VBox>
+                        <Button minWidth="-Infinity" text="View Recipients" graphicTextGap="8" styleClass="btn-secondary"
+                                onAction="#handleViewRecipients">
+                            <graphic><FontIcon iconLiteral="fas-users" iconSize="13" iconColor="#1E2130"/></graphic>
+                        </Button>
+                    </HBox>
+                    <VBox spacing="6">
+                        <Label text="SUBJECT (EMAIL ONLY)" styleClass="form-label"/>
+                        <TextField fx:id="subjectField" styleClass="form-field"
+                                   promptText="Email subject..." maxWidth="Infinity"/>
                     </VBox>
-                    <VBox spacing="6" prefWidth="160">
-                        <Label text="CHANNEL" styleClass="form-label"/>
-                        <ComboBox fx:id="channelCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                    <VBox spacing="6" VBox.vgrow="ALWAYS">
+                        <Label text="MESSAGE *" styleClass="form-label"/>
+                        <TextArea fx:id="messageArea" styleClass="form-textarea" wrapText="true"
+                                  promptText="Write your message here..."
+                                  prefHeight="200" maxWidth="Infinity" VBox.vgrow="ALWAYS"/>
                     </VBox>
-                    <VBox spacing="6" alignment="BOTTOM_LEFT">
-                        <Label text=" " styleClass="form-label"/>
-                        <Button text="👥  View Recipients" styleClass="btn-secondary"
-                                onAction="#handleViewRecipients"/>
-                    </VBox>
-                </HBox>
-                <VBox spacing="6">
-                    <Label text="SUBJECT (EMAIL ONLY)" styleClass="form-label"/>
-                    <TextField fx:id="subjectField" styleClass="form-field"
-                               promptText="Email subject..." maxWidth="Infinity"/>
+                    <HBox alignment="CENTER_LEFT" spacing="14">
+                        <Label fx:id="statusLabel" visible="false" wrapText="true"/>
+                        <HBox HBox.hgrow="ALWAYS"/>
+                        <Button minWidth="-Infinity" text="Send Message" graphicTextGap="8" styleClass="btn-primary"
+                                onAction="#handleSend">
+                            <graphic><FontIcon iconLiteral="fas-paper-plane" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                        </Button>
+                    </HBox>
                 </VBox>
-                <VBox spacing="6" VBox.vgrow="ALWAYS">
-                    <Label text="MESSAGE *" styleClass="form-label"/>
-                    <TextArea fx:id="messageArea" styleClass="form-textarea"
-                              promptText="Write your message here..."
-                              prefHeight="220" maxWidth="Infinity"/>
-                </VBox>
-                <HBox alignment="CENTER_LEFT" spacing="14">
-                    <Button text="Send Message" styleClass="btn-primary" onAction="#handleSend"/>
-                    <Label fx:id="statusLabel" visible="false"/>
-                </HBox>
             </VBox>
+            </ScrollPane>
         </Tab>
 
         <!-- ANNOUNCEMENTS TAB -->
         <Tab text="Announcements">
             <ScrollPane fitToWidth="true"
                         style="-fx-background-color:transparent;-fx-background:transparent;">
-                <VBox spacing="24" style="-fx-padding:24;-fx-background-color:#F5F6FA;">
+                <VBox spacing="16" style="-fx-padding:16 0 16 0;">
 
                     <VBox styleClass="page-card" spacing="16">
                         <Label text="ANNOUNCEMENTS" styleClass="section-label"/>
@@ -65,14 +125,18 @@
                         <VBox spacing="6">
                             <Label text="ATTACHMENT (optional)" styleClass="form-label"/>
                             <HBox spacing="10" alignment="CENTER_LEFT">
-                                <Button text="📎  Attach File" styleClass="btn-secondary"
-                                        onAction="#handleAttachFile"/>
+                                <Button minWidth="-Infinity" text="Attach File" graphicTextGap="8" styleClass="btn-secondary"
+                                        onAction="#handleAttachFile">
+                                    <graphic><FontIcon iconLiteral="fas-paperclip" iconSize="13" iconColor="#1E2130"/></graphic>
+                                </Button>
                                 <Label fx:id="attachmentLabel" text="No attachment"
                                        style="-fx-text-fill:#9099AA;-fx-font-size:12px;"
                                        HBox.hgrow="ALWAYS"/>
-                                <Button text="✕ Remove" styleClass="btn-secondary"
+                                <Button minWidth="-Infinity" text="Remove" graphicTextGap="6" styleClass="btn-secondary"
                                         style="-fx-padding:4 10;-fx-font-size:11px;"
-                                        onAction="#handleRemoveAttachment"/>
+                                        onAction="#handleRemoveAttachment">
+                                    <graphic><FontIcon iconLiteral="fas-times" iconSize="11" iconColor="#1E2130"/></graphic>
+                                </Button>
                             </HBox>
                             <Label text="Supports: PDF, Word (.docx), Images (JPG/PNG), Videos (MP4)."
                                    style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
@@ -85,8 +149,11 @@
                                       style="-fx-background-color:#F0FFF4;-fx-border-color:#25D366;-fx-border-radius:8;-fx-background-radius:8;-fx-padding:10 16;">
                                     <CheckBox fx:id="sendToWhatsApp"/>
                                     <VBox spacing="2">
-                                        <Label text="📱 WhatsApp"
-                                               style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#128C7E;"/>
+                                        <HBox spacing="6" alignment="CENTER_LEFT">
+                                            <FontIcon iconLiteral="fab-whatsapp" iconSize="13" iconColor="#128C7E"/>
+                                            <Label text="WhatsApp"
+                                                   style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#128C7E;"/>
+                                        </HBox>
                                         <Label text="Sends to configured recipient via WhatsApp Cloud API"
                                                style="-fx-font-size:10px;-fx-text-fill:#5A6275;" wrapText="true"/>
                                     </VBox>
@@ -95,8 +162,11 @@
                                       style="-fx-background-color:#EBF5FF;-fx-border-color:#1877F2;-fx-border-radius:8;-fx-background-radius:8;-fx-padding:10 16;">
                                     <CheckBox fx:id="sendToFacebook"/>
                                     <VBox spacing="2">
-                                        <Label text="📘 Facebook Page"
-                                               style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#1877F2;"/>
+                                        <HBox spacing="6" alignment="CENTER_LEFT">
+                                            <FontIcon iconLiteral="fab-facebook" iconSize="13" iconColor="#1877F2"/>
+                                            <Label text="Facebook Page"
+                                                   style="-fx-font-weight:700;-fx-font-size:13px;-fx-text-fill:#1877F2;"/>
+                                        </HBox>
                                         <Label text="Posts to the church Facebook Page feed"
                                                style="-fx-font-size:10px;-fx-text-fill:#5A6275;" wrapText="true"/>
                                     </VBox>
@@ -105,23 +175,29 @@
                         </VBox>
 
                         <HBox spacing="14" alignment="CENTER_LEFT">
-                            <Button text="📢  Post Announcement"
-                                    styleClass="btn-primary" style="-fx-padding:10 24;"
-                                    onAction="#handlePostAnnouncement"/>
                             <Label fx:id="announcementStatus"
                                    visible="false" managed="false"
                                    style="-fx-font-size:12px;-fx-font-weight:600;"
-                                   wrapText="true" HBox.hgrow="ALWAYS"/>
+                                   wrapText="true"/>
+                            <HBox HBox.hgrow="ALWAYS"/>
+                            <Button minWidth="-Infinity" text="Post Announcement" graphicTextGap="8"
+                                    styleClass="btn-primary" onAction="#handlePostAnnouncement">
+                                <graphic><FontIcon iconLiteral="fas-bullhorn" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                            </Button>
                         </HBox>
 
-                        <Label text="💡  Configure WhatsApp and Facebook credentials in Settings → Announcements before posting."
-                               style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+                        <HBox spacing="6" alignment="CENTER_LEFT">
+                            <FontIcon iconLiteral="fas-lightbulb" iconSize="11" iconColor="#3A86C8"/>
+                            <Label text="Configure WhatsApp and Facebook credentials in Settings → Announcements before posting."
+                                   style="-fx-text-fill:#3A86C8;-fx-font-size:11px;" wrapText="true"/>
+                        </HBox>
                     </VBox>
 
                     <VBox styleClass="page-card" spacing="16">
                         <Label text="ANNOUNCEMENT HISTORY" styleClass="section-label"/>
                         <Label text="All Posted Announcements" styleClass="section-title"/>
                         <TableView fx:id="announcementTable" prefHeight="320">
+                            <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                             <columns>
                                 <TableColumn fx:id="colAnnTitle"    text="ANNOUNCEMENT"  prefWidth="280"/>
                                 <TableColumn fx:id="colAnnDate"     text="DATE"          prefWidth="140"/>
@@ -143,17 +219,21 @@
 
         <!-- ── SENT LOG TAB ── -->
         <Tab text="Sent Log">
-            <VBox spacing="12" style="-fx-padding:24;-fx-background-color:#F5F6FA;">
-                <Label text="Double-click any row or click View to read the full message. Click 'Recipients' to see who was in the group."
-                       style="-fx-font-size:11px;-fx-text-fill:#9099AA;"/>
-                <TableView fx:id="sentTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <Label text="Every email and SMS sent from the CMS. Click View to read a message and see its recipients."
+                       style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                <TableView fx:id="sentTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colSentType"    text="CHANNEL"  prefWidth="90"/>
                         <TableColumn fx:id="colSentTo"      text="SENT TO"  prefWidth="190"/>
                         <TableColumn fx:id="colSentSubject" text="SUBJECT"  prefWidth="200"/>
                         <TableColumn fx:id="colSentDate"    text="DATE"     prefWidth="140"/>
-                        <TableColumn fx:id="colSentActions" text=""         prefWidth="160"/>
+                        <TableColumn fx:id="colSentActions" text="" prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="Nothing has been sent yet."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>

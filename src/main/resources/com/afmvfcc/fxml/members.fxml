@@ -2,10 +2,59 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.afmvfcc.controllers.MembersController"
-      spacing="16" style="-fx-padding:0;">
+<ScrollPane fitToWidth="true" fitToHeight="true" styleClass="root"
+            style="-fx-background-color:transparent;-fx-background:transparent;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.MembersController">
+<VBox spacing="16" style="-fx-padding:4 0 16 0;">
+
+    <!-- ── STAT CARDS ── -->
+    <GridPane hgap="14" vgap="14">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+        </columnConstraints>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="0" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue">
+                <FontIcon iconLiteral="fas-users" styleClass="stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="TOTAL MEMBERS" styleClass="stat-label"/>
+                <Label fx:id="statTotal" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="1" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-green">
+                <FontIcon iconLiteral="fas-user-check" styleClass="stat-icon" iconColor="#2E7D4F"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="ACTIVE" styleClass="stat-label"/>
+                <Label fx:id="statActive" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="2" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-amber">
+                <FontIcon iconLiteral="fas-user-clock" styleClass="stat-icon" iconColor="#C07800"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="PENDING APPROVAL" styleClass="stat-label"/>
+                <Label fx:id="statPending" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="3" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue-dark">
+                <FontIcon iconLiteral="fas-user-friends" styleClass="stat-icon" iconColor="#2A6BA8"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="GUESTS TO FOLLOW UP" styleClass="stat-label"/>
+                <Label fx:id="statGuests" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+    </GridPane>
 
     <!-- TOOLBAR -->
     <HBox spacing="10" alignment="BOTTOM_LEFT">
@@ -57,8 +106,12 @@
         <VBox spacing="4" alignment="BOTTOM_LEFT">
             <Label text=" " styleClass="form-label"/>  <!-- spacer to match label height -->
             <HBox spacing="8">
-                <Button text="+ Add Member"  styleClass="btn-primary"   onAction="#handleAdd"/>
-                <Button text="📊  Print"     styleClass="btn-secondary" onAction="#handlePrint"/>
+                <Button minWidth="-Infinity" text="Add Member" graphicTextGap="8" styleClass="btn-primary" onAction="#handleAdd">
+                    <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                </Button>
+                <Button minWidth="-Infinity" text="Print" graphicTextGap="8" styleClass="btn-secondary" onAction="#handlePrint">
+                    <graphic><FontIcon iconLiteral="fas-print" iconSize="13" iconColor="#1E2130"/></graphic>
+                </Button>
             </HBox>
         </VBox>
 
@@ -72,7 +125,7 @@
         <Label fx:id="pendingBannerLabel" text="0 new members pending approval"
                style="-fx-text-fill:#D4A017;-fx-font-weight:700;-fx-font-size:13px;"/>
         <HBox HBox.hgrow="ALWAYS"/>
-        <Button text="Review Pending" styleClass="btn-primary"
+        <Button minWidth="-Infinity" text="Review Pending" styleClass="btn-primary"
                 style="-fx-padding:6 14;" onAction="#showPendingTab"/>
     </HBox>
 
@@ -83,7 +136,8 @@
         <Tab text="All Members">
             <VBox spacing="12" style="-fx-padding:0 0 8 0;">
                 <TableView fx:id="membersTable" VBox.vgrow="ALWAYS"
-                           style="-fx-min-height:500px;" onMouseClicked="#handleTableClick">
+                           style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colPhoto"        text=""             prefWidth="50"/>
                         <TableColumn fx:id="colName"         text="FULL NAME"    prefWidth="200"/>
@@ -92,8 +146,11 @@
                         <TableColumn fx:id="colMinistries"   text="MINISTRIES"   prefWidth="200"/>
                         <TableColumn fx:id="colAvailability" text="AVAILABILITY" prefWidth="110"/>
                         <TableColumn fx:id="colStatus"       text="STATUS"       prefWidth="90"/>
-                        <TableColumn fx:id="colActions"      text="ACTIONS"      prefWidth="200"/>
+                        <TableColumn fx:id="colActions"      text="ACTIONS"      prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No members match these filters."/>
+                    </placeholder>
                 </TableView>
                 <HBox alignment="CENTER_LEFT">
                     <Label fx:id="memberCountLabel" text="0 members"
@@ -109,16 +166,22 @@
                     <Label text="Manage the sub-branches of your church."
                            style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="+ Add Sub-Branch" styleClass="btn-primary"
-                            onAction="#handleAddSubBranch"/>
+                    <Button minWidth="-Infinity" text="Add Sub-Branch" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleAddSubBranch">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="subBranchTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="subBranchTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colSbName"    text="SUB-BRANCH NAME" prefWidth="300"/>
                         <TableColumn fx:id="colSbMembers" text="MEMBERS"         prefWidth="100"/>
                         <TableColumn fx:id="colSbStatus"  text="STATUS"          prefWidth="100"/>
-                        <TableColumn fx:id="colSbActions" text="ACTIONS"         prefWidth="200"/>
+                        <TableColumn fx:id="colSbActions" text="ACTIONS"         prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No sub-branches yet. Click &quot;Add Sub-Branch&quot; to create one."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
@@ -130,17 +193,23 @@
                     <Label text="Manage the ministries of your church."
                            style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="+ Add Ministry" styleClass="btn-primary"
-                            onAction="#handleAddMinistry"/>
+                    <Button minWidth="-Infinity" text="Add Ministry" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleAddMinistry">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="ministriesTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="ministriesTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colMinName"    text="MINISTRY NAME" prefWidth="240"/>
                         <TableColumn fx:id="colMinDesc"    text="DESCRIPTION"   prefWidth="280"/>
                         <TableColumn fx:id="colMinMembers" text="MEMBERS"       prefWidth="100"/>
                         <TableColumn fx:id="colMinStatus"  text="STATUS"        prefWidth="100"/>
-                        <TableColumn fx:id="colMinActions" text="ACTIONS"       prefWidth="200"/>
+                        <TableColumn fx:id="colMinActions" text="ACTIONS"       prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No ministries yet. Click &quot;Add Ministry&quot; to create one."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
@@ -158,7 +227,8 @@
                     <Label fx:id="guestCountLabel" text="0 guest(s)"
                            style="-fx-text-fill:#9099AA;-fx-font-size:12px;"/>
                 </HBox>
-                <TableView fx:id="guestsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="guestsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colGuestName"       text="NAME"             prefWidth="160"/>
                         <TableColumn fx:id="colGuestPhone"      text="PHONE"            prefWidth="110"/>
@@ -168,8 +238,11 @@
                         <TableColumn fx:id="colGuestMembership" text="WANTS MEMBERSHIP" prefWidth="130"/>
                         <TableColumn fx:id="colGuestDate"       text="VISIT DATE"       prefWidth="100"/>
                         <TableColumn fx:id="colGuestStatus"     text="STATUS"           prefWidth="90"/>
-                        <TableColumn fx:id="colGuestActions"    text="ACTIONS"          prefWidth="185"/>
+                        <TableColumn fx:id="colGuestActions"    text="ACTIONS"          prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No guests yet. Ushers record guests from the Android app."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
@@ -181,15 +254,21 @@
                     <Label text="Group members into family units."
                            style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="+ Create Family" styleClass="btn-primary"
-                            onAction="#handleAddFamily"/>
+                    <Button minWidth="-Infinity" text="Create Family" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleAddFamily">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="familiesTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="familiesTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colFamilyName"    text="FAMILY NAME" prefWidth="250"/>
                         <TableColumn fx:id="colFamilyMembers" text="MEMBERS"     prefWidth="350"/>
-                        <TableColumn fx:id="colFamilyActions" text="ACTIONS"     prefWidth="150"/>
+                        <TableColumn fx:id="colFamilyActions" text="ACTIONS"     prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No families yet. Click &quot;Create Family&quot; to add one."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
@@ -197,15 +276,19 @@
         <!-- PENDING TAB -->
         <Tab text="Pending Review" fx:id="pendingTab">
             <VBox spacing="12" style="-fx-padding:16 0 0 0;">
-                <TableView fx:id="pendingTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="pendingTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colPendingName"     text="FULL NAME"  prefWidth="200"/>
                         <TableColumn fx:id="colPendingPhone"    text="PHONE"      prefWidth="130"/>
                         <TableColumn fx:id="colPendingBranch"   text="SUB-BRANCH" prefWidth="130"/>
                         <TableColumn fx:id="colPendingMinistry" text="MINISTRY"   prefWidth="150"/>
                         <TableColumn fx:id="colPendingDate"     text="SUBMITTED"  prefWidth="150"/>
-                        <TableColumn fx:id="colPendingActions"  text="ACTIONS"    prefWidth="180"/>
+                        <TableColumn fx:id="colPendingActions"  text="ACTIONS"    prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No new members are waiting for approval."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
@@ -222,18 +305,23 @@
                                onKeyReleased="#handleDeceasedSearch"
                                prefWidth="280"/>
                 </HBox>
-                <TableView fx:id="deceasedTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="deceasedTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colDecName"      text="FULL NAME"      prefWidth="200"/>
                         <TableColumn fx:id="colDecDod"       text="DATE OF DEATH"  prefWidth="130"/>
                         <TableColumn fx:id="colDecSubBranch" text="SUB-BRANCH"     prefWidth="130"/>
                         <TableColumn fx:id="colDecObituary"  text="MEMORIAL NOTE"  prefWidth="240"/>
                         <TableColumn fx:id="colDecRecorded"  text="RECORDED"       prefWidth="120"/>
-                        <TableColumn fx:id="colDecActions"   text="ACTIONS"        prefWidth="200"/>
+                        <TableColumn fx:id="colDecActions"   text="ACTIONS"        prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No members have been recorded as Faithful Departed."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
 
     </TabPane>
 </VBox>
+</ScrollPane>

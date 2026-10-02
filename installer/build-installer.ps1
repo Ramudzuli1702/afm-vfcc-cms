@@ -14,7 +14,9 @@ $projectRoot  = Split-Path -Parent $installerDir
 $distDir      = Join-Path $projectRoot 'build\dist'
 $stageDir     = Join-Path $installerDir 'stage'
 
-$appInstaller = Get-ChildItem -Path $distDir -Filter 'AFM_VFCC_CMS-*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+# Newest build wins, so a leftover installer from an older version is never bundled by mistake
+$appInstaller = Get-ChildItem -Path $distDir -Filter 'AFM_VFCC_CMS-*.exe' -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $appInstaller) {
     throw "No app installer found in $distDir. Run 'gradle createInstaller' first."
 }

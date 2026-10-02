@@ -1,21 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
-<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.afmvfcc.controllers.AuditLogController" spacing="16">
-    <Label fx:id="accessDeniedLabel" text="⛔  Access denied. Only the super admin can view the audit log."
-           style="-fx-text-fill:#e74c3c;-fx-font-size:14px;-fx-padding:40;" visible="false" managed="false"/>
-    <VBox fx:id="contentBox" spacing="16">
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+<!-- Shown as the "Audit Log" tab inside admins.fxml (fx:include). -->
+<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.afmvfcc.controllers.AuditLogController"
+      spacing="12" style="-fx-padding:16 0 0 0;">
+    <HBox fx:id="accessDeniedBox" spacing="10" alignment="CENTER_LEFT"
+          style="-fx-padding:40;" visible="false" managed="false">
+        <FontIcon iconLiteral="fas-ban" iconSize="16" iconColor="#e74c3c"/>
+        <Label text="Access denied. Only the super admin can view the audit log."
+               style="-fx-text-fill:#e74c3c;-fx-font-size:14px;"/>
+    </HBox>
+    <VBox fx:id="contentBox" spacing="12" VBox.vgrow="ALWAYS">
         <HBox spacing="10" alignment="CENTER_LEFT">
-            <TextField fx:id="auditSearchField" styleClass="search-field" promptText="🔍  Search actions or admin names..." onKeyReleased="#handleSearch"/>
+            <TextField fx:id="auditSearchField" styleClass="search-field" promptText="Search actions or admin names..." onKeyReleased="#handleSearch"/>
+            <Label text="Last 500 actions, newest first." style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
             <HBox HBox.hgrow="ALWAYS"/>
-            <Button text="🔄  Refresh" styleClass="btn-secondary" onAction="#handleRefresh"/>
+            <Button minWidth="-Infinity" text="Refresh" graphicTextGap="8" styleClass="btn-secondary" onAction="#handleRefresh">
+                <graphic><FontIcon iconLiteral="fas-sync-alt" iconSize="13" iconColor="#1E2130"/></graphic>
+            </Button>
         </HBox>
-        <TableView fx:id="auditTable" VBox.vgrow="ALWAYS" style="-fx-min-height:540px;">
+        <TableView fx:id="auditTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+            <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
             <columns>
                 <TableColumn fx:id="colAuditAdmin"  text="ADMIN"    prefWidth="180"/>
                 <TableColumn fx:id="colAuditAction" text="ACTION"   prefWidth="480"/>
                 <TableColumn fx:id="colAuditDate"   text="DATE / TIME" prefWidth="200"/>
             </columns>
+            <placeholder>
+                <Label text="No activity has been recorded yet."/>
+            </placeholder>
         </TableView>
     </VBox>
 </VBox>

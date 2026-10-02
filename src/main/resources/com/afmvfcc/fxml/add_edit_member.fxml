@@ -2,166 +2,196 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
+<!-- Add / Edit Member: profile photo + membership on the left, details grouped
+     into section cards on the right. The window is sized to fit (Dialogs). -->
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.afmvfcc.controllers.AddEditMemberController"
-      style="-fx-background-color:#F5F6FA;" spacing="0"
-      prefWidth="720" prefHeight="820">
+      style="-fx-background-color:#F5F6FA;" spacing="0">
 
     <!-- Header -->
-    <HBox style="-fx-background-color:#FFFFFF;-fx-padding:18 24;-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;"
-          alignment="CENTER_LEFT">
-        <Label fx:id="dialogTitle" text="Add New Member"
-               style="-fx-font-size:17px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+    <HBox style="-fx-background-color:#FFFFFF;-fx-padding:16 28;-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;"
+          alignment="CENTER_LEFT" spacing="10">
+        <VBox spacing="2">
+            <Label fx:id="dialogTitle" text="Add New Member"
+                   style="-fx-font-size:18px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+            <Label text="Fields marked * are required."
+                   style="-fx-font-size:11px;-fx-text-fill:#9099AA;"/>
+        </VBox>
     </HBox>
 
     <!-- Scrollable body -->
-    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+    <ScrollPane fx:id="bodyScroll" fitToWidth="true" VBox.vgrow="ALWAYS"
                 style="-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;">
-        <VBox spacing="18" style="-fx-padding:24 28;-fx-background-color:#F5F6FA;">
+        <VBox spacing="14" style="-fx-padding:22 28;-fx-background-color:#F5F6FA;">
+        <HBox spacing="20">
 
-            <!-- Row 1: Full Name + Gender -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="FULL NAME *" styleClass="form-label"/>
-                    <TextField fx:id="fullNameField" styleClass="form-field"
-                               promptText="Enter full name" maxWidth="Infinity"/>
+            <!-- ── LEFT: photo + membership ── -->
+            <VBox spacing="14" prefWidth="230" minWidth="230" maxWidth="230">
+                <VBox styleClass="form-section" spacing="12" alignment="TOP_CENTER">
+                    <StackPane fx:id="photoHolder" prefWidth="140" prefHeight="140"/>
+                    <Label fx:id="photoNameLabel" text="New member" wrapText="true" textAlignment="CENTER"
+                           style="-fx-font-size:14px;-fx-font-weight:700;-fx-text-fill:#1E2130;"/>
+                    <Button minWidth="-Infinity" text="Choose Photo..." styleClass="btn-secondary" maxWidth="Infinity"
+                            graphicTextGap="8" onAction="#handleChoosePhoto">
+                        <graphic><FontIcon iconLiteral="fas-camera" iconSize="13" iconColor="#1E2130"/></graphic>
+                    </Button>
+                    <Button minWidth="-Infinity" fx:id="removePhotoBtn" text="Remove Photo" maxWidth="Infinity"
+                            onAction="#handleRemovePhoto"
+                            style="-fx-background-color:transparent;-fx-text-fill:#D94040;-fx-font-size:12px;-fx-cursor:hand;"/>
+                    <Label text="JPG or PNG. A square, head-and-shoulders photo looks best."
+                           wrapText="true" textAlignment="CENTER"
+                           style="-fx-font-size:11px;-fx-text-fill:#9099AA;"/>
                 </VBox>
-                <VBox spacing="6" prefWidth="160">
-                    <Label text="GENDER" styleClass="form-label"/>
-                    <ComboBox fx:id="genderCombo" styleClass="form-combo" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
 
-            <!-- Row 2: Date of Birth + Phone -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="DATE OF BIRTH" styleClass="form-label"/>
-                    <DatePicker fx:id="dobPicker" styleClass="form-date-picker" maxWidth="Infinity"/>
+                <VBox styleClass="form-section" spacing="12">
+                    <Label text="MEMBERSHIP" styleClass="form-section-title"/>
+                    <VBox spacing="6">
+                        <Label text="STATUS" styleClass="form-label"/>
+                        <ComboBox fx:id="statusCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6">
+                        <Label text="AVAILABILITY" styleClass="form-label"/>
+                        <ComboBox fx:id="availabilityCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                    </VBox>
                 </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="PHONE" styleClass="form-label"/>
-                    <TextField fx:id="phoneField" styleClass="form-field"
-                               promptText="e.g. 0712345678" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
+            </VBox>
 
-            <!-- Row 3: Email + Sub-branch -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="EMAIL" styleClass="form-label"/>
-                    <TextField fx:id="emailField" styleClass="form-field"
-                               promptText="email@example.com" maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="SUB-BRANCH *" styleClass="form-label"/>
-                    <ComboBox fx:id="subBranchCombo" styleClass="form-combo" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
+            <!-- ── RIGHT: details ── -->
+            <VBox spacing="14" HBox.hgrow="ALWAYS">
 
-            <!-- Marital Status + Employment Status -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="MARITAL STATUS" styleClass="form-label"/>
-                    <ComboBox fx:id="maritalStatusCombo" styleClass="form-combo" maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="EMPLOYMENT STATUS" styleClass="form-label"/>
-                    <ComboBox fx:id="employmentCombo" styleClass="form-combo" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
+                <!-- Personal -->
+                <VBox styleClass="form-section" spacing="12">
+                    <Label text="PERSONAL DETAILS" styleClass="form-section-title"/>
+                    <HBox spacing="14">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS">
+                            <Label text="FULL NAME *" styleClass="form-label"/>
+                            <TextField fx:id="fullNameField" styleClass="form-field"
+                                       promptText="Name and surname" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" prefWidth="150" minWidth="150">
+                            <Label text="GENDER" styleClass="form-label"/>
+                            <ComboBox fx:id="genderCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
+                    <HBox spacing="14">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="DATE OF BIRTH" styleClass="form-label"/>
+                            <DatePicker fx:id="dobPicker" styleClass="form-date-picker" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="MARITAL STATUS" styleClass="form-label"/>
+                            <ComboBox fx:id="maritalStatusCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="EMPLOYMENT" styleClass="form-label"/>
+                            <ComboBox fx:id="employmentCombo" styleClass="form-combo" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
 
-            <!-- Spouse Section (shown only when Married is selected) -->
-            <VBox fx:id="spouseSection" spacing="10" visible="false" managed="false">
-                <Label text="SPOUSE INFORMATION"
-                       styleClass="form-label"/>
+                    <!-- Spouse (only when Married) -->
+                    <VBox fx:id="spouseSection" spacing="10" visible="false" managed="false"
+                          style="-fx-background-color:#F7F9FC;-fx-background-radius:8;-fx-padding:12 14;">
+                        <HBox fx:id="spouseCheckBox" spacing="14">
+                            <CheckBox fx:id="spouseIsMemberCheck" text="Spouse is also a member of this church"/>
+                        </HBox>
+                        <VBox fx:id="spouseSelectBox" spacing="6" visible="false" managed="false">
+                            <Label text="SPOUSE" styleClass="form-label"/>
+                            <ComboBox fx:id="spouseCombo" styleClass="form-combo"
+                                      promptText="Select spouse..." maxWidth="Infinity"/>
+                        </VBox>
+                    </VBox>
+                </VBox>
 
-                <!-- Spouse checkbox — same pattern as ministriesBox -->
-                <VBox spacing="6">
-                    <Label text="IS SPOUSE A MEMBER OF THIS CHURCH?" styleClass="form-label"/>
-                    <HBox fx:id="spouseCheckBox" spacing="14" style="-fx-padding:2 0;">
-                        <CheckBox fx:id="spouseIsMemberCheck" text="Yes, spouse is a member" styleClass="form-label"/>
+                <!-- Contact -->
+                <VBox styleClass="form-section" spacing="12">
+                    <Label text="CONTACT" styleClass="form-section-title"/>
+                    <HBox spacing="14">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="PHONE" styleClass="form-label"/>
+                            <TextField fx:id="phoneField" styleClass="form-field"
+                                       promptText="e.g. 0712345678" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="EMAIL" styleClass="form-label"/>
+                            <TextField fx:id="emailField" styleClass="form-field"
+                                       promptText="email@example.com" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="6">
+                        <Label text="ADDRESS" styleClass="form-label"/>
+                        <TextArea fx:id="addressField" styleClass="form-textarea" wrapText="true"
+                                  promptText="Physical address" prefRowCount="2" prefHeight="60" maxWidth="Infinity"/>
+                    </VBox>
+                </VBox>
+
+                <!-- Church -->
+                <VBox styleClass="form-section" spacing="12">
+                    <Label text="CHURCH" styleClass="form-section-title"/>
+                    <HBox spacing="14">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="SUB-BRANCH *" styleClass="form-label"/>
+                            <ComboBox fx:id="subBranchCombo" styleClass="form-combo" maxWidth="Infinity"
+                                      promptText="Select sub-branch"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="FAMILY" styleClass="form-label"/>
+                            <ComboBox fx:id="familyCombo" styleClass="form-combo" maxWidth="Infinity"
+                                      promptText="Select family (optional)"/>
+                        </VBox>
+                    </HBox>
+                    <HBox spacing="14">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="DATE JOINED" styleClass="form-label"/>
+                            <DatePicker fx:id="joinedPicker" styleClass="form-date-picker" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="BAPTISM DATE" styleClass="form-label"/>
+                            <DatePicker fx:id="baptismPicker" styleClass="form-date-picker" maxWidth="Infinity"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="8">
+                        <Label text="MINISTRIES" styleClass="form-label"/>
+                        <FlowPane fx:id="ministriesBox" hgap="16" vgap="8"/>
+                    </VBox>
+                </VBox>
+
+                <!-- Next of kin -->
+                <VBox styleClass="form-section" spacing="12">
+                    <Label text="NEXT OF KIN" styleClass="form-section-title"/>
+                    <HBox spacing="14">
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="FULL NAME" styleClass="form-label"/>
+                            <TextField fx:id="nokNameField" styleClass="form-field"
+                                       promptText="Next of kin full name" maxWidth="Infinity"/>
+                        </VBox>
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" prefWidth="0">
+                            <Label text="PHONE" styleClass="form-label"/>
+                            <TextField fx:id="nokPhoneField" styleClass="form-field"
+                                       promptText="Next of kin phone" maxWidth="Infinity"/>
+                        </VBox>
                     </HBox>
                 </VBox>
-
-                <!-- Spouse member picker — shown only when checkbox is ticked -->
-                <VBox fx:id="spouseSelectBox" spacing="6" visible="false" managed="false">
-                    <Label text="SELECT SPOUSE FROM MEMBERS" styleClass="form-label"/>
-                    <ComboBox fx:id="spouseCombo" styleClass="form-combo"
-                              promptText="Search and select spouse..." maxWidth="Infinity"/>
-                </VBox>
             </VBox>
+        </HBox>
 
-            <!-- Ministries -->
-            <VBox spacing="8">
-                <Label text="MINISTRIES" styleClass="form-label"/>
-                <HBox fx:id="ministriesBox" spacing="14" style="-fx-padding:2 0;"/>
-            </VBox>
-
-            <!-- Address -->
-            <VBox spacing="6">
-                <Label text="ADDRESS" styleClass="form-label"/>
-                <TextArea fx:id="addressField" styleClass="form-textarea"
-                          promptText="Physical address" prefHeight="70" maxWidth="Infinity"/>
-            </VBox>
-
-            <!-- Baptism + Date Joined -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="BAPTISM DATE" styleClass="form-label"/>
-                    <DatePicker fx:id="baptismPicker" styleClass="form-date-picker" maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="DATE JOINED" styleClass="form-label"/>
-                    <DatePicker fx:id="joinedPicker" styleClass="form-date-picker" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
-
-            <!-- Next of Kin -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="NEXT OF KIN NAME" styleClass="form-label"/>
-                    <TextField fx:id="nokNameField" styleClass="form-field"
-                               promptText="Next of kin full name" maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="NEXT OF KIN PHONE" styleClass="form-label"/>
-                    <TextField fx:id="nokPhoneField" styleClass="form-field"
-                               promptText="Next of kin phone" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
-
-            <!-- Family + Availability + Status -->
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="FAMILY" styleClass="form-label"/>
-                    <ComboBox fx:id="familyCombo" styleClass="form-combo" maxWidth="Infinity"
-                              promptText="Select family (optional)"/>
-                </VBox>
-                <VBox spacing="6" prefWidth="160">
-                    <Label text="AVAILABILITY" styleClass="form-label"/>
-                    <ComboBox fx:id="availabilityCombo" styleClass="form-combo" maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" prefWidth="140">
-                    <Label text="STATUS" styleClass="form-label"/>
-                    <ComboBox fx:id="statusCombo" styleClass="form-combo" maxWidth="Infinity"/>
-                </VBox>
-            </HBox>
-
-            <!-- Error Message -->
-            <Label fx:id="errorLabel"
-                   style="-fx-text-fill:#D94040;-fx-font-size:12px;-fx-font-weight:600;"
-                   visible="false" managed="false" wrapText="true" maxWidth="Infinity"/>
-
+        <!-- Error Message -->
+        <Label fx:id="errorLabel"
+               style="-fx-text-fill:#D94040;-fx-font-size:12px;-fx-font-weight:600;"
+               visible="false" managed="false" wrapText="true" maxWidth="Infinity"/>
         </VBox>
     </ScrollPane>
 
     <!-- Footer -->
     <HBox fx:id="footerBox" spacing="10" alignment="CENTER_RIGHT"
-          style="-fx-background-color:#FFFFFF;-fx-padding:16 28;-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;">
-        <Button text="🖨  Print Form" styleClass="btn-secondary" onAction="#handlePrintForm"/>
-        <Button text="Cancel"         styleClass="btn-secondary" onAction="#handleCancel"/>
-        <Button text="Save Member"    styleClass="btn-primary"   onAction="#handleSave"/>
+          style="-fx-background-color:#FFFFFF;-fx-padding:14 28;-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;">
+        <Button minWidth="-Infinity" text="Print Form" graphicTextGap="8" styleClass="btn-secondary" onAction="#handlePrintForm">
+            <graphic><FontIcon iconLiteral="fas-print" iconSize="13" iconColor="#1E2130"/></graphic>
+        </Button>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button minWidth="-Infinity" text="Cancel"         styleClass="btn-secondary" onAction="#handleCancel"/>
+        <Button minWidth="-Infinity" text="Save Member"    styleClass="btn-primary"   onAction="#handleSave"/>
     </HBox>
 
 </VBox>

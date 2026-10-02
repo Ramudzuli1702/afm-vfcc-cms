@@ -4,6 +4,9 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.Event;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
@@ -26,6 +29,7 @@ public class CalendarController {
     @FXML private Label         monthYearLabel;
     @FXML private GridPane      calendarGrid;
     @FXML private ComboBox<String> categoryFilter;
+    @FXML private Label statMonth, statWeek, statUpcoming, statServices;
 
     private YearMonth currentMonth = YearMonth.now();
     private final List<Event> allEvents = new ArrayList<>();
@@ -52,22 +56,7 @@ public class CalendarController {
 
     @FXML
     public void handlePrintEvents() {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Print Events");
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label titleLbl = new Label("Print / Export Events");
-        titleLbl.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
-
-        VBox body = new VBox(16);
-        body.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
+        FormBuilder f = new FormBuilder("Print / Export Events", "Choose which events to include.").icon("fas-print");
 
         // Range selector
         ToggleGroup rangeGroup = new ToggleGroup();
@@ -89,15 +78,13 @@ public class CalendarController {
         fromPicker.setMaxWidth(Double.MAX_VALUE);
         toPicker.setMaxWidth(Double.MAX_VALUE);
 
-        HBox dateRangeRow = new HBox(10);
-        dateRangeRow.setAlignment(Pos.CENTER_LEFT);
-        Label fromLbl = new Label("From:");
-        fromLbl.setStyle("-fx-font-size:12px;-fx-text-fill:#5A6275;-fx-min-width:40;");
-        Label toLbl = new Label("To:");
-        toLbl.setStyle("-fx-font-size:12px;-fx-text-fill:#5A6275;-fx-min-width:25;");
-        HBox.setHgrow(fromPicker, Priority.ALWAYS);
-        HBox.setHgrow(toPicker, Priority.ALWAYS);
-        dateRangeRow.getChildren().addAll(fromLbl, fromPicker, toLbl, toPicker);
+        GridPane dateRangeRow = new GridPane();
+        dateRangeRow.setHgap(14);
+        ColumnConstraints half = new ColumnConstraints();
+        half.setPercentWidth(50);
+        dateRangeRow.getColumnConstraints().addAll(half, half);
+        dateRangeRow.add(FormBuilder.labelled("FROM", fromPicker), 0, 0);
+        dateRangeRow.add(FormBuilder.labelled("TO", toPicker), 1, 0);
         dateRangeRow.setDisable(true);
 
         rbCustom.selectedProperty().addListener((obs, o, n) -> dateRangeRow.setDisable(!n));
@@ -109,30 +96,13 @@ public class CalendarController {
         catCombo.setValue("All");
         catCombo.setMaxWidth(Double.MAX_VALUE);
 
-        VBox catRow = new VBox(6);
-        Label catLbl = new Label("CATEGORY FILTER");
-        catLbl.getStyleClass().add("form-label");
-        catRow.getChildren().addAll(catLbl, catCombo);
+        f.section("Range")
+         .node(new VBox(10, rbMonth, rbYear, rbCustom))
+         .node(dateRangeRow);
+        f.section("Filter")
+         .field("CATEGORY", catCombo);
 
-        body.getChildren().addAll(
-            new Label("SELECT RANGE") {{
-                getStyleClass().add("form-label");
-            }},
-            rbMonth, rbYear, rbCustom, dateRangeRow,
-            catRow
-        );
-
-        Button printBtn  = new Button("Export");
-        Button cancelBtn = new Button("Cancel");
-        printBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, printBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        root.getChildren().addAll(header, body, footer);
-        cancelBtn.setOnAction(e -> stage.close());
+        Button printBtn = f.saveButton("Export");
 
         printBtn.setOnAction(e -> {
             LocalDate from, to;
@@ -146,23 +116,16 @@ public class CalendarController {
                 from = fromPicker.getValue();
                 to   = toPicker.getValue();
                 if (from == null || to == null || from.isAfter(to)) {
-                    Alert a = new Alert(Alert.AlertType.WARNING, "Please enter a valid date range.");
-                    Main.applyStyles(a.getDialogPane());
-                    a.showAndWait();
+                    f.showError("Please choose a valid date range (the From date must be on or before the To date).");
                     return;
                 }
             }
             String cat = catCombo.getValue();
+            f.close();
             exportEvents(from, to, cat);
-            stage.close();
         });
 
-        Scene scene = new Scene(root, 500, 400);
-        scene.setFill(javafx.scene.paint.Color.web("#F5F6FA"));
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(540);
     }
 
     private void exportEvents(LocalDate from, LocalDate to, String category) {
@@ -215,7 +178,28 @@ public class CalendarController {
 
     // -- BUILD CALENDAR GRID -----------------------------------
 
+    private void refreshStats() {
+        LocalDate today = LocalDate.now();
+        long month = 0, week = 0, upcoming = 0, services = 0;
+        for (Event ev : allEvents) {
+            LocalDate d = ev.getEventDate();
+            if (d == null) continue;
+            boolean inMonth = YearMonth.from(d).equals(currentMonth);
+            if (inMonth) month++;
+            if (inMonth && "Service".equals(ev.getCategory())) services++;
+            if (!d.isBefore(today)) {
+                upcoming++;
+                if (!d.isAfter(today.plusDays(7))) week++;
+            }
+        }
+        statMonth.setText(String.valueOf(month));
+        statWeek.setText(String.valueOf(week));
+        statUpcoming.setText(String.valueOf(upcoming));
+        statServices.setText(String.valueOf(services));
+    }
+
     private void refreshCalendar() {
+        refreshStats();
         monthYearLabel.setText(currentMonth.format(FMT_DISP));
         calendarGrid.getChildren().clear();
         calendarGrid.getRowConstraints().clear();
@@ -313,7 +297,7 @@ public class CalendarController {
                           "-fx-font-size:9px;-fx-font-weight:600;" +
                           "-fx-padding:1 5;-fx-background-radius:3;-fx-cursor:hand;");
             final Event evRef = ev;
-            chip.setOnMouseClicked(e -> openEventDialog(evRef));
+            chip.setOnMouseClicked(e -> showEvent(evRef));
             chip.setTooltip(new Tooltip(
                 ev.getTitle() + (ev.getEventTime() != null
                     ? " at " + ev.getEventTime().toString().substring(0,5) : "") +
@@ -329,6 +313,25 @@ public class CalendarController {
         return cell;
     }
 
+    // -- EVENT VIEW -------------------------------------------
+
+    private void showEvent(Event ev) {
+        String when = ev.getEventDate() != null
+            ? ev.getEventDate().format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")) : null;
+        new DocumentViewer("Calendar Event", ev.getTitle())
+            .icon("fas-calendar-day")
+            .status(ev.getCategory() != null ? ev.getCategory() : "Other", "badge-inprogress")
+            .width(640)
+            .meta("Date",     when)
+            .meta("Time",     ev.getEventTime() != null ? ev.getEventTime().toString().substring(0, 5) : "All day")
+            .meta("Location", ev.getLocation())
+            .meta("Category", ev.getCategory())
+            .section("Description", ev.getDescription(), "No description.")
+            .onEdit(() -> openEventDialog(ev))
+            .onDelete(() -> deleteEvent(ev))
+            .show();
+    }
+
     // -- EVENT DIALOG -----------------------------------------
 
     private void openEventDialogOnDate(LocalDate date) {
@@ -339,22 +342,7 @@ public class CalendarController {
     }
 
     private void openEventDialog(Event existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null || existing.getId() <= 0 ? "Add Event" : "Edit Event");
-
-        VBox root = new VBox(14);
-        root.setStyle("-fx-background-color:#F5F6FA;-fx-padding:0;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label title = new Label(existing == null || existing.getId() <= 0 ? "Add Event" : "Edit Event");
-        title.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(title);
-
-        VBox body = new VBox(14);
-        body.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
+        FormBuilder f = new FormBuilder(existing == null || existing.getId() <= 0 ? "Add Event" : "Edit Event").icon("fas-calendar-plus");
 
         TextField titleField = new TextField();
         titleField.getStyleClass().add("form-field");
@@ -400,6 +388,7 @@ public class CalendarController {
 
         TextArea descArea = new TextArea();
         descArea.getStyleClass().add("form-textarea");
+        descArea.setWrapText(true);
         descArea.setPromptText("Description (optional)");
         descArea.setPrefHeight(80);
         descArea.setMaxWidth(Double.MAX_VALUE);
@@ -414,57 +403,28 @@ public class CalendarController {
             descArea.setText(existing.getDescription() != null ? existing.getDescription() : "");
         }
 
-        body.getChildren().addAll(
-            row("TITLE *",       titleField),
-            row("DATE *",        datePicker),
-            row("TIME",          timeField),
-            row("LOCATION",      locationField),
-            row("CATEGORY",      catCombo),
-            row("DESCRIPTION",   descArea)
-        );
+        f.section("Event")
+         .field("TITLE *", titleField)
+         .row("CATEGORY", catCombo, "LOCATION", locationField);
+        f.section("When")
+         .row("DATE *", datePicker, "TIME (HH:MM)", timeField);
+        if (isNewEvent) f.hint("New events can't be added on a past date.");
+        f.section("Details")
+         .field("DESCRIPTION", descArea);
 
-        // Delete button (only for existing events)
-        HBox footerLeft = new HBox();
-        if (existing != null && existing.getId() > 0) {
-            Button deleteBtn = new Button("Delete Event");
-            deleteBtn.getStyleClass().add("btn-danger");
-            deleteBtn.setStyle("-fx-padding:8 18;");
-            deleteBtn.setOnAction(e -> {
-                stage.close();
-                deleteEvent(existing);
-            });
-            footerLeft.getChildren().add(deleteBtn);
-        }
-        HBox.setHgrow(footerLeft, Priority.ALWAYS);
-
-        Button saveBtn   = new Button(existing != null && existing.getId() > 0 ? "Save Changes" : "Add Event");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, footerLeft, cancelBtn, saveBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        javafx.scene.control.ScrollPane bodyScroll = new javafx.scene.control.ScrollPane(body);
-        bodyScroll.setFitToWidth(true);
-        bodyScroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;");
-        javafx.scene.layout.VBox.setVgrow(bodyScroll, javafx.scene.layout.Priority.ALWAYS);
-
-        root.getChildren().addAll(header, bodyScroll, footer);
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing != null && existing.getId() > 0 ? "Save Changes" : "Add Event");
 
         saveBtn.setOnAction(e -> {
             String t = titleField.getText().trim();
-            if (t.isEmpty()) return;
-
-            if (isNewEvent && datePicker.getValue() != null
-                    && datePicker.getValue().isBefore(LocalDate.now())) {
-                Alert a = new Alert(Alert.AlertType.WARNING,
-                    "Events can't be added on a past date. Please choose today or a future date.");
-                Main.applyStyles(a.getDialogPane());
-                a.showAndWait();
+            if (t.isEmpty()) { f.showError("Please enter a title for the event."); return; }
+            if (datePicker.getValue() == null) { f.showError("Please choose the date."); return; }
+            if (isNewEvent && datePicker.getValue().isBefore(LocalDate.now())) {
+                f.showError("Events can't be added on a past date. Please choose today or a future date.");
+                return;
+            }
+            String timeText = timeField.getText().trim();
+            if (!timeText.isEmpty() && !timeText.matches("([01]?\\d|2[0-3]):[0-5]\\d")) {
+                f.showError("Time must be in 24-hour HH:MM format, e.g. 09:30 or 18:00.");
                 return;
             }
 
@@ -505,7 +465,7 @@ public class CalendarController {
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(), "Updated event: " + t);
                 }
                 loadEvents();
-                stage.close();
+                f.close();
                 ToastManager.success(isNewEvent ? "Event added successfully." : "Event updated successfully.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
@@ -513,33 +473,31 @@ public class CalendarController {
             }
         });
 
-        Scene scene = new Scene(root, 480, 540);
-        scene.setFill(javafx.scene.paint.Color.web("#F5F6FA"));
-        scene.getStylesheets().add(getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(560);
     }
 
-    private void deleteEvent(Event e) {
+    /** Confirms, then deletes the event. Returns true if deleted. */
+    private boolean deleteEvent(Event e) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Event");
         confirm.setHeaderText("Delete \"" + e.getTitle() + "\"?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    DatabaseConnection.getConnection().createStatement()
-                        .executeUpdate("DELETE FROM events WHERE id=" + e.getId());
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Deleted event: " + e.getTitle());
-                    loadEvents();
-                    ToastManager.success("Event deleted successfully.");
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                    ToastManager.error("Failed to delete event: " + ex.getMessage());
-                }
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection()
+                .prepareStatement("DELETE FROM events WHERE id=?");
+            ps.setInt(1, e.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted event: " + e.getTitle());
+            loadEvents();
+            ToastManager.success("Event deleted successfully.");
+            return true;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            ToastManager.error("Failed to delete event: " + ex.getMessage());
+            return false;
+        }
     }
 
     private VBox row(String label, javafx.scene.Node field) {

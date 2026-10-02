@@ -8,6 +8,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.sql.*;
@@ -18,7 +19,7 @@ public class AuditLogController {
     @FXML private TableView<AuditEntry>             auditTable;
     @FXML private TableColumn<AuditEntry, String>   colAuditAdmin, colAuditAction, colAuditDate;
     @FXML private TextField                         auditSearchField;
-    @FXML private Label                             accessDeniedLabel;
+    @FXML private HBox                              accessDeniedBox;
     @FXML private VBox                              contentBox;
 
     private ObservableList<AuditEntry> allEntries = FXCollections.observableArrayList();
@@ -29,8 +30,8 @@ public class AuditLogController {
         if (!SessionManager.getInstance().isSuperAdmin()) {
             contentBox.setVisible(false);
             contentBox.setManaged(false);
-            accessDeniedLabel.setVisible(true);
-            accessDeniedLabel.setManaged(true);
+            accessDeniedBox.setVisible(true);
+            accessDeniedBox.setManaged(true);
             return;
         }
         setupTable();

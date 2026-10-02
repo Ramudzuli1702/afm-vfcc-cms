@@ -33,8 +33,9 @@ It includes:
 - **`demo_data.sql`** — ~40 fictional members, a handful of welfare cases,
   calendar events, and inventory items, so the system isn't empty on first
   look. **Entirely made-up data — no real church or member information.**
-  After installing, run the first-time setup wizard, then in the CMS go to
-  **Settings → Backup → Restore Backup…** and select this file.
+  After installing, the first-time setup wizard creates the database and then
+  asks how to start — choose **Restore a backup** and select this file. (On an
+  existing install, use **Settings → Backup → Restore Backup…** instead.)
   Demo logins: `demo_admin` / `Demo@1234` (desktop + app) and
   `demo_usher` / `Usher@1234` (mobile app only) — change or remove these
   before using the system for real.
@@ -106,7 +107,7 @@ gradle run
 ### Option C — Build a JAR
 ```bash
 gradle jar
-java -jar build/libs/AFM_VFCC_CMS-1.0.0.jar
+java -jar build/libs/AFM_VFCC_CMS-1.1.0.jar
 ```
 
 ---
@@ -234,6 +235,23 @@ AFM_VFCC_CMS/
 
 ## 🔧 Module Guide
 
+### How every module works
+The same few patterns are used everywhere, so once you know one module you
+know them all:
+- **Summary cards** across the top of each module show its key numbers
+  (compact on module pages, larger on the Dashboard).
+- **Lists are read-only.** Each table row has a single **View** button (or
+  double-click the row) that opens the record as a read-only page
+  (`DocumentViewer`). Edit, Delete and record-specific actions — Restore,
+  Approve, Unlock, Mark Completed, Print, Export — are buttons on that page,
+  so nothing changes by accident from a list.
+- **Forms** (`FormBuilder`) share one layout: a header with a hint, titled
+  section cards, labels above inputs with related fields side by side,
+  errors shown inside the form, and a window sized to fit its content.
+- **Icons** are vector Font Awesome icons (`Icons`), including each window's
+  title-bar icon and inline status messages — no emoji or font-dependent
+  symbols anywhere in the UI.
+
 ### Notifications
 Every add/edit/delete/send action across the system (members, events,
 meetings, welfare cases, admins, announcements, inventory, etc.) shows a
@@ -258,7 +276,9 @@ startup in `MainLayoutController`.
 ### Members
 Seven tabs in one module: **All Members** (full CRUD with soft delete, search
 by name/phone/email, filter by status/sub-branch/ministry, multi-ministry
-assignment via checkboxes, PDF export via iText7), **Sub-Branches**,
+assignment via checkboxes, PDF export via iText7, and an optional **profile
+photo** per member — shown across the system, with a person icon when there is
+none; photos live in `%APPDATA%\AFM_VFCC_CMS\member_photos`), **Sub-Branches**,
 **Ministries**, **Families** (family unit creation and linking), **Guests**
 (synced from the Android app — promote to Pending Review or dismiss),
 **Pending Review** (new member registrations awaiting approval, from the
@@ -281,8 +301,12 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 
 ### Church Board
 - Board member roles with start/end dates
-- Meetings with typed agenda + minutes
-- Meeting attendee count
+- Meetings with typed agenda + minutes, attendance and uploaded documents;
+  a meeting opens as a read-only document that can be exported to PDF/Word
+- **Tasks**: action items assigned to a member, optionally linked to the
+  meeting they came from, with a due date, status (Open / In Progress / Done,
+  flagged **Overdue** when late), the assignee's progress report, and a
+  PDF/Word task report
 - Searchable history
 
 ### Calendar
@@ -296,7 +320,7 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 - Cases linked to members + welfare workers
 - Status: Pending → In Progress → Completed
 - Report field updated by assigned worker
-- Quick "Close" button on the table
+- "Mark Completed" on the case's View page
 
 ### Inventory
 - Tracks the church's musical instruments, office equipment, building
@@ -350,7 +374,8 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
 - Publishing to the actual public website is handled by `WebsiteExporter` +
   `GitHubSync` — see Website Integration below
 
-### Admins (Super Admin Only)
+### Admins & Audit Log (Super Admin Only)
+One module with two tabs: **Accounts** and **Audit Log**.
 - Full CRUD for admin accounts
 - BCrypt password hashing on save
 - Account unlock button for locked accounts
@@ -359,7 +384,7 @@ Android app), and **Faithful Departed** (deceased members record-keeping).
   (mobile app only — attendance/guests — blocked from the desktop login
   with a clear message)
 
-### Audit Log (Super Admin Only)
+**Audit Log tab**
 - Read-only table of all admin actions
 - 500 most recent entries
 - Searchable by admin name or action text

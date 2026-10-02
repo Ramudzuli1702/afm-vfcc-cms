@@ -4,6 +4,10 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.User;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.PasswordUtil;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
@@ -28,8 +32,9 @@ public class AdminsController {
                                              colAdminRole, colAdminEmail, colAdminStatus;
     @FXML private TableColumn<User, Void>   colAdminActions;
     @FXML private TextField                 adminSearchField;
-    @FXML private Label                     accessDeniedLabel;
+    @FXML private HBox                      accessDeniedBox;
     @FXML private VBox                      contentBox;
+    @FXML private Label                     statAdmins, statUshers, statInactive, statActionsToday;
 
     private ObservableList<User> allAdmins = FXCollections.observableArrayList();
 
@@ -37,7 +42,7 @@ public class AdminsController {
     public void initialize() {
         boolean isSuperAdmin = SessionManager.getInstance().getCurrentUser().isSuperAdmin();
         if (!isSuperAdmin) {
-            if (accessDeniedLabel != null) { accessDeniedLabel.setVisible(true); accessDeniedLabel.setManaged(true); }
+            if (accessDeniedBox != null)   { accessDeniedBox.setVisible(true);   accessDeniedBox.setManaged(true); }
             if (contentBox != null)        { contentBox.setVisible(false);        contentBox.setManaged(false); }
             return;
         }
@@ -76,48 +81,7 @@ public class AdminsController {
             }
         });
 
-        colAdminActions.setCellFactory(col -> new TableCell<>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button unlockBtn = new Button("Unlock");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, editBtn, unlockBtn, deleteBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 8;-fx-font-size:11px;");
-                unlockBtn.getStyleClass().add("btn-secondary");
-                unlockBtn.setStyle("-fx-padding:4 8;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 8;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-
-                editBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        openAdminDialog(getTableView().getItems().get(idx));
-                });
-                unlockBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        unlockAdmin(getTableView().getItems().get(idx));
-                });
-                deleteBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        deleteAdmin(getTableView().getItems().get(idx));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (!empty && getIndex() >= 0 && getIndex() < getTableView().getItems().size()) {
-                    User u = getTableView().getItems().get(getIndex());
-                    unlockBtn.setVisible(u.getLockedUntil() != null && u.getLockedUntil().isAfter(java.time.LocalDateTime.now()));
-                    unlockBtn.setManaged(u.getLockedUntil() != null && u.getLockedUntil().isAfter(java.time.LocalDateTime.now()));
-                    deleteBtn.setVisible(!u.isSuperAdmin());
-                    deleteBtn.setManaged(!u.isSuperAdmin());
-                }
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(adminsTable, colAdminActions, this::showAccount);
 
         adminsTable.setItems(allAdmins);
     }
@@ -131,6 +95,18 @@ public class AdminsController {
             while (rs.next()) allAdmins.add(mapUser(rs));
         } catch (SQLException e) { e.printStackTrace(); }
         applySearch();
+        refreshStats();
+    }
+
+    private void refreshStats() {
+        statAdmins.setText(String.valueOf(allAdmins.stream().filter(u -> !u.isUsher()).count()));
+        statUshers.setText(String.valueOf(allAdmins.stream().filter(User::isUsher).count()));
+        statInactive.setText(String.valueOf(allAdmins.stream().filter(u -> !u.isActive()).count()));
+        try {
+            ResultSet rs = DatabaseConnection.getConnection().createStatement().executeQuery(
+                "SELECT COUNT(*) FROM audit_log WHERE performed_at >= CURDATE()");
+            statActionsToday.setText(rs.next() ? String.valueOf(rs.getInt(1)) : "0");
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     @FXML public void handleSearch() { applySearch(); }
@@ -148,25 +124,34 @@ public class AdminsController {
 
     @FXML public void handleAddAdmin() { openAdminDialog(null); }
 
+    private static boolean isLocked(User u) {
+        return u.getLockedUntil() != null && u.getLockedUntil().isAfter(java.time.LocalDateTime.now());
+    }
+
+    private void showAccount(User u) {
+        String type = u.isSuperAdmin() ? "Super Admin" : u.isUsher() ? "Usher (mobile app only)" : "Admin";
+        DocumentViewer v = new DocumentViewer("System Account", u.getFullName())
+            .icon("fas-user-shield")
+            .status(isLocked(u) ? "Locked" : u.isActive() ? "Active" : "Inactive",
+                    isLocked(u) ? "badge-overdue" : u.isActive() ? "badge-active" : "badge-inactive")
+            .width(640)
+            .meta("Username",     u.getUsername())
+            .meta("Account Type", type)
+            .meta("Role / Title", u.getRoleTitle())
+            .meta("Email",        u.getEmail())
+            .meta("Phone",        u.getPhone())
+            .meta("Locked Until", isLocked(u)
+                ? u.getLockedUntil().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")) : null);
+        if (isLocked(u))
+            v.closingAction("Unlock", "fas-unlock", "btn-secondary", () -> unlockAdmin(u));
+        v.onEdit(() -> openAdminDialog(u));
+        if (!u.isSuperAdmin()) v.onDelete(() -> deleteAdmin(u));
+        v.show();
+    }
+
     // -- Add / Edit dialog -------------------------------------
     private void openAdminDialog(User existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null ? "Add Admin" : "Edit Admin: " + existing.getUsername());
-        stage.setMinWidth(480);
-
-        // -- Header --
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-            "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label title = new Label(existing == null ? "Add New Admin" : "Edit Admin");
-        title.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(title);
-
-        // -- Form --
-        GridPane form = new GridPane();
-        form.setHgap(12); form.setVgap(14);
-        form.setPadding(new Insets(22, 24, 8, 24));
+        FormBuilder f = new FormBuilder(existing == null ? "Add Account" : "Edit Account").icon("fas-user-cog");
 
         TextField fullNameField = field("Enter full name");
         TextField usernameField = field("Username");
@@ -185,7 +170,7 @@ public class AdminsController {
         Label accountTypeHint = new Label(
             "Admin: full desktop + mobile app access.  Usher: mobile app only (attendance/guests) — cannot log into the desktop system.");
         accountTypeHint.setWrapText(true);
-        accountTypeHint.setStyle("-fx-font-size:10px;-fx-text-fill:#9099AA;");
+        accountTypeHint.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
         ComboBox<String> statusCombo = new ComboBox<>();
         statusCombo.getStyleClass().add("form-combo");
         statusCombo.getItems().addAll("Active", "Inactive");
@@ -204,63 +189,30 @@ public class AdminsController {
             statusCombo.setValue(existing.isActive() ? "Active" : "Inactive");
         }
 
-        String[] labels = {"FULL NAME *", "USERNAME *",
-            existing == null ? "PASSWORD *" : "NEW PASSWORD",
-            "EMAIL", "PHONE", "ROLE / TITLE", "ACCOUNT TYPE *", "", "STATUS"};
-        javafx.scene.Node[] controls = {fullNameField, usernameField, passField,
-            emailField, phoneField, roleField, accountTypeCombo, accountTypeHint, statusCombo};
+        f.section("Person")
+         .field("FULL NAME *", fullNameField)
+         .row("EMAIL", emailField, "PHONE", phoneField)
+         .field("ROLE / TITLE", roleField);
+        f.section("Login")
+         .row("USERNAME *", usernameField, existing == null ? "PASSWORD *" : "NEW PASSWORD", passField);
+        if (existing != null) f.hint("Leave the password blank to keep the current one.");
+        f.section("Access")
+         .row("ACCOUNT TYPE *", accountTypeCombo, "STATUS", statusCombo)
+         .node(accountTypeHint);
 
-        for (int i = 0; i < labels.length; i++) {
-            Label lbl = new Label(labels[i]);
-            lbl.setStyle("-fx-font-size:10px;-fx-font-weight:700;-fx-text-fill:#9099AA;");
-            form.add(lbl,                     0, i);
-            form.add(controls[i],             1, i);
-            GridPane.setHgrow(controls[i], Priority.ALWAYS);
-        }
-
-        Label errLabel = new Label();
-        errLabel.setStyle("-fx-text-fill:#D94040;-fx-font-size:11px;");
-        errLabel.setVisible(false);
-        form.add(errLabel, 0, labels.length, 2, 1);
-
-        // -- Footer --
-        Button saveBtn   = new Button(existing == null ? "Add Admin" : "Save Changes");
-        saveBtn.getStyleClass().add("btn-primary");
-        Button cancelBtn = new Button("Cancel");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, saveBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-            "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        // -- Root --
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        // ScrollPane wraps the form so it never pushes the footer off screen
-        ScrollPane scroll = new ScrollPane(form);
-        scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;" +
-            "-fx-border-color:transparent;");
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-
-        root.getChildren().addAll(header, scroll, footer);
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing == null ? "Add Account" : "Save Changes");
 
         saveBtn.setOnAction(e -> {
-            errLabel.setVisible(false);
+            f.clearError();
             String name = fullNameField.getText().trim();
             String user = usernameField.getText().trim();
             String pass = passField.getText();
 
             if (name.isEmpty() || user.isEmpty()) {
-                errLabel.setText("Full name and username are required.");
-                errLabel.setVisible(true); return;
+                f.showError("Full name and username are required."); return;
             }
             if (existing == null && pass.isEmpty()) {
-                errLabel.setText("Password is required for new admin.");
-                errLabel.setVisible(true); return;
+                f.showError("Password is required for new admin."); return;
             }
 
             try {
@@ -270,8 +222,7 @@ public class AdminsController {
                         "SELECT id FROM users WHERE username=?");
                     check.setString(1, user);
                     if (check.executeQuery().next()) {
-                        errLabel.setText("That username is already taken.");
-                        errLabel.setVisible(true); return;
+                        f.showError("That username is already taken."); return;
                     }
                     PreparedStatement ps = conn.prepareStatement(
                         "INSERT INTO users (full_name, username, password_hash, email, phone, role_title, account_role, is_active) " +
@@ -309,24 +260,20 @@ public class AdminsController {
                     ToastManager.success("Admin \"" + name + "\" updated successfully.");
                 }
                 loadAdmins();
-                stage.close();
+                f.close();
             } catch (SQLException ex) {
-                errLabel.setText("Database error: " + ex.getMessage());
-                errLabel.setVisible(true);
+                f.showError("Database error: " + ex.getMessage());
                 ex.printStackTrace();
                 ToastManager.error("Failed to save admin: " + ex.getMessage());
             }
         });
 
-        Scene scene = new Scene(root, 500, 520);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(600);
     }
 
     // -- Unlock ------------------------------------------------
-    private void unlockAdmin(User u) {
+    /** Clears the lockout. Returns true on success. */
+    private boolean unlockAdmin(User u) {
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement ps = conn.prepareStatement(
@@ -337,36 +284,39 @@ public class AdminsController {
                 "Unlocked admin account: " + u.getUsername());
             loadAdmins();
             ToastManager.success("Account unlocked for " + u.getUsername() + ".");
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
             ToastManager.error("Failed to unlock account: " + e.getMessage());
+            return false;
         }
     }
 
     // -- Delete ------------------------------------------------
-    private void deleteAdmin(User u) {
-        if (u.isSuperAdmin()) return;
+    /** Confirms, then deletes the account. Returns true if deleted. */
+    private boolean deleteAdmin(User u) {
+        if (u.isSuperAdmin()) return false;
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Admin");
         confirm.setHeaderText("Delete " + u.getFullName() + "?");
         confirm.setContentText("This will permanently remove the admin account.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn != ButtonType.OK) return;
-            try {
-                Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement ps = conn.prepareStatement("DELETE FROM users WHERE id=?");
-                ps.setInt(1, u.getId());
-                ps.executeUpdate();
-                AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                    "Deleted admin: " + u.getUsername());
-                loadAdmins();
-                ToastManager.success("Admin \"" + u.getFullName() + "\" deleted.");
-            } catch (SQLException e) {
-                e.printStackTrace();
-                ToastManager.error("Failed to delete admin: " + e.getMessage());
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM users WHERE id=?");
+            ps.setInt(1, u.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted admin: " + u.getUsername());
+            loadAdmins();
+            ToastManager.success("Admin \"" + u.getFullName() + "\" deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete admin: " + e.getMessage());
+            return false;
+        }
     }
 
     // -- Helpers -----------------------------------------------

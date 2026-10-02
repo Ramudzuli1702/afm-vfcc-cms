@@ -3,6 +3,7 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.Main;
 import com.afmvfcc.models.User;
 import com.afmvfcc.utils.GitHubSync;
+import com.afmvfcc.utils.Icons;
 import com.afmvfcc.utils.NavigationBus;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
@@ -38,12 +39,12 @@ public class MainLayoutController {
     @FXML private Button btnComms;
     @FXML private Button btnWebsite;
     @FXML private Button btnAdmins;
-    @FXML private Button btnAuditLog;
     @FXML private Button btnSettings;
     @FXML private Button btnDocumentation;
     @FXML private Button btnCommems;
     @FXML private Button btnViewWebsite;
     @FXML private Button btnBroadcast;
+    @FXML private Button btnLogout;
 
     private Button activeBtn;
 
@@ -64,8 +65,7 @@ public class MainLayoutController {
         pageMap.put("btnInventory",  new String[]{"inventory.fxml",       "Inventory",       "Instruments, equipment & materials"});
         pageMap.put("btnComms",      new String[]{"communications.fxml",  "Communications",  "Email & SMS"});
         pageMap.put("btnWebsite",    new String[]{"website.fxml",         "Website",         "Manage blogs & events"});
-        pageMap.put("btnAdmins",     new String[]{"admins.fxml",          "Admins",          "Manage system users"});
-        pageMap.put("btnAuditLog",   new String[]{"audit_log.fxml",       "Audit Log",       "System activity trail"});
+        pageMap.put("btnAdmins",     new String[]{"admins.fxml",          "Admins & Audit Log", "System users & activity trail"});
         pageMap.put("btnSettings",   new String[]{"settings.fxml",        "Settings",        "Backup, email & SMS"});
         pageMap.put("btnDocumentation", new String[]{"documentation.fxml", "Documentation",  "User guide & usage policy"});
         pageMap.put("btnCommems",    new String[]{"commemorations.fxml",  "Commemorations",  "Issue certificates"});
@@ -92,7 +92,6 @@ public class MainLayoutController {
         buttonsById.put("btnComms", btnComms);
         buttonsById.put("btnWebsite", btnWebsite);
         buttonsById.put("btnAdmins", btnAdmins);
-        buttonsById.put("btnAuditLog", btnAuditLog);
         buttonsById.put("btnSettings", btnSettings);
         buttonsById.put("btnDocumentation", btnDocumentation);
         buttonsById.put("btnCommems", btnCommems);
@@ -206,21 +205,22 @@ public class MainLayoutController {
     }
 
     private void setNavIcons() {
-        btnDashboard.setText("🏠  Dashboard");
-        btnMembers.setText("👥  Members");
-        btnAttendance.setText("✅  Attendance");
-        btnBoard.setText("🏛  Church Board");
-        btnCalendar.setText("📅  Calendar");
-        btnWelfare.setText("❤  Welfare");
-        btnFinance.setText("💰  Finance");
-        btnInventory.setText("📦  Inventory");
-        btnComms.setText("✉  Communications");
-        btnWebsite.setText("🌐  Website");
-        btnBroadcast.setText("📡  Broadcast");
-        btnAdmins.setText("⚙  Admins");
-        btnAuditLog.setText("📋  Audit Log");
-        btnSettings.setText("🔧  Settings");
-        btnDocumentation.setText("📖  Documentation");
-        btnCommems.setText("🎖  Commemorations");
+        btnDashboard.setGraphic(Icons.nav("fas-home"));
+        btnMembers.setGraphic(Icons.nav("fas-users"));
+        btnAttendance.setGraphic(Icons.nav("fas-check-circle"));
+        btnBoard.setGraphic(Icons.nav("fas-landmark"));
+        btnCalendar.setGraphic(Icons.nav("fas-calendar-alt"));
+        btnWelfare.setGraphic(Icons.nav("fas-hand-holding-heart"));
+        btnFinance.setGraphic(Icons.nav("fas-coins"));
+        btnInventory.setGraphic(Icons.nav("fas-boxes"));
+        btnComms.setGraphic(Icons.nav("fas-envelope"));
+        btnWebsite.setGraphic(Icons.nav("fas-globe"));
+        btnBroadcast.setGraphic(Icons.nav("fas-broadcast-tower"));
+        btnAdmins.setGraphic(Icons.nav("fas-user-shield"));
+        btnSettings.setGraphic(Icons.nav("fas-cog"));
+        btnDocumentation.setGraphic(Icons.nav("fas-book"));
+        btnCommems.setGraphic(Icons.nav("fas-award"));
+        btnLogout.setGraphic(Icons.of("fas-sign-out-alt", 14, Icons.RED));
+        btnViewWebsite.setGraphic(Icons.dark("fas-external-link-alt"));
     }
 }

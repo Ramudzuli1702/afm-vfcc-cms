@@ -147,6 +147,36 @@ public class DatabaseConnection {
         return config;
     }
 
+    /** Connection settings in use: [host, port, database, username, password]. */
+    public static String[] connectionSettings() {
+        Properties p = loadConfig();
+        return new String[] {
+            p.getProperty("db.host",     DEFAULT_HOST),
+            p.getProperty("db.port",     DEFAULT_PORT),
+            p.getProperty("db.database", DEFAULT_DATABASE),
+            p.getProperty("db.username", DEFAULT_USERNAME),
+            p.getProperty("db.password", "")
+        };
+    }
+
+    /**
+     * Brings the schema up to date (new tables/columns added since a backup was
+     * made). Runs on every connect; call again after restoring a backup.
+     */
+    public static void runMigrations() {
+        Connection conn = getConnection();
+        if (conn == null) return;
+        try {
+            createTables(conn);
+        } catch (SQLException e) {
+            System.err.println("[DB] Table check after restore failed: " + e.getMessage());
+        }
+        ensureAttendanceSessionsMigration(conn);
+        ensureGitHubSettingsMigration(conn);
+        ensureUserAccountRoleMigration(conn);
+        ensureBoardTasksMigration(conn);
+    }
+
     private static void saveConfig(Properties p, Path configPath) {
         try {
             Files.createDirectories(configPath.getParent());
@@ -400,7 +430,7 @@ public class DatabaseConnection {
 
                         Platform.runLater(() -> { progressLbl.setText("Connecting to MySQL…"); progress.setProgress(0.1); });
                         String rootUrl = "jdbc:mysql://" + host + ":" + port +
-                            "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
+                            "?useSSL=false&serverTimezone=Africa/Johannesburg&allowPublicKeyRetrieval=true";
                         Class.forName("com.mysql.cj.jdbc.Driver");
                         Connection adminConn = DriverManager.getConnection(rootUrl, "root", rootPw);
 
@@ -443,7 +473,7 @@ public class DatabaseConnection {
                             progress.setProgress(1.0);
                             progressLbl.setText("Setup complete!");
                             dialog.close();
-                            Platform.runLater(() -> showCreateFirstUserDialog(latch));
+                            Platform.runLater(() -> showStartChoiceDialog(latch));
                         });
 
                     } catch (Exception ex) {
@@ -482,6 +512,134 @@ public class DatabaseConnection {
             Platform.exit();
             System.exit(0);
         }
+    }
+
+    // ── Start fresh or restore a backup ───────────────────────
+
+    /**
+     * Shown right after the database is created: start with an empty system
+     * (create the first admin account) or restore a previous backup — e.g. when
+     * moving the CMS to a new computer. A restored backup brings its own user
+     * accounts; if it has none, the admin-account step follows.
+     */
+    private static void showStartChoiceDialog(CountDownLatch latch) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("AFM VFCC CMS — Getting Started");
+        dialog.setResizable(false);
+
+        VBox card = new VBox(0);
+        card.setMaxWidth(440);
+        card.setPrefWidth(440);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+
+        VBox header = new VBox(3);
+        header.setStyle("-fx-background-color:" + COLOR_NAVY + ";" +
+                        "-fx-background-radius:16 16 0 0;-fx-padding:24 32 20 32;");
+        Label title = new Label("Database ready");
+        title.setStyle("-fx-text-fill:" + COLOR_WHITE + ";-fx-font-size:20px;-fx-font-weight:700;");
+        Label subtitle = new Label("How would you like to start?");
+        subtitle.setStyle("-fx-text-fill:rgba(255,255,255,0.60);-fx-font-size:11px;");
+        header.getChildren().addAll(title, subtitle);
+
+        Button freshBtn   = choiceButton("Start fresh",
+            "Create the first admin account for a new, empty system.");
+        Button restoreBtn = choiceButton("Restore a backup",
+            "Load a .sql backup made in Settings → Backup.");
+
+        Label status = new Label();
+        status.setWrapText(true);
+        status.setMaxWidth(Double.MAX_VALUE);
+        status.setVisible(false);
+        status.setManaged(false);
+        ProgressIndicator spinner = new ProgressIndicator();
+        spinner.setPrefSize(22, 22);
+        spinner.setVisible(false);
+        spinner.setManaged(false);
+        HBox statusRow = new HBox(10, spinner, status);
+        statusRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox body = new VBox(12, freshBtn, restoreBtn, statusRow);
+        body.setStyle("-fx-padding:24 32 28 32;-fx-background-color:" + COLOR_WHITE + ";" +
+                      "-fx-background-radius:0 0 16 16;");
+        card.getChildren().addAll(header, body);
+
+        freshBtn.setOnAction(e -> {
+            dialog.close();
+            Platform.runLater(() -> showCreateFirstUserDialog(latch));
+        });
+
+        restoreBtn.setOnAction(e -> {
+            javafx.stage.FileChooser fc = new javafx.stage.FileChooser();
+            fc.setTitle("Select Backup File to Restore");
+            fc.getExtensionFilters().add(
+                new javafx.stage.FileChooser.ExtensionFilter("SQL Backup Files (*.sql)", "*.sql"));
+            java.io.File file = fc.showOpenDialog(dialog);
+            if (file == null) return;
+
+            freshBtn.setDisable(true);
+            restoreBtn.setDisable(true);
+            spinner.setVisible(true); spinner.setManaged(true);
+            status.setVisible(true);  status.setManaged(true);
+            status.setStyle("-fx-text-fill:#5A6275;-fx-font-size:12px;");
+            status.setText("Restoring " + file.getName() + "... this can take a minute.");
+
+            new Thread(() -> {
+                try {
+                    com.afmvfcc.utils.BackupRestore.restore(file);
+                    ResultSet rs = getConnection().createStatement()
+                        .executeQuery("SELECT COUNT(*) FROM users WHERE is_active=1");
+                    boolean hasUsers = rs.next() && rs.getInt(1) > 0;
+                    System.out.println("[DB] Restored backup during setup: " + file.getAbsolutePath());
+                    Platform.runLater(() -> {
+                        dialog.close();
+                        if (hasUsers) {
+                            Alert done = new Alert(Alert.AlertType.INFORMATION);
+                            done.setTitle("Backup Restored");
+                            done.setHeaderText("Your data has been restored.");
+                            done.setContentText("Log in with an account from the backup.");
+                            done.showAndWait();
+                            latch.countDown();
+                        } else {
+                            showCreateFirstUserDialog(latch);
+                        }
+                    });
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        spinner.setVisible(false); spinner.setManaged(false);
+                        status.setStyle("-fx-text-fill:" + COLOR_ERROR + ";-fx-font-size:12px;");
+                        status.setText("Restore failed: " + ex.getMessage() +
+                                       "\nChoose another file, or start fresh.");
+                        freshBtn.setDisable(false);
+                        restoreBtn.setDisable(false);
+                    });
+                }
+            }, "db-setup-restore").start();
+        });
+
+        // Must choose one of the two options
+        dialog.setOnCloseRequest(Event::consume);
+        dialog.setScene(new Scene(buildLoginShell(card, 540, 520), 540, 520));
+        dialog.showAndWait();
+    }
+
+    /** Large option button: bold title over a muted description. */
+    private static Button choiceButton(String title, String description) {
+        Label t = new Label(title);
+        t.setStyle("-fx-font-size:14px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
+        Label d = new Label(description);
+        d.setStyle("-fx-font-size:12px;-fx-text-fill:#5A6275;");
+        Button b = new Button();
+        b.setGraphic(new VBox(4, t, d));
+        b.setMaxWidth(Double.MAX_VALUE);
+        b.setAlignment(Pos.CENTER_LEFT);
+        String base = "-fx-background-color:" + COLOR_FIELD_BG + ";-fx-border-color:" + COLOR_BORDER + ";" +
+                      "-fx-border-radius:10;-fx-background-radius:10;-fx-padding:14 16;-fx-cursor:hand;";
+        b.setStyle(base);
+        b.setOnMouseEntered(e -> b.setStyle(base + "-fx-border-color:" + COLOR_ACCENT_BLUE + ";"));
+        b.setOnMouseExited(e  -> b.setStyle(base));
+        return b;
     }
 
     // ── Create first admin user dialog ────────────────────────
@@ -771,6 +929,7 @@ public class DatabaseConnection {
             "CREATE TABLE IF NOT EXISTS board_meetings (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(150) NOT NULL, meeting_date DATE NOT NULL, location VARCHAR(150), agenda TEXT, minutes_text LONGTEXT, status ENUM('Upcoming','Completed') DEFAULT 'Upcoming', agenda_doc_path VARCHAR(500), minutes_doc_path VARCHAR(500), created_by INT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS board_meeting_attendees (id INT AUTO_INCREMENT PRIMARY KEY, meeting_id INT NOT NULL, member_id INT NOT NULL, attended TINYINT(1) DEFAULT 1, apology TINYINT(1) DEFAULT 0, FOREIGN KEY (meeting_id) REFERENCES board_meetings(id) ON DELETE CASCADE, FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS board_meeting_files (id INT AUTO_INCREMENT PRIMARY KEY, meeting_id INT NOT NULL, file_name VARCHAR(255) NOT NULL, file_path VARCHAR(255) NOT NULL, uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (meeting_id) REFERENCES board_meetings(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            BOARD_TASKS_DDL,
             "CREATE TABLE IF NOT EXISTS welfare_workers (id INT AUTO_INCREMENT PRIMARY KEY, member_id INT NOT NULL UNIQUE, assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS welfare_cases (id INT AUTO_INCREMENT PRIMARY KEY, member_id INT NOT NULL, reason TEXT NOT NULL, assigned_worker_id INT, report LONGTEXT, status ENUM('Pending','In Progress','Completed') DEFAULT 'Pending', opened_at DATETIME DEFAULT CURRENT_TIMESTAMP, completed_at DATETIME, FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE, FOREIGN KEY (assigned_worker_id) REFERENCES welfare_workers(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS deceased_members (id INT AUTO_INCREMENT PRIMARY KEY, member_id INT NOT NULL UNIQUE, date_of_death DATE, obituary TEXT, recorded_by INT, recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE, FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -832,7 +991,7 @@ public class DatabaseConnection {
                 String password = p.getProperty("db.password", "");
 
                 String url = "jdbc:mysql://" + host + ":" + port + "/" + database +
-                    "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
+                    "?useSSL=false&serverTimezone=Africa/Johannesburg&allowPublicKeyRetrieval=true";
 
                 Class.forName("com.mysql.cj.jdbc.Driver");
                 connection = DriverManager.getConnection(url, username, password);
@@ -841,6 +1000,7 @@ public class DatabaseConnection {
                 ensureAttendanceSessionsMigration(connection);
                 ensureGitHubSettingsMigration(connection);
                 ensureUserAccountRoleMigration(connection);
+                ensureBoardTasksMigration(connection);
             }
         } catch (ClassNotFoundException e) {
             System.err.println("[DB] JDBC Driver not found."); e.printStackTrace();
@@ -848,6 +1008,34 @@ public class DatabaseConnection {
             System.err.println("[DB] Connection failed: " + e.getMessage()); e.printStackTrace();
         }
         return connection;
+    }
+
+    /** Board action items — raised at a meeting (optional), assigned to a member, tracked to completion. */
+    private static final String BOARD_TASKS_DDL =
+        "CREATE TABLE IF NOT EXISTS board_tasks (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY, " +
+            "title VARCHAR(200) NOT NULL, " +
+            "description TEXT, " +
+            "assigned_member_id INT, " +
+            "meeting_id INT, " +
+            "due_date DATE, " +
+            "status ENUM('Open','In Progress','Done') NOT NULL DEFAULT 'Open', " +
+            "report LONGTEXT, " +
+            "reported_at DATETIME, " +
+            "completed_at DATETIME, " +
+            "created_by INT, " +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+            "FOREIGN KEY (assigned_member_id) REFERENCES members(id) ON DELETE SET NULL, " +
+            "FOREIGN KEY (meeting_id) REFERENCES board_meetings(id) ON DELETE SET NULL, " +
+            "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL" +
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    private static void ensureBoardTasksMigration(Connection conn) {
+        try {
+            conn.createStatement().executeUpdate(BOARD_TASKS_DDL);
+        } catch (SQLException e) {
+            System.err.println("[DB] board_tasks migration failed: " + e.getMessage());
+        }
     }
 
     private static void ensureAttendanceSessionsMigration(Connection conn) {
@@ -925,6 +1113,7 @@ public class DatabaseConnection {
             { "website_contact_youtube_url",     "" },
             { "website_contact_youtube_label",   "" },
             { "website_contact_email",           "" },
+            { "document_output_folder",          "" },
         };
         for (String[] kv : settings) {
             try {

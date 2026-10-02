@@ -1,9 +1,17 @@
 package com.afmvfcc.controllers;
 
 import com.afmvfcc.db.DatabaseConnection;
+import com.afmvfcc.Main;
 import com.afmvfcc.models.BoardMeeting;
+import com.afmvfcc.models.BoardTask;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Avatars;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.Icons;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -40,17 +48,41 @@ public class BoardController {
     @FXML private TableColumn<BoardMeeting, Void>   colMeetActions;
     @FXML private TextField                         meetingSearchField;
 
+    // Tasks
+    @FXML private TableView<BoardTask>              tasksTable;
+    @FXML private TableColumn<BoardTask, String>    colTaskTitle, colTaskAssignee, colTaskMeeting,
+                                                     colTaskDue, colTaskStatus, colTaskReport;
+    @FXML private TableColumn<BoardTask, Void>      colTaskActions;
+    @FXML private TextField                         taskSearchField;
+    @FXML private ComboBox<String>                  taskStatusFilter;
+
+    // Stat cards
+    @FXML private Label statBoardMembers, statUpcomingMeetings, statOpenTasks, statOverdueTasks;
+
     private ObservableList<String[]>     allBoard    = FXCollections.observableArrayList();
     private ObservableList<BoardMeeting> allMeetings = FXCollections.observableArrayList();
+    private ObservableList<BoardTask>    allTasks    = FXCollections.observableArrayList();
     private final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     @FXML
     public void initialize() {
         setupBoardTable();
         setupMeetingsTable();
+        setupTasksTable();
         loadBoard();
         loadMeetings();
+        loadTasks();
     }
+
+    private void refreshStats() {
+        statBoardMembers.setText(String.valueOf(allBoard.size()));
+        statUpcomingMeetings.setText(String.valueOf(
+            allMeetings.stream().filter(m -> !isCompleted(m)).count()));
+        statOpenTasks.setText(String.valueOf(allTasks.stream().filter(t -> !t.isDone()).count()));
+        statOverdueTasks.setText(String.valueOf(allTasks.stream().filter(BoardTask::isOverdue).count()));
+    }
+
+    private static boolean isCompleted(BoardMeeting m) { return "Completed".equals(m.getStatus()); }
 
     // ══════════════════════════════════════════════════════════
     // BOARD MEMBERS
@@ -58,30 +90,12 @@ public class BoardController {
 
     private void setupBoardTable() {
         colBoardName.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
+        Avatars.nameColumn(colBoardName, row -> row[6]);
         colBoardRole.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
         colBoardPhone.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
         colBoardEmail.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
         colBoardStart.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[4]));
-        colBoardActions.setCellFactory(col -> new TableCell<>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button removeBtn = new Button("Remove");
-            private final HBox   box       = new HBox(6, editBtn, removeBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                removeBtn.getStyleClass().add("btn-danger");
-                removeBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> openBoardMemberDialog(
-                    getTableView().getItems().get(getIndex())));
-                removeBtn.setOnAction(e -> removeBoardMember(
-                    Integer.parseInt(getTableView().getItems().get(getIndex())[5])));
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(boardTable, colBoardActions, this::showBoardMember);
         boardTable.setItems(allBoard);
     }
 
@@ -91,7 +105,7 @@ public class BoardController {
             Connection conn = DatabaseConnection.getConnection();
             String sql = """
                 SELECT bm.id, m.full_name, bm.role_title,
-                       m.phone, m.email,
+                       m.phone, m.email, m.photo_path,
                        DATE_FORMAT(bm.start_date,'%d %b %Y') AS since
                 FROM board_members bm
                 JOIN members m ON m.id = bm.member_id
@@ -106,10 +120,12 @@ public class BoardController {
                     rs.getString("phone") != null ? rs.getString("phone") : "—",
                     rs.getString("email") != null ? rs.getString("email") : "—",
                     rs.getString("since") != null ? rs.getString("since") : "—",
-                    rs.getString("id")
+                    rs.getString("id"),
+                    rs.getString("photo_path")
                 });
             }
         } catch (SQLException e) { e.printStackTrace(); }
+        refreshStats();
     }
 
     @FXML public void handleBoardSearch() {
@@ -124,58 +140,59 @@ public class BoardController {
 
     @FXML public void handleAddBoardMember() { openBoardMemberDialog(null); }
 
+    private void showBoardMember(String[] row) {
+        new DocumentViewer("Board Member", row[0])
+            .icon("fas-user-tie")
+            .avatar(Avatars.of(row[6], 64))
+            .status(row[1], "badge-inprogress")
+            .width(640)
+            .meta("Role / Title", row[1])
+            .meta("On the board since", row[4])
+            .meta("Phone", row[2])
+            .meta("Email", row[3])
+            .onEdit(() -> openBoardMemberDialog(row))
+            .deleteLabel("Remove from Board")
+            .onDelete(() -> removeBoardMember(Integer.parseInt(row[5])))
+            .show();
+    }
+
     private void openBoardMemberDialog(String[] existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null ? "Add Board Member" : "Edit Board Member");
+        FormBuilder f = new FormBuilder(existing == null ? "Add Board Member" : "Edit Board Member").icon("fas-user-tie");
 
-        VBox root = new VBox(16);
-        root.setStyle("-fx-background-color:#F5F6FA;-fx-padding:24;");
-
-        ComboBox<String> memberCombo = new ComboBox<>();
-        memberCombo.getStyleClass().add("form-combo");
+        ComboBox<String> memberCombo = FormBuilder.combo("Search and select member...");
         memberCombo.setEditable(true);
-        memberCombo.setPromptText("Search and select member...");
         loadAllMembersInto(memberCombo);
-
-        TextField roleField = new TextField();
-        roleField.getStyleClass().add("form-field");
-        roleField.setPromptText("e.g. Chairman, Secretary");
-
-        DatePicker startPicker = new DatePicker(LocalDate.now());
-        startPicker.getStyleClass().add("form-date-picker");
+        TextField roleField = FormBuilder.text("e.g. Chairman, Secretary");
+        DatePicker startPicker = FormBuilder.date();
+        startPicker.setValue(LocalDate.now());
 
         if (existing != null) {
             memberCombo.setValue(existing[0]);
+            memberCombo.setDisable(true); // the role belongs to this member; remove + re-add to change person
             roleField.setText(existing[1]);
+            try {
+                startPicker.setValue(LocalDate.parse(existing[4],
+                    DateTimeFormatter.ofPattern("dd MMM yyyy", java.util.Locale.ENGLISH)));
+            } catch (Exception ignored) { /* "—" when no start date was recorded */ }
         }
 
-        Button saveBtn   = new Button("Save");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox btns = new HBox(10, cancelBtn, saveBtn);
-        btns.setAlignment(Pos.CENTER_RIGHT);
+        f.section("Board Member")
+         .field("MEMBER *", memberCombo)
+         .row("ROLE / TITLE *", roleField, "ON THE BOARD SINCE", startPicker);
 
-        root.getChildren().addAll(
-            makeRow("MEMBER *",       memberCombo),
-            makeRow("ROLE / TITLE *", roleField),
-            makeRow("START DATE",     startPicker),
-            btns
-        );
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing == null ? "Add to Board" : "Save Changes");
         saveBtn.setOnAction(e -> {
             String member = memberCombo.getValue();
             String role   = roleField.getText().trim();
-            if (member == null || role.isEmpty()) {
-                showAlert("Validation", "Please select a member and enter a role.");
+            if (member == null || member.isBlank() || role.isEmpty()) {
+                f.showError("Please select a member and enter a role.");
                 return;
             }
+            LocalDate start = startPicker.getValue() != null ? startPicker.getValue() : LocalDate.now();
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 int memberId = getMemberIdByName(conn, member);
-                if (memberId <= 0) { showAlert("Error", "Member not found."); return; }
+                if (memberId <= 0) { f.showError("\"" + member + "\" is not an active member."); return; }
 
                 if (existing == null) {
                     PreparedStatement ps = conn.prepareStatement(
@@ -183,7 +200,7 @@ public class BoardController {
                     );
                     ps.setInt(1, memberId);
                     ps.setString(2, role);
-                    ps.setDate(3, Date.valueOf(startPicker.getValue()));
+                    ps.setDate(3, Date.valueOf(start));
                     ps.executeUpdate();
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Added board member: " + member + " as " + role);
@@ -192,52 +209,50 @@ public class BoardController {
                         "UPDATE board_members SET role_title=?, start_date=? WHERE id=?"
                     );
                     ps.setString(1, role);
-                    ps.setDate(2, Date.valueOf(startPicker.getValue()));
+                    ps.setDate(2, Date.valueOf(start));
                     ps.setInt(3, Integer.parseInt(existing[5]));
                     ps.executeUpdate();
                     AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
                         "Updated board member: " + member + " role to " + role);
                 }
                 loadBoard();
-                stage.close();
+                f.close();
                 ToastManager.success(existing == null ? "Board member added successfully." : "Board member updated successfully.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                showAlert("Database Error", "Could not save board member:\n" + ex.getMessage());
+                f.showError("Could not save board member: " + ex.getMessage());
                 ToastManager.error("Failed to save board member: " + ex.getMessage());
             }
         });
-
-        Scene scene = new Scene(root, 500, 320);
-        scene.getStylesheets().add(getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(560);
     }
 
-    private void removeBoardMember(int boardId) {
+    /** Confirms, then ends the member's board term. Returns true if removed. */
+    private boolean removeBoardMember(int boardId) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Remove Board Member");
         confirm.setHeaderText("Remove this member from the board?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE board_members SET is_active=0, end_date=? WHERE id=?"
-                    );
-                    ps.setDate(1, Date.valueOf(LocalDate.now()));
-                    ps.setInt(2, boardId);
-                    ps.executeUpdate();
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Removed board member ID " + boardId);
-                    loadBoard();
-                    ToastManager.success("Board member removed successfully.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to remove board member: " + e.getMessage());
-                }
-            }
-        });
+        confirm.setContentText("Their term is ended today; their member record is kept.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(
+                "UPDATE board_members SET is_active=0, end_date=? WHERE id=?"
+            );
+            ps.setDate(1, Date.valueOf(LocalDate.now()));
+            ps.setInt(2, boardId);
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Removed board member ID " + boardId);
+            loadBoard();
+            ToastManager.success("Board member removed successfully.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to remove board member: " + e.getMessage());
+            return false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -266,25 +281,107 @@ public class BoardController {
             int count = getMeetingAttendeeCount(d.getValue().getId());
             return new SimpleStringProperty(String.valueOf(count));
         });
-        colMeetActions.setCellFactory(col -> new TableCell<>() {
-            private final Button viewBtn   = new Button("View / Edit");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, viewBtn, deleteBtn);
-            {
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                viewBtn.setOnAction(e -> openMeetingDialog(getTableView().getItems().get(getIndex())));
-                deleteBtn.setOnAction(e -> deleteMeeting(getTableView().getItems().get(getIndex())));
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(meetingsTable, colMeetActions, this::showMeetingDocument);
         meetingsTable.setItems(allMeetings);
+    }
+
+    private void showMeetingDocument(BoardMeeting m) {
+        List<String> present   = new ArrayList<>();
+        List<String> apologies = new ArrayList<>();
+        loadAttendeeNames(m.getId(), present, apologies);
+        List<BoardTask> tasks = allTasks.stream().filter(t -> t.getMeetingId() == m.getId()).toList();
+
+        VBox files = new VBox(8);
+        addDocLink(files, "Agenda document",  m.getAgendaDocPath());
+        addDocLink(files, "Minutes document", m.getMinutesDocPath());
+        if (files.getChildren().isEmpty()) files.getChildren().add(emptyNote("No documents uploaded."));
+
+        VBox taskList = new VBox(6);
+        for (BoardTask t : tasks) {
+            Label badge = taskBadge(t);
+            Label name  = new Label(t.getTitle());
+            name.getStyleClass().add("doc-body");
+            name.setWrapText(true);
+            Label who = new Label(nvlDash(t.getAssignedName()) +
+                (t.getDueDate() != null ? "  ·  due " + t.getDueDate().format(FMT) : ""));
+            who.setStyle("-fx-font-size:12px;-fx-text-fill:#5A6275;");
+            Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
+            HBox line = new HBox(10, new VBox(2, name, who), sp, badge);
+            line.setAlignment(Pos.CENTER_LEFT);
+            taskList.getChildren().add(line);
+        }
+        if (tasks.isEmpty()) taskList.getChildren().add(emptyNote("No action items raised at this meeting."));
+
+        DocumentViewer[] viewer = new DocumentViewer[1];
+        viewer[0] = new DocumentViewer("Board Meeting", m.getTitle())
+            .icon("fas-landmark")
+            .status(m.getStatus(), isCompleted(m) ? "badge-completed" : "badge-pending")
+            .meta("Date",      m.getMeetingDate() != null ? m.getMeetingDate().format(FMT) : null)
+            .meta("Location",  m.getLocation())
+            .meta("Present",   present.isEmpty()   ? null : present.size()   + " board member(s)")
+            .meta("Apologies", apologies.isEmpty() ? null : apologies.size() + " board member(s)")
+            .section("Agenda",  m.getAgenda(),      "No agenda recorded.")
+            .section("Minutes", m.getMinutesText(), "No minutes recorded.")
+            .section("Attendance", new VBox(10,
+                labelled("Present",   DocumentViewer.bulletList(present,   "Nobody marked present.")),
+                labelled("Apologies", DocumentViewer.bulletList(apologies, "No apologies recorded."))))
+            .section("Action Items", taskList)
+            .section("Documents", files)
+            .action("Export", "fas-file-export", () -> exportMinutes(m, present, apologies, tasks))
+            .action("Add Task", "fas-plus", () -> viewer[0].closeThen(() -> {
+                openTaskDialog(null, m.getId());
+                showMeetingDocument(m);
+            }))
+            .onEdit(() -> openMeetingDialog(m))
+            .onDelete(() -> deleteMeeting(m));
+        viewer[0].show();
+    }
+
+    private void exportMinutes(BoardMeeting m, List<String> present, List<String> apologies,
+                               List<BoardTask> tasks) {
+        DocumentExporter.exportMeetingMinutes(new DocumentExporter.MinutesDoc(
+            m.getTitle(),
+            m.getMeetingDate() != null ? m.getMeetingDate().format(FMT) : "—",
+            nvl(m.getLocation()), m.getStatus(),
+            m.getAgenda(), m.getMinutesText(), present, apologies,
+            tasks.stream().map(this::toTaskRow).toList()));
+    }
+
+    private void loadAttendeeNames(int meetingId, List<String> present, List<String> apologies) {
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection().prepareStatement(
+                "SELECT m.full_name, a.attended, a.apology FROM board_meeting_attendees a " +
+                "JOIN members m ON m.id = a.member_id WHERE a.meeting_id=? ORDER BY m.full_name");
+            ps.setInt(1, meetingId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                if (rs.getInt("attended") == 1)     present.add(rs.getString("full_name"));
+                else if (rs.getInt("apology") == 1) apologies.add(rs.getString("full_name"));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    private void addDocLink(VBox box, String label, String path) {
+        if (path == null || path.isEmpty()) return;
+        Label name = new Label(label + ":  " + new File(path).getName());
+        name.setStyle(fileNameStyle());
+        Button open = openFileBtn("Open");
+        open.setOnAction(e -> openFileExternally(path));
+        HBox row = new HBox(10, name, open);
+        row.setAlignment(Pos.CENTER_LEFT);
+        box.getChildren().add(row);
+    }
+
+    private VBox labelled(String label, javafx.scene.Node content) {
+        Label l = new Label(label.toUpperCase());
+        l.getStyleClass().add("form-label");
+        return new VBox(4, l, content);
+    }
+
+    private Label emptyNote(String text) {
+        Label l = new Label(text);
+        l.getStyleClass().add("doc-empty");
+        return l;
     }
 
     private void loadMeetings() {
@@ -309,6 +406,7 @@ public class BoardController {
                 allMeetings.add(m);
             }
         } catch (SQLException e) { e.printStackTrace(); }
+        refreshStats();
     }
 
     @FXML public void handleMeetingSearch() {
@@ -327,8 +425,10 @@ public class BoardController {
 
     private void openMeetingDialog(BoardMeeting existing) {
         Stage stage = new Stage();
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-landmark");
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle(existing == null ? "New Meeting" : "Edit Meeting: " + existing.getTitle());
+        Dialogs.ownByActiveWindow(stage);
         stage.setWidth(720);
         stage.setMinHeight(680);
 
@@ -336,12 +436,13 @@ public class BoardController {
         root.setStyle("-fx-background-color:#F5F6FA;");
 
         // ── Header ─────────────────────────────────────────────
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
         Label titleLbl = new Label(existing == null ? "New Meeting" : "Edit Meeting");
         titleLbl.setStyle("-fx-font-size:18px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
+        Label hintLbl = new Label("Fields marked * are required. Attendance and documents are on the other tabs.");
+        hintLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
+        VBox header = new VBox(2, titleLbl, hintLbl);
+        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:16 28;" +
+                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
 
         // ══════════════════════════════════════════════════════
         // TAB PANE: Details | Attendance | Documents
@@ -351,8 +452,8 @@ public class BoardController {
         VBox.setVgrow(tabs, Priority.ALWAYS);
 
         // ── TAB 1: Details ─────────────────────────────────────
-        VBox detailsContent = new VBox(16);
-        detailsContent.setStyle("-fx-padding:20 24;");
+        VBox detailsContent = new VBox(14);
+        detailsContent.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
 
         TextField  titleField    = new TextField();
         TextField  locationField = new TextField();
@@ -367,19 +468,22 @@ public class BoardController {
         statusCombo.getStyleClass().add("form-combo");
         statusCombo.getItems().addAll("Upcoming", "Completed");
         statusCombo.setValue("Upcoming"); statusCombo.setMaxWidth(Double.MAX_VALUE);
-        agendaArea.getStyleClass().add("form-textarea");
+        agendaArea.getStyleClass().add("form-textarea"); agendaArea.setWrapText(true);
         agendaArea.setPromptText("Paste or type the agenda...");  agendaArea.setPrefHeight(110);
-        minutesArea.getStyleClass().add("form-textarea");
+        minutesArea.getStyleClass().add("form-textarea"); minutesArea.setWrapText(true);
         minutesArea.setPromptText("Paste or type the minutes..."); minutesArea.setPrefHeight(140);
 
-        detailsContent.getChildren().addAll(
-            makeRow("TITLE *",   titleField),
-            makeRow("DATE *",    datePicker),
-            makeRow("LOCATION",  locationField),
-            makeRow("STATUS",    statusCombo),
-            makeRow("AGENDA",    agendaArea),
-            makeRow("MINUTES",   minutesArea)
-        );
+        VBox meetingSection = formSection("Meeting");
+        meetingSection.getChildren().addAll(
+            FormBuilder.labelled("TITLE *", titleField),
+            equalColumns(FormBuilder.labelled("DATE *", datePicker),
+                         FormBuilder.labelled("LOCATION", locationField),
+                         FormBuilder.labelled("STATUS", statusCombo)));
+        VBox agendaSection = formSection("Agenda");
+        agendaSection.getChildren().add(agendaArea);
+        VBox minutesSection = formSection("Minutes");
+        minutesSection.getChildren().add(minutesArea);
+        detailsContent.getChildren().addAll(meetingSection, agendaSection, minutesSection);
         ScrollPane detailsScroll = scrollWrap(detailsContent);
         Tab detailsTab = new Tab("Details", detailsScroll);
 
@@ -607,6 +711,7 @@ public class BoardController {
                 if (meetingId > 0) saveAttendance(conn, meetingId, boardMembers, attChecks);
 
                 loadMeetings();
+                loadTasks();
                 stage.close();
                 ToastManager.success(existing == null ? "Meeting added successfully." : "Meeting updated successfully.");
             } catch (SQLException ex) {
@@ -773,21 +878,318 @@ public class BoardController {
     // DELETE MEETING
     // ══════════════════════════════════════════════════════════
 
-    private void deleteMeeting(BoardMeeting m) {
+    /** Confirms, then deletes. Returns true if the meeting was removed. */
+    private boolean deleteMeeting(BoardMeeting m) {
+        if (m == null) return false;
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Meeting");
         confirm.setHeaderText("Delete \"" + m.getTitle() + "\"?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    DatabaseConnection.getConnection().createStatement()
-                        .executeUpdate("DELETE FROM board_meetings WHERE id=" + m.getId());
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Deleted board meeting: " + m.getTitle());
-                    loadMeetings();
-                } catch (SQLException e) { e.printStackTrace(); }
+        confirm.setContentText("Its attendance and documents links are removed too. " +
+                               "Tasks raised at this meeting are kept but unlinked.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection()
+                .prepareStatement("DELETE FROM board_meetings WHERE id=?");
+            ps.setInt(1, m.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted board meeting: " + m.getTitle());
+            loadMeetings();
+            loadTasks();
+            ToastManager.success("Meeting deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete meeting: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // TASKS
+    // ══════════════════════════════════════════════════════════
+
+    private void setupTasksTable() {
+        taskStatusFilter.getItems().addAll("All", "Open", "In Progress", "Overdue", "Done");
+        taskStatusFilter.setValue("All");
+
+        colTaskTitle.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getTitle()));
+        colTaskAssignee.setCellValueFactory(d -> new SimpleStringProperty(nvlDash(d.getValue().getAssignedName())));
+        Avatars.nameColumn(colTaskAssignee, BoardTask::getAssigneePhoto);
+        colTaskMeeting.setCellValueFactory(d -> new SimpleStringProperty(nvlDash(d.getValue().getMeetingTitle())));
+        colTaskDue.setCellValueFactory(d -> new SimpleStringProperty(
+            d.getValue().getDueDate() != null ? d.getValue().getDueDate().format(FMT) : "—"));
+        colTaskStatus.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getDisplayStatus()));
+        colTaskStatus.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                BoardTask t = empty ? null : getTableRow().getItem();
+                setText(null);
+                setGraphic(t == null ? null : taskBadge(t));
             }
         });
+        colTaskReport.setCellValueFactory(d -> new SimpleStringProperty(
+            d.getValue().getReport() != null && !d.getValue().getReport().isBlank() ? "Received" : "—"));
+        TableActions.viewOnly(tasksTable, colTaskActions, this::openTask);
+        tasksTable.setItems(allTasks);
+    }
+
+    private void loadTasks() {
+        allTasks.clear();
+        try {
+            ResultSet rs = DatabaseConnection.getConnection().createStatement().executeQuery("""
+                SELECT t.*, m.full_name AS assignee, m.photo_path AS assignee_photo, bm.title AS meeting_title
+                FROM board_tasks t
+                LEFT JOIN members m         ON m.id  = t.assigned_member_id
+                LEFT JOIN board_meetings bm ON bm.id = t.meeting_id
+                ORDER BY (t.status = 'Done'), t.due_date IS NULL, t.due_date, t.created_at DESC
+                """);
+            while (rs.next()) {
+                BoardTask t = new BoardTask();
+                t.setId(rs.getInt("id"));
+                t.setTitle(rs.getString("title"));
+                t.setDescription(rs.getString("description"));
+                t.setAssignedMemberId(rs.getInt("assigned_member_id"));
+                t.setAssignedName(rs.getString("assignee"));
+                t.setAssigneePhoto(rs.getString("assignee_photo"));
+                t.setMeetingId(rs.getInt("meeting_id"));
+                t.setMeetingTitle(rs.getString("meeting_title"));
+                if (rs.getDate("due_date") != null) t.setDueDate(rs.getDate("due_date").toLocalDate());
+                t.setStatus(rs.getString("status"));
+                t.setReport(rs.getString("report"));
+                if (rs.getTimestamp("reported_at") != null)
+                    t.setReportedAt(rs.getTimestamp("reported_at").toLocalDateTime());
+                if (rs.getTimestamp("completed_at") != null)
+                    t.setCompletedAt(rs.getTimestamp("completed_at").toLocalDateTime());
+                if (rs.getTimestamp("created_at") != null)
+                    t.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                allTasks.add(t);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        handleTaskFilter();
+        refreshStats();
+    }
+
+    @FXML public void handleTaskFilter() {
+        String q      = taskSearchField.getText() == null ? "" : taskSearchField.getText().toLowerCase();
+        String status = taskStatusFilter.getValue();
+        ObservableList<BoardTask> f = FXCollections.observableArrayList();
+        for (BoardTask t : allTasks) {
+            if (!q.isEmpty()
+                && !t.getTitle().toLowerCase().contains(q)
+                && !(t.getAssignedName() != null && t.getAssignedName().toLowerCase().contains(q))
+                && !(t.getMeetingTitle() != null && t.getMeetingTitle().toLowerCase().contains(q)))
+                continue;
+            if (status != null && !"All".equals(status) && !status.equals(t.getDisplayStatus())) continue;
+            f.add(t);
+        }
+        tasksTable.setItems(f);
+    }
+
+    @FXML public void handleAddTask() { openTaskDialog(null, 0); }
+
+    @FXML public void handleExportTasks() {
+        DocumentExporter.exportBoardTasks(tasksTable.getItems().stream().map(this::toTaskRow).toList());
+    }
+
+    private DocumentExporter.TaskRow toTaskRow(BoardTask t) {
+        return new DocumentExporter.TaskRow(
+            t.getTitle(), nvlDash(t.getAssignedName()), nvlDash(t.getMeetingTitle()),
+            t.getDueDate() != null ? t.getDueDate().format(FMT) : "—",
+            t.getDisplayStatus(), nvlDash(t.getReport()));
+    }
+
+    private void openTask(BoardTask t) {
+        if (t == null) return;
+
+        DateTimeFormatter stamp = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm");
+        new DocumentViewer("Board Task", t.getTitle())
+            .icon("fas-tasks")
+            .status(t.getDisplayStatus(), taskBadgeClass(t.getDisplayStatus()))
+            .width(720)
+            .meta("Assigned To", t.getAssignedName())
+            .meta("Status",      t.getDisplayStatus())
+            .meta("Raised At",   t.getMeetingTitle())
+            .meta("Due Date",    t.getDueDate()    != null ? t.getDueDate().format(FMT)      : null)
+            .meta("Completed",   t.getCompletedAt() != null ? t.getCompletedAt().format(stamp) : null)
+            .section("Description", t.getDescription(), "No description.")
+            .section("Progress Report", t.getReport(), "No report has been submitted yet.")
+            .onEdit(() -> openTaskDialog(t, 0))
+            .onDelete(() -> deleteTask(t))
+            .show();
+    }
+
+    /**
+     * Add/edit a task. {@code presetMeetingId} pre-selects the meeting when the
+     * task is raised from a meeting's document view (0 = none).
+     */
+    private void openTaskDialog(BoardTask existing, int presetMeetingId) {
+        FormBuilder f = new FormBuilder(existing == null ? "New Task" : "Edit Task").icon("fas-tasks");
+
+        TextField titleField = new TextField();
+        titleField.getStyleClass().add("form-field");
+        titleField.setPromptText("What needs to be done?");
+
+        TextArea descArea = new TextArea();
+        descArea.getStyleClass().add("form-textarea");
+        descArea.setWrapText(true);
+        descArea.setPrefHeight(80);
+        descArea.setPromptText("Details, expectations, context...");
+
+        ComboBox<String> assigneeCombo = new ComboBox<>();
+        assigneeCombo.getStyleClass().add("form-combo");
+        assigneeCombo.setEditable(true);
+        assigneeCombo.setPromptText("Search and select member...");
+        loadAllMembersInto(assigneeCombo);
+
+        // Meeting picker — label → id, in table order (most recent first)
+        java.util.Map<String, Integer> meetingIds = new java.util.LinkedHashMap<>();
+        meetingIds.put("— Not linked to a meeting —", 0);
+        for (BoardMeeting m : allMeetings)
+            meetingIds.put(m.getTitle() + "  (" + (m.getMeetingDate() != null ? m.getMeetingDate().format(FMT) : "—") + ")",
+                           m.getId());
+        ComboBox<String> meetingCombo = new ComboBox<>(FXCollections.observableArrayList(meetingIds.keySet()));
+        meetingCombo.getStyleClass().add("form-combo");
+        int selectedMeeting = existing != null ? existing.getMeetingId() : presetMeetingId;
+        meetingCombo.setValue(meetingIds.entrySet().stream()
+            .filter(en -> en.getValue() == selectedMeeting).map(java.util.Map.Entry::getKey)
+            .findFirst().orElse("— Not linked to a meeting —"));
+
+        DatePicker duePicker = new DatePicker(LocalDate.now().plusWeeks(2));
+        duePicker.getStyleClass().add("form-date-picker");
+
+        ComboBox<String> statusCombo = new ComboBox<>();
+        statusCombo.getStyleClass().add("form-combo");
+        statusCombo.getItems().addAll("Open", "In Progress", "Done");
+        statusCombo.setValue("Open");
+
+        TextArea reportArea = new TextArea();
+        reportArea.getStyleClass().add("form-textarea");
+        reportArea.setWrapText(true);
+        reportArea.setPrefHeight(110);
+        reportArea.setPromptText("Feedback from the assigned person — progress, outcome or problems (optional).");
+
+        if (existing != null) {
+            titleField.setText(existing.getTitle());
+            descArea.setText(nvl(existing.getDescription()));
+            assigneeCombo.setValue(existing.getAssignedName());
+            duePicker.setValue(existing.getDueDate());
+            statusCombo.setValue(existing.getStatus());
+            reportArea.setText(nvl(existing.getReport()));
+        }
+
+        f.section("Task")
+         .field("TASK *", titleField)
+         .field("DESCRIPTION", descArea);
+        f.section("Assignment")
+         .row("ASSIGNED TO *", assigneeCombo, "RAISED AT MEETING", meetingCombo)
+         .row("DUE DATE", duePicker, "STATUS", statusCombo);
+        f.section("Progress Report")
+         .field("REPORT FROM THE ASSIGNED PERSON", reportArea);
+        if (existing != null && existing.getReportedAt() != null)
+            f.hint("Report last updated " +
+                existing.getReportedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")));
+
+        Button saveBtn = f.saveButton(existing == null ? "Add Task" : "Save Changes");
+        saveBtn.setOnAction(e -> {
+            String title    = titleField.getText().trim();
+            String assignee = assigneeCombo.getValue();
+            if (title.isEmpty() || assignee == null || assignee.isBlank()) {
+                f.showError("Please enter the task and choose who it is assigned to.");
+                return;
+            }
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                int memberId = getMemberIdByName(conn, assignee);
+                if (memberId <= 0) { f.showError("\"" + assignee + "\" is not an active member."); return; }
+                int meetingId   = meetingIds.getOrDefault(meetingCombo.getValue(), 0);
+                String status   = statusCombo.getValue();
+                String report   = reportArea.getText().trim();
+                boolean reportChanged = existing == null ? !report.isEmpty() : !report.equals(nvl(existing.getReport()).trim());
+
+                PreparedStatement ps;
+                if (existing == null) {
+                    ps = conn.prepareStatement(
+                        "INSERT INTO board_tasks (title, description, assigned_member_id, meeting_id, due_date, " +
+                        "status, report, reported_at, completed_at, created_by) " +
+                        "VALUES (?,?,?,?,?,?,?, IF(?, NOW(), NULL), IF(?='Done', NOW(), NULL), ?)");
+                } else {
+                    ps = conn.prepareStatement(
+                        "UPDATE board_tasks SET title=?, description=?, assigned_member_id=?, meeting_id=?, due_date=?, " +
+                        "status=?, report=?, reported_at=IF(?, NOW(), reported_at), " +
+                        "completed_at=CASE WHEN ?='Done' THEN COALESCE(completed_at, NOW()) ELSE NULL END " +
+                        "WHERE id=?");
+                }
+                ps.setString(1, title);
+                ps.setString(2, descArea.getText().trim());
+                ps.setInt(3, memberId);
+                if (meetingId > 0) ps.setInt(4, meetingId); else ps.setNull(4, Types.INTEGER);
+                if (duePicker.getValue() != null) ps.setDate(5, Date.valueOf(duePicker.getValue()));
+                else ps.setNull(5, Types.DATE);
+                ps.setString(6, status);
+                ps.setString(7, report.isEmpty() ? null : report);
+                ps.setBoolean(8, reportChanged);
+                ps.setString(9, status);
+                if (existing == null) ps.setInt(10, SessionManager.getInstance().getCurrentUser().getId());
+                else                  ps.setInt(10, existing.getId());
+                ps.executeUpdate();
+
+                AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                    (existing == null ? "Created board task: " : "Updated board task: ") +
+                    title + " (assigned to " + assignee + ", " + status + ")");
+                loadTasks();
+                f.close();
+                ToastManager.success(existing == null ? "Task added." : "Task updated.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                ToastManager.error("Failed to save task: " + ex.getMessage());
+            }
+        });
+
+        f.show(640);
+    }
+
+    /** Confirms, then deletes. Returns true if the task was removed. */
+    private boolean deleteTask(BoardTask t) {
+        if (t == null) return false;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
+        confirm.setTitle("Delete Task");
+        confirm.setHeaderText("Delete task \"" + t.getTitle() + "\"?");
+        confirm.setContentText("Its progress report is deleted too. This cannot be undone.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection()
+                .prepareStatement("DELETE FROM board_tasks WHERE id=?");
+            ps.setInt(1, t.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted board task: " + t.getTitle());
+            loadTasks();
+            ToastManager.success("Task deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete task: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private Label taskBadge(BoardTask t) {
+        Label b = new Label(t.getDisplayStatus());
+        b.getStyleClass().add(taskBadgeClass(t.getDisplayStatus()));
+        b.setMinWidth(Region.USE_PREF_SIZE);
+        return b;
+    }
+
+    private static String taskBadgeClass(String displayStatus) {
+        return switch (displayStatus) {
+            case "Done"        -> "badge-completed";
+            case "In Progress" -> "badge-inprogress";
+            case "Overdue"     -> "badge-overdue";
+            default            -> "badge-pending";
+        };
     }
 
     // ══════════════════════════════════════════════════════════
@@ -801,6 +1203,27 @@ public class BoardController {
         box.getChildren().addAll(l, field);
         if (field instanceof Control) ((Control) field).setMaxWidth(Double.MAX_VALUE);
         return box;
+    }
+
+    /** White titled section card, matching FormBuilder forms. */
+    private VBox formSection(String title) {
+        Label t = new Label(title.toUpperCase());
+        t.getStyleClass().add("form-section-title");
+        VBox box = new VBox(12, t);
+        box.getStyleClass().add("form-section");
+        return box;
+    }
+
+    private GridPane equalColumns(javafx.scene.Node... cells) {
+        GridPane g = new GridPane();
+        g.setHgap(14);
+        for (int i = 0; i < cells.length; i++) {
+            ColumnConstraints c = new ColumnConstraints();
+            c.setPercentWidth(100.0 / cells.length);
+            g.getColumnConstraints().add(c);
+            g.add(cells[i], i, 0);
+        }
+        return g;
     }
 
     private Label headerLabel(String text) {
@@ -817,6 +1240,8 @@ public class BoardController {
     }
 
     private String nvl(String s) { return s != null ? s : ""; }
+
+    private String nvlDash(String s) { return s != null && !s.isBlank() ? s : "—"; }
 
     private void loadAllMembersInto(ComboBox<String> combo) {
         try {

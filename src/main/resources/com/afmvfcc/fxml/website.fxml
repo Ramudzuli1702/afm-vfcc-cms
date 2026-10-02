@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
 <VBox xmlns:fx="http://javafx.com/fxml"
@@ -10,56 +11,89 @@
 
         <!-- BLOG POSTS -->
         <Tab text="Blog Posts">
-            <VBox spacing="12" style="-fx-padding:20;-fx-background-color:#F5F6FA;">
-                <HBox alignment="CENTER_RIGHT">
-                    <Button text="+ New Blog Post" styleClass="btn-primary" onAction="#handleAddBlog"/>
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Posts appear on the church website as soon as they are published."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button minWidth="-Infinity" text="New Blog Post" graphicTextGap="8" styleClass="btn-primary" onAction="#handleAddBlog">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="blogsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                <TableView fx:id="blogsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colBlogTitle"   text="TITLE"   prefWidth="340"/>
                         <TableColumn fx:id="colBlogAuthor"  text="AUTHOR"  prefWidth="180"/>
                         <TableColumn fx:id="colBlogDate"    text="DATE"    prefWidth="140"/>
-                        <TableColumn fx:id="colBlogActions" text="ACTIONS" prefWidth="140"/>
+                        <TableColumn fx:id="colBlogActions" text="ACTIONS" prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No blog posts yet. Click &quot;New Blog Post&quot; to write one."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
 
         <!-- WEBSITE EVENTS -->
         <Tab text="Events">
-            <VBox spacing="12" style="-fx-padding:20;-fx-background-color:#F5F6FA;">
-                <HBox alignment="CENTER_RIGHT">
-                    <Button text="+ New Event" styleClass="btn-primary" onAction="#handleAddWebEvent"/>
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Upcoming events with posters, shown on the church website."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button minWidth="-Infinity" text="New Event" graphicTextGap="8" styleClass="btn-primary" onAction="#handleAddWebEvent">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="webEventsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                <TableView fx:id="webEventsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colWebEvTitle"   text="TITLE"   prefWidth="300"/>
                         <TableColumn fx:id="colWebEvDate"    text="DATE"    prefWidth="140"/>
                         <TableColumn fx:id="colWebEvPoster"  text="POSTER"  prefWidth="100"/>
-                        <TableColumn fx:id="colWebEvActions" text="ACTIONS" prefWidth="140"/>
+                        <TableColumn fx:id="colWebEvActions" text="ACTIONS" prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No website events yet. Click &quot;New Event&quot; to publish one."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
 
         <!-- BISHOP'S MESSAGE -->
         <Tab text="Bishop's Message">
-            <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
-                <VBox spacing="16" style="-fx-padding:20;-fx-max-width:520;">
-                    <Label text="The short video and caption shown in the &quot;A Special Message&quot; section on the homepage. Uploading a new video replaces the one currently live."
+            <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;-fx-background:transparent;">
+                <VBox spacing="16" style="-fx-padding:16 0 16 0;">
+                    <Label text="The short video and caption shown in the &quot;A Special Message&quot; section of the homepage. Uploading a new video replaces the one currently live."
                            wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
 
-                    <VBox spacing="10" style="-fx-background-color:#FFFFFF;-fx-padding:16;-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-background-radius:10;">
-                        <Label text="VIDEO" styleClass="form-label"/>
-                        <Label fx:id="messageVideoStatusLabel" text="No video chosen." wrapText="true"
-                               style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
-                        <Button text="Choose Video (.mp4)..." styleClass="btn-secondary" onAction="#handleChooseMessageVideo"/>
+                    <GridPane hgap="16" vgap="16">
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="50"/>
+                            <ColumnConstraints percentWidth="50"/>
+                        </columnConstraints>
+                        <VBox styleClass="form-section" spacing="12" GridPane.columnIndex="0">
+                            <Label text="VIDEO" styleClass="form-section-title"/>
+                            <Label fx:id="messageVideoStatusLabel" text="No video chosen." wrapText="true"
+                                   style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
+                            <Button minWidth="-Infinity" text="Choose Video (.mp4)..." graphicTextGap="8"
+                                    styleClass="btn-secondary" onAction="#handleChooseMessageVideo">
+                                <graphic><FontIcon iconLiteral="fas-film" iconSize="13" iconColor="#1E2130"/></graphic>
+                            </Button>
+                        </VBox>
+                        <VBox styleClass="form-section" spacing="12" GridPane.columnIndex="1">
+                            <Label text="POSTER / THUMBNAIL" styleClass="form-section-title"/>
+                            <ImageView fx:id="messagePosterPreview" fitWidth="140" fitHeight="140" preserveRatio="true"/>
+                            <Button minWidth="-Infinity" text="Choose Poster Image..." graphicTextGap="8"
+                                    styleClass="btn-secondary" onAction="#handleChooseMessagePoster">
+                                <graphic><FontIcon iconLiteral="fas-image" iconSize="13" iconColor="#1E2130"/></graphic>
+                            </Button>
+                        </VBox>
+                    </GridPane>
 
-                        <Label text="POSTER / THUMBNAIL IMAGE" styleClass="form-label" style="-fx-padding:10 0 0 0;"/>
-                        <ImageView fx:id="messagePosterPreview" fitWidth="140" fitHeight="140" preserveRatio="true"/>
-                        <Button text="Choose Poster Image..." styleClass="btn-secondary" onAction="#handleChooseMessagePoster"/>
-
-                        <Label text="CAPTION" styleClass="form-label" style="-fx-padding:10 0 0 0;"/>
+                    <VBox styleClass="form-section" spacing="12">
+                        <Label text="CAPTION" styleClass="form-section-title"/>
                         <TextField fx:id="messageCaptionField" styleClass="form-field"
                                    promptText="e.g. Watch Bishop Ramatshimbila preach live every Sunday" maxWidth="Infinity"/>
                         <Label text="The Facebook link below the video uses the Facebook URL set in Contact Details."
@@ -67,7 +101,10 @@
                     </VBox>
 
                     <HBox alignment="CENTER_RIGHT">
-                        <Button text="Save &amp; Publish Message" styleClass="btn-primary" onAction="#handleSaveMessage"/>
+                        <Button minWidth="-Infinity" text="Save &amp; Publish Message" graphicTextGap="8"
+                                styleClass="btn-primary" onAction="#handleSaveMessage">
+                            <graphic><FontIcon iconLiteral="fas-globe" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                        </Button>
                     </HBox>
                 </VBox>
             </ScrollPane>
@@ -75,42 +112,59 @@
 
         <!-- MEET OUR LEADERS -->
         <Tab text="Meet Our Leaders">
-            <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
-                <VBox spacing="16" style="-fx-padding:20;">
-
-                    <Label text="Bishop and Mom Bishop are shown together in ONE photo, with both their names listed underneath it. Recommended photo: square, at least 400×400px."
+            <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;-fx-background:transparent;">
+                <VBox spacing="16" style="-fx-padding:16 0 16 0;">
+                    <Label text="Bishop and Mom Bishop are shown together in one photo with both names underneath. Recommended photo: square, at least 400×400px."
                            wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
 
-                    <VBox spacing="10" style="-fx-background-color:#FFFFFF;-fx-padding:16;-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-background-radius:10;">
-                        <Label text="BISHOP &amp; MOM BISHOP — ONE PHOTO" styleClass="form-label"/>
-                        <ImageView fx:id="leadersPhotoPreview" fitWidth="160" fitHeight="160" preserveRatio="true"/>
-                        <Button text="Choose Photo..." styleClass="btn-secondary" onAction="#handleChooseLeadersPhoto"/>
-                        <HBox spacing="16">
-                            <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                <Label text="NAME 1 (BISHOP)" styleClass="form-label"/>
-                                <TextField fx:id="leader1NameField" styleClass="form-field" promptText="e.g. Bishop Ramatshimbila" maxWidth="Infinity"/>
-                                <TextField fx:id="leader1RoleField" styleClass="form-field" promptText="e.g. Senior Bishop" maxWidth="Infinity"/>
-                            </VBox>
-                            <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                <Label text="NAME 2 (MOM BISHOP)" styleClass="form-label"/>
-                                <TextField fx:id="leader2NameField" styleClass="form-field" promptText="e.g. Mom Bishop Ramatshimbila" maxWidth="Infinity"/>
-                                <TextField fx:id="leader2RoleField" styleClass="form-field" promptText="e.g. Mom Bishop" maxWidth="Infinity"/>
-                            </VBox>
-                        </HBox>
-                    </VBox>
-
-                    <VBox spacing="10" style="-fx-background-color:#FFFFFF;-fx-padding:16;-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-background-radius:10;">
-                        <Label text="CHURCH BOARD" styleClass="form-label"/>
-                        <Label text="One group photo, with member names listed underneath automatically — names are pulled live from the Church Board module, nothing to type here."
-                               wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
-                        <ImageView fx:id="boardPhotoPreview" fitWidth="160" fitHeight="120" preserveRatio="true"/>
-                        <Button text="Choose Board Photo..." styleClass="btn-secondary" onAction="#handleChooseBoardPhoto"/>
-                        <Label text="CURRENT ACTIVE BOARD MEMBERS (from Church Board)" styleClass="form-label" style="-fx-padding:10 0 0 0;"/>
-                        <ListView fx:id="boardMembersPreviewList" prefHeight="120"/>
-                    </VBox>
+                    <GridPane hgap="16" vgap="16">
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="50"/>
+                            <ColumnConstraints percentWidth="50"/>
+                        </columnConstraints>
+                        <VBox styleClass="form-section" spacing="12" GridPane.columnIndex="0">
+                            <Label text="BISHOP &amp; MOM BISHOP" styleClass="form-section-title"/>
+                            <ImageView fx:id="leadersPhotoPreview" fitWidth="160" fitHeight="160" preserveRatio="true"/>
+                            <Button minWidth="-Infinity" text="Choose Photo..." graphicTextGap="8"
+                                    styleClass="btn-secondary" onAction="#handleChooseLeadersPhoto">
+                                <graphic><FontIcon iconLiteral="fas-camera" iconSize="13" iconColor="#1E2130"/></graphic>
+                            </Button>
+                            <GridPane hgap="14" vgap="8">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="50"/>
+                                    <ColumnConstraints percentWidth="50"/>
+                                </columnConstraints>
+                                <Label text="BISHOP" styleClass="form-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <Label text="MOM BISHOP" styleClass="form-label" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <TextField fx:id="leader1NameField" styleClass="form-field" promptText="Name" maxWidth="Infinity"
+                                           GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <TextField fx:id="leader2NameField" styleClass="form-field" promptText="Name" maxWidth="Infinity"
+                                           GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <TextField fx:id="leader1RoleField" styleClass="form-field" promptText="Title, e.g. Senior Bishop" maxWidth="Infinity"
+                                           GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                                <TextField fx:id="leader2RoleField" styleClass="form-field" promptText="Title, e.g. Mom Bishop" maxWidth="Infinity"
+                                           GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            </GridPane>
+                        </VBox>
+                        <VBox styleClass="form-section" spacing="12" GridPane.columnIndex="1">
+                            <Label text="CHURCH BOARD" styleClass="form-section-title"/>
+                            <ImageView fx:id="boardPhotoPreview" fitWidth="160" fitHeight="120" preserveRatio="true"/>
+                            <Button minWidth="-Infinity" text="Choose Board Photo..." graphicTextGap="8"
+                                    styleClass="btn-secondary" onAction="#handleChooseBoardPhoto">
+                                <graphic><FontIcon iconLiteral="fas-camera" iconSize="13" iconColor="#1E2130"/></graphic>
+                            </Button>
+                            <Label text="NAMES SHOWN (from Church Board)" styleClass="form-label"/>
+                            <ListView fx:id="boardMembersPreviewList" prefHeight="120"/>
+                            <Label text="Names are pulled live from the Church Board module — nothing to type here."
+                                   wrapText="true" style="-fx-text-fill:#9099AA;-fx-font-size:11px;"/>
+                        </VBox>
+                    </GridPane>
 
                     <HBox alignment="CENTER_RIGHT">
-                        <Button text="Save &amp; Publish Leaders" styleClass="btn-primary" onAction="#handleSaveLeaders"/>
+                        <Button minWidth="-Infinity" text="Save &amp; Publish Leaders" graphicTextGap="8"
+                                styleClass="btn-primary" onAction="#handleSaveLeaders">
+                            <graphic><FontIcon iconLiteral="fas-globe" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                        </Button>
                     </HBox>
                 </VBox>
             </ScrollPane>
@@ -118,46 +172,57 @@
 
         <!-- CONTACT DETAILS -->
         <Tab text="Contact Details">
-            <ScrollPane fitToWidth="true" style="-fx-background-color:#F5F6FA;-fx-background:#F5F6FA;">
-                <VBox spacing="14" style="-fx-padding:20;-fx-max-width:520;">
+            <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;-fx-background:transparent;">
+                <VBox spacing="16" style="-fx-padding:16 0 16 0;">
                     <Label text="Shown in the Contact Us section of the public website."
                            wrapText="true" style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
 
-                    <VBox spacing="6">
-                        <Label text="ADDRESS" styleClass="form-label"/>
-                        <TextArea fx:id="contactAddressField" prefHeight="60" wrapText="true" maxWidth="Infinity"/>
-                    </VBox>
-                    <VBox spacing="6">
-                        <Label text="PHONE" styleClass="form-label"/>
-                        <TextField fx:id="contactPhoneField" styleClass="form-field" promptText="+27 82 399 8785" maxWidth="Infinity"/>
-                    </VBox>
-                    <HBox spacing="16">
-                        <VBox spacing="6" HBox.hgrow="ALWAYS">
-                            <Label text="FACEBOOK URL" styleClass="form-label"/>
-                            <TextField fx:id="contactFacebookUrlField" styleClass="form-field" maxWidth="Infinity"/>
+                    <GridPane hgap="16" vgap="16">
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="50"/>
+                            <ColumnConstraints percentWidth="50"/>
+                        </columnConstraints>
+                        <VBox styleClass="form-section" spacing="12" GridPane.columnIndex="0">
+                            <Label text="CONTACT" styleClass="form-section-title"/>
+                            <VBox spacing="6">
+                                <Label text="ADDRESS" styleClass="form-label"/>
+                                <TextArea fx:id="contactAddressField" styleClass="form-textarea" prefHeight="70" wrapText="true" maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="PHONE" styleClass="form-label"/>
+                                <TextField fx:id="contactPhoneField" styleClass="form-field" promptText="+27 82 399 8785" maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="EMAIL" styleClass="form-label"/>
+                                <TextField fx:id="contactEmailField" styleClass="form-field" promptText="info@afmvfcc.co.za" maxWidth="Infinity"/>
+                            </VBox>
                         </VBox>
-                        <VBox spacing="6" HBox.hgrow="ALWAYS">
-                            <Label text="FACEBOOK LABEL" styleClass="form-label"/>
-                            <TextField fx:id="contactFacebookLabelField" styleClass="form-field" promptText="Kutama AFM: Victory Fellowship" maxWidth="Infinity"/>
+                        <VBox styleClass="form-section" spacing="12" GridPane.columnIndex="1">
+                            <Label text="SOCIAL LINKS" styleClass="form-section-title"/>
+                            <VBox spacing="6">
+                                <Label text="FACEBOOK URL" styleClass="form-label"/>
+                                <TextField fx:id="contactFacebookUrlField" styleClass="form-field" promptText="https://facebook.com/..." maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="FACEBOOK LABEL" styleClass="form-label"/>
+                                <TextField fx:id="contactFacebookLabelField" styleClass="form-field" promptText="Kutama AFM: Victory Fellowship" maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="YOUTUBE URL" styleClass="form-label"/>
+                                <TextField fx:id="contactYoutubeUrlField" styleClass="form-field" promptText="https://youtube.com/..." maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="YOUTUBE LABEL" styleClass="form-label"/>
+                                <TextField fx:id="contactYoutubeLabelField" styleClass="form-field" promptText="Watch our services &amp; sermons" maxWidth="Infinity"/>
+                            </VBox>
                         </VBox>
-                    </HBox>
-                    <HBox spacing="16">
-                        <VBox spacing="6" HBox.hgrow="ALWAYS">
-                            <Label text="YOUTUBE URL" styleClass="form-label"/>
-                            <TextField fx:id="contactYoutubeUrlField" styleClass="form-field" maxWidth="Infinity"/>
-                        </VBox>
-                        <VBox spacing="6" HBox.hgrow="ALWAYS">
-                            <Label text="YOUTUBE LABEL" styleClass="form-label"/>
-                            <TextField fx:id="contactYoutubeLabelField" styleClass="form-field" promptText="Watch our services &amp; sermons" maxWidth="Infinity"/>
-                        </VBox>
-                    </HBox>
-                    <VBox spacing="6">
-                        <Label text="EMAIL" styleClass="form-label"/>
-                        <TextField fx:id="contactEmailField" styleClass="form-field" promptText="info@afmvfcc.co.za" maxWidth="Infinity"/>
-                    </VBox>
+                    </GridPane>
 
                     <HBox alignment="CENTER_RIGHT">
-                        <Button text="Save &amp; Publish Contact Details" styleClass="btn-primary" onAction="#handleSaveContact"/>
+                        <Button minWidth="-Infinity" text="Save &amp; Publish Contact Details" graphicTextGap="8"
+                                styleClass="btn-primary" onAction="#handleSaveContact">
+                            <graphic><FontIcon iconLiteral="fas-globe" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                        </Button>
                     </HBox>
                 </VBox>
             </ScrollPane>

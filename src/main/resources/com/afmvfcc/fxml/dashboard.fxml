@@ -3,6 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.chart.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <ScrollPane fitToWidth="true" styleClass="root"
             style="-fx-background-color:transparent;-fx-background:transparent;"
@@ -26,27 +27,35 @@
                 <ColumnConstraints percentWidth="25"/>
             </columnConstraints>
 
-            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="6"
+            <VBox styleClass="stat-card" GridPane.columnIndex="0" spacing="10"
                   onMouseClicked="#handleStatMembersClick" style="-fx-cursor:hand;">
-                <Label text="👥" styleClass="stat-icon"/>
+                <StackPane styleClass="stat-icon-chip, chip-blue">
+                    <FontIcon iconLiteral="fas-users" styleClass="stat-icon"/>
+                </StackPane>
                 <Label text="TOTAL MEMBERS" styleClass="stat-label"/>
                 <Label fx:id="statTotal" text="0" styleClass="stat-number"/>
             </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="6"
+            <VBox styleClass="stat-card" GridPane.columnIndex="1" spacing="10"
                   onMouseClicked="#handleStatMembersClick" style="-fx-cursor:hand;">
-                <Label text="✅" styleClass="stat-icon"/>
+                <StackPane styleClass="stat-icon-chip, chip-green">
+                    <FontIcon iconLiteral="fas-check-circle" styleClass="stat-icon" iconColor="#2E7D4F"/>
+                </StackPane>
                 <Label text="ACTIVE (FULL TIME)" styleClass="stat-label"/>
                 <Label fx:id="statActive" text="0" styleClass="stat-number"/>
             </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="6"
+            <VBox styleClass="stat-card" GridPane.columnIndex="2" spacing="10"
                   onMouseClicked="#handleStatMembersClick" style="-fx-cursor:hand;">
-                <Label text="🕓" styleClass="stat-icon"/>
+                <StackPane styleClass="stat-icon-chip, chip-amber">
+                    <FontIcon iconLiteral="fas-clock" styleClass="stat-icon" iconColor="#C07800"/>
+                </StackPane>
                 <Label text="PART TIME" styleClass="stat-label"/>
                 <Label fx:id="statPartTime" text="0" styleClass="stat-number"/>
             </VBox>
-            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="6"
+            <VBox styleClass="stat-card" GridPane.columnIndex="3" spacing="10"
                   onMouseClicked="#handleStatAttendanceClick" style="-fx-cursor:hand;">
-                <Label text="📊" styleClass="stat-icon"/>
+                <StackPane styleClass="stat-icon-chip, chip-blue-dark">
+                    <FontIcon iconLiteral="fas-chart-bar" styleClass="stat-icon" iconColor="#2A6BA8"/>
+                </StackPane>
                 <Label text="LAST WEEK ATTENDANCE" styleClass="stat-label"/>
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <Label fx:id="statLastAttendance" text="0" styleClass="stat-number"/>
@@ -120,7 +129,7 @@
 
             <!-- Birthdays This Week -->
             <VBox styleClass="reminder-card" spacing="12" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                <Label text="🎂 BIRTHDAYS THIS WEEK" styleClass="section-label"/>
+                <Label text="BIRTHDAYS THIS WEEK" styleClass="section-label"/>
                 <VBox fx:id="birthdaysBox" spacing="8">
                     <Label text="No birthdays this week." styleClass="reminder-item"/>
                 </VBox>

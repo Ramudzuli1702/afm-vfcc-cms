@@ -3,6 +3,11 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Icons;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.GitHubSync;
 import com.afmvfcc.utils.WebsiteExporter;
 import com.afmvfcc.utils.SessionManager;
@@ -94,32 +99,7 @@ public class WebsiteController {
         colBlogAuthor.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
         colBlogDate.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
 
-        colBlogActions.setCellFactory(col -> new TableCell<>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, editBtn, deleteBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    int i = getIndex();
-                    if (i >= 0 && i < getTableView().getItems().size())
-                        openBlogDialog(getTableView().getItems().get(i));
-                });
-                deleteBtn.setOnAction(e -> {
-                    int i = getIndex();
-                    if (i >= 0 && i < getTableView().getItems().size())
-                        deleteBlog(Integer.parseInt(getTableView().getItems().get(i)[3]));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(blogsTable, colBlogActions, this::showBlog);
     }
 
     private void loadBlogs() {
@@ -169,7 +149,8 @@ public class WebsiteController {
                 }
                 @Override protected void updateItem(String item, boolean empty) {
                     super.updateItem(item, empty);
-                    if (empty || item == null || "No".equals(item)) {
+                    if (empty) { setGraphic(null); setText(null); return; }
+                    if (item == null || "No".equals(item)) {
                         setGraphic(null); setText("No poster");
                         setStyle("-fx-text-fill:#9099AA;-fx-font-size:11px;");
                         return;
@@ -187,32 +168,7 @@ public class WebsiteController {
             });
         }
 
-        colWebEvActions.setCellFactory(col -> new TableCell<>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, editBtn, deleteBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    int i = getIndex();
-                    if (i >= 0 && i < getTableView().getItems().size())
-                        openWebEventDialog(getTableView().getItems().get(i));
-                });
-                deleteBtn.setOnAction(e -> {
-                    int i = getIndex();
-                    if (i >= 0 && i < getTableView().getItems().size())
-                        deleteWebEvent(Integer.parseInt(getTableView().getItems().get(i)[2]));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(webEventsTable, colWebEvActions, this::showWebEvent);
     }
 
     private void loadWebEvents() {
@@ -239,30 +195,53 @@ public class WebsiteController {
     // =========================================================
 
     @FXML public void handleAddBlog()     { openBlogDialog(null); }
+
+    private void showBlog(String[] row) {
+        int id = Integer.parseInt(row[3]);
+        TextArea content = new TextArea();
+        loadBlogContent(content, id);
+        new DocumentViewer("Blog Post", row[0])
+            .icon("fas-newspaper")
+            .meta("Author",    row[1])
+            .meta("Published", row[2])
+            .section("Content", content.getText(), "This post has no content.")
+            .onEdit(() -> openBlogDialog(row))
+            .onDelete(() -> deleteBlog(id))
+            .show();
+    }
+
+    private void showWebEvent(String[] row) {
+        int id = Integer.parseInt(row[2]);
+        TextArea desc = new TextArea();
+        DatePicker unused = new DatePicker();
+        loadWebEventDetails(desc, unused, id);
+        DocumentViewer v = new DocumentViewer("Website Event", row[0])
+            .icon("fas-bullhorn")
+            .meta("Event Date", row[1])
+            .meta("Poster", row[3].isEmpty() ? "None" : fileNameFromUrl(row[3]))
+            .section("Description", desc.getText(), "No description.");
+        Image poster = row[3].isEmpty() ? null : loadImageFromPathOrUrl(row[3]);
+        if (poster != null) {
+            ImageView iv = new ImageView(poster);
+            iv.setPreserveRatio(true);
+            iv.setFitWidth(320);
+            v.section("Poster", iv);
+        }
+        v.onEdit(() -> openWebEventDialog(row))
+         .onDelete(() -> deleteWebEvent(id))
+         .show();
+    }
     @FXML public void handleAddWebEvent() { openWebEventDialog(null); }
 
     private void openBlogDialog(String[] existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null ? "New Blog Post" : "Edit Blog Post");
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label titleLbl = new Label(existing == null ? "New Blog Post" : "Edit Blog Post");
-        titleLbl.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
-
-        VBox body = new VBox(14);
-        body.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
+        FormBuilder f = new FormBuilder(existing == null ? "New Blog Post" : "Edit Blog Post",
+            "Fields marked * are required. Saving publishes the post to the website.").icon("fas-newspaper");
 
         TextField titleField  = styledField("Blog title");
         TextField authorField = styledField("Author name");
         TextArea  contentArea = new TextArea();
         contentArea.getStyleClass().add("form-textarea");
+        contentArea.setWrapText(true);
         contentArea.setPromptText("Blog content...");
         contentArea.setPrefHeight(200); contentArea.setMaxWidth(Double.MAX_VALUE);
 
@@ -272,26 +251,15 @@ public class WebsiteController {
             loadBlogContent(contentArea, Integer.parseInt(existing[3]));
         }
 
-        body.getChildren().addAll(
-            row("TITLE *", titleField),
-            row("AUTHOR",  authorField),
-            row("CONTENT *", contentArea));
+        f.section("Post")
+         .row("TITLE *", titleField, "AUTHOR", authorField)
+         .field("CONTENT *", contentArea);
 
-        Button saveBtn   = new Button("Save Post");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, saveBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-                "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        root.getChildren().addAll(header, body, footer);
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing == null ? "Publish Post" : "Save & Republish");
         saveBtn.setOnAction(e -> {
             String t = titleField.getText().trim();
             String c = contentArea.getText().trim();
-            if (t.isEmpty() || c.isEmpty()) return;
+            if (t.isEmpty() || c.isEmpty()) { f.showError("Please enter a title and the post content."); return; }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 if (existing == null) {
@@ -312,15 +280,16 @@ public class WebsiteController {
                 loadBlogs();
                 // DB write is complete on the FX thread — safe to export now
                 triggerExport();
-                stage.close();
+                f.close();
                 ToastManager.success(existing == null ? "Blog post published." : "Blog post updated.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                f.showError("Could not save the post: " + ex.getMessage());
                 ToastManager.error("Failed to save blog post: " + ex.getMessage());
             }
         });
 
-        showScene(stage, root, 600, 560);
+        f.show(680);
     }
 
     // =========================================================
@@ -328,22 +297,8 @@ public class WebsiteController {
     // =========================================================
 
     private void openWebEventDialog(String[] existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null ? "New Website Event" : "Edit Website Event");
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label titleLbl = new Label(existing == null ? "New Website Event" : "Edit Website Event");
-        titleLbl.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
-
-        VBox body = new VBox(14);
-        body.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
+        FormBuilder f = new FormBuilder(existing == null ? "New Website Event" : "Edit Website Event",
+            "Fields marked * are required. Saving publishes the event to the website.").icon("fas-bullhorn");
 
         TextField  titleField = styledField("Event title");
         DatePicker datePicker = new DatePicker(LocalDate.now());
@@ -351,6 +306,7 @@ public class WebsiteController {
         datePicker.setMaxWidth(Double.MAX_VALUE);
         TextArea descArea = new TextArea();
         descArea.getStyleClass().add("form-textarea");
+        descArea.setWrapText(true);
         descArea.setPromptText("Event description...");
         descArea.setPrefHeight(100); descArea.setMaxWidth(Double.MAX_VALUE);
 
@@ -388,13 +344,13 @@ public class WebsiteController {
             fc.setTitle("Select Event Poster");
             fc.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("Images", "*.jpg","*.jpeg","*.png","*.gif","*.webp"));
-            File chosen = fc.showOpenDialog(stage);
+            File chosen = fc.showOpenDialog(f.stage());
             if (chosen != null) {
                 selectedLocalFile[0] = chosen;
                 // Show local preview immediately
                 posterPreview.setImage(new Image(chosen.toURI().toString()));
                 posterLabel.setText(chosen.getName());
-                uploadStatus.setText("⏳ Will upload to GitHub on save");
+                Icons.status(uploadStatus, "Will upload to GitHub on save", Icons.Status.INFO);
                 removePosterBtn.setVisible(true);
             }
         });
@@ -412,41 +368,34 @@ public class WebsiteController {
             posterPreview.setImage(null);
             posterLabel.setText("No poster selected");
             uploadStatus.setText("");
+            uploadStatus.setGraphic(null);
             removePosterBtn.setVisible(false);
         });
 
         HBox posterBtns = new HBox(8, choosePosterBtn, removePosterBtn);
         posterBtns.setAlignment(Pos.CENTER_LEFT);
-        VBox posterBox = new VBox(8, posterPreview, posterLabel, uploadStatus, posterBtns);
-        posterBox.setStyle("-fx-background-color:#FFFFFF;-fx-padding:12;-fx-border-color:#DDE1EA;" +
-                "-fx-border-radius:8;-fx-background-radius:8;");
+        VBox posterText = new VBox(8, posterLabel, uploadStatus, posterBtns);
+        HBox posterBox = new HBox(16, posterPreview, posterText);
+        posterBox.setAlignment(Pos.CENTER_LEFT);
 
         if (existing != null && existing.length > 2) {
             titleField.setText(existing[0]);
             loadWebEventDetails(descArea, datePicker, Integer.parseInt(existing[2]));
         }
 
-        body.getChildren().addAll(
-            row("TITLE *",        titleField),
-            row("EVENT DATE *",   datePicker),
-            row("DESCRIPTION",    descArea),
-            row("EVENT POSTER",   posterBox));
+        f.section("Event")
+         .row("TITLE *", titleField, "EVENT DATE *", datePicker)
+         .field("DESCRIPTION", descArea);
+        f.section("Poster")
+         .node(posterBox)
+         .hint("The poster is uploaded to the website's GitHub repository when you save.");
 
-        Button saveBtn   = new Button("Save Event");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, saveBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-                "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        root.getChildren().addAll(header, body, footer);
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing == null ? "Publish Event" : "Save & Republish");
 
         saveBtn.setOnAction(e -> {
             String t = titleField.getText().trim();
-            if (t.isEmpty()) return;
+            if (t.isEmpty()) { f.showError("Please enter a title for the event."); return; }
+            if (datePicker.getValue() == null) { f.showError("Please choose the event date."); return; }
 
             saveBtn.setDisable(true);
             String descText  = descArea.getText().trim();
@@ -455,7 +404,7 @@ public class WebsiteController {
 
             if (selectedLocalFile[0] != null) {
                 // ── New poster chosen: upload first, then write DB, then export ──
-                uploadStatus.setText("⏳ Uploading poster to GitHub…");
+                Icons.status(uploadStatus, "Uploading poster to GitHub…", Icons.Status.BUSY);
                 final File localFile = selectedLocalFile[0];
 
                 new Thread(() -> {
@@ -498,7 +447,7 @@ public class WebsiteController {
 
                             // ── Export AFTER the DB write has completed ──
                             triggerExport();
-                            stage.close();
+                            f.close();
                             ToastManager.success(existing == null ? "Event published." : "Event updated.");
                             if (finalPosterUploadError != null) {
                                 ToastManager.error("Poster image could not be uploaded to GitHub: " +
@@ -507,7 +456,7 @@ public class WebsiteController {
                         } catch (SQLException ex) {
                             ex.printStackTrace();
                             saveBtn.setDisable(false);
-                            uploadStatus.setText("❌ Save failed: " + ex.getMessage());
+                            Icons.status(uploadStatus, "Save failed: " + ex.getMessage(), Icons.Status.ERROR);
                             ToastManager.error("Failed to save event: " + ex.getMessage());
                         }
                     });
@@ -522,18 +471,18 @@ public class WebsiteController {
 
                     // ── Export AFTER the DB write has completed ──
                     triggerExport();
-                    stage.close();
+                    f.close();
                     ToastManager.success(existing == null ? "Event published." : "Event updated.");
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                     saveBtn.setDisable(false);
-                    uploadStatus.setText("❌ Save failed: " + ex.getMessage());
+                    Icons.status(uploadStatus, "Save failed: " + ex.getMessage(), Icons.Status.ERROR);
                     ToastManager.error("Failed to save event: " + ex.getMessage());
                 }
             }
         });
 
-        showScene(stage, root, 540, 640);
+        f.show(640);
     }
 
     /**
@@ -572,65 +521,70 @@ public class WebsiteController {
     // DELETE
     // =========================================================
 
-    private void deleteBlog(int id) {
+    /** Confirms, then deletes the post and republishes. Returns true if deleted. */
+    private boolean deleteBlog(int id) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Blog");
         confirm.setHeaderText("Delete this blog post?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    DatabaseConnection.getConnection().createStatement()
-                        .executeUpdate("DELETE FROM website_blogs WHERE id=" + id);
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Deleted blog post ID " + id);
-                    loadBlogs();
-                    triggerExport();
-                    ToastManager.success("Blog post deleted.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to delete blog post: " + e.getMessage());
-                }
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection()
+                .prepareStatement("DELETE FROM website_blogs WHERE id=?");
+            ps.setInt(1, id);
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted blog post ID " + id);
+            loadBlogs();
+            triggerExport();
+            ToastManager.success("Blog post deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete blog post: " + e.getMessage());
+            return false;
+        }
     }
 
-    private void deleteWebEvent(int id) {
+    /** Confirms, then deletes the event (and its poster on GitHub) and republishes. Returns true if deleted. */
+    private boolean deleteWebEvent(int id) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Event");
         confirm.setHeaderText("Delete this website event?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    // Get poster URL before deleting
-                    ResultSet rs = DatabaseConnection.getConnection().createStatement()
-                        .executeQuery("SELECT image_filename FROM website_events WHERE id=" + id);
-                    String posterUrl = rs.next() ? rs.getString(1) : null;
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            // Get poster URL before deleting
+            PreparedStatement q = conn.prepareStatement("SELECT image_filename FROM website_events WHERE id=?");
+            q.setInt(1, id);
+            ResultSet rs = q.executeQuery();
+            String posterUrl = rs.next() ? rs.getString(1) : null;
 
-                    DatabaseConnection.getConnection().createStatement()
-                        .executeUpdate("DELETE FROM website_events WHERE id=" + id);
+            PreparedStatement del = conn.prepareStatement("DELETE FROM website_events WHERE id=?");
+            del.setInt(1, id);
+            del.executeUpdate();
 
-                    // Delete poster from GitHub
-                    if (posterUrl != null && !posterUrl.isEmpty()) {
-                        String repoPath = githubPagesUrlToRepoPath(posterUrl);
-                        if (repoPath != null) {
-                            final String rp = repoPath;
-                            new Thread(() -> GitHubSync.deletePoster(rp)).start();
-                        }
-                    }
-
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                        "Deleted website event ID " + id);
-                    loadWebEvents();
-                    triggerExport();
-                    ToastManager.success("Event deleted.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to delete event: " + e.getMessage());
+            // Delete poster from GitHub
+            if (posterUrl != null && !posterUrl.isEmpty()) {
+                String repoPath = githubPagesUrlToRepoPath(posterUrl);
+                if (repoPath != null) {
+                    final String rp = repoPath;
+                    new Thread(() -> GitHubSync.deletePoster(rp)).start();
                 }
             }
-        });
+
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted website event ID " + id);
+            loadWebEvents();
+            triggerExport();
+            ToastManager.success("Event deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete event: " + e.getMessage());
+            return false;
+        }
     }
 
     // =========================================================
@@ -735,23 +689,6 @@ public class WebsiteController {
         f.setPromptText(prompt);
         f.setMaxWidth(Double.MAX_VALUE);
         return f;
-    }
-
-    private VBox row(String label, javafx.scene.Node field) {
-        VBox b = new VBox(6);
-        Label l = new Label(label);
-        l.getStyleClass().add("form-label");
-        b.getChildren().addAll(l, field);
-        if (field instanceof Control) ((Control) field).setMaxWidth(Double.MAX_VALUE);
-        return b;
-    }
-
-    private void showScene(Stage stage, VBox root, double w, double h) {
-        Scene scene = new Scene(root, w, h);
-        scene.setFill(javafx.scene.paint.Color.web("#F5F6FA"));
-        scene.getStylesheets().add(getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
     }
 
     // =========================================================

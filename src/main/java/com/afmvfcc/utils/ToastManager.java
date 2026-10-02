@@ -7,8 +7,10 @@ import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 /**
  * App-wide "Success" / "Failed" toast notifications. MainLayoutController
@@ -51,15 +53,15 @@ public class ToastManager {
                 "-fx-effect:dropshadow(gaussian, rgba(42,53,80,0.30), 20, 0, 0, 6);"
             );
 
-            Label icon = new Label(isSuccess ? "✓" : "✕");
+            StackPane icon = new StackPane();
             icon.setMinSize(26, 26);
             icon.setMaxSize(26, 26);
             icon.setAlignment(Pos.CENTER);
             icon.setStyle(
-                "-fx-font-size:14px;-fx-font-weight:800;-fx-text-fill:white;" +
                 "-fx-background-color:" + (isSuccess ? "#2E7D4F" : "#D94040") + ";" +
                 "-fx-background-radius:100;"
             );
+            icon.getChildren().add(Icons.of(isSuccess ? "fas-check" : "fas-times", 12, Icons.WHITE));
 
             Label title = new Label(isSuccess ? "Success" : "Failed");
             title.setStyle(

@@ -307,6 +307,24 @@ CREATE TABLE IF NOT EXISTS board_meeting_files (
     FOREIGN KEY (meeting_id) REFERENCES board_meetings(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS board_tasks (
+    id                 INT AUTO_INCREMENT PRIMARY KEY,
+    title              VARCHAR(200) NOT NULL,
+    description        TEXT,
+    assigned_member_id INT,
+    meeting_id         INT,
+    due_date           DATE,
+    status             ENUM('Open','In Progress','Done') NOT NULL DEFAULT 'Open',
+    report             LONGTEXT,
+    reported_at        DATETIME,
+    completed_at       DATETIME,
+    created_by         INT,
+    created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assigned_member_id) REFERENCES members(id)        ON DELETE SET NULL,
+    FOREIGN KEY (meeting_id)         REFERENCES board_meetings(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by)         REFERENCES users(id)          ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- WELFARE MODULE
 -- ============================================================

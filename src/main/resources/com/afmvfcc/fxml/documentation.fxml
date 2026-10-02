@@ -2,6 +2,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox styleClass="root" xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.afmvfcc.controllers.DocumentationController"
@@ -10,7 +11,8 @@
     <TabPane fx:id="docTabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
 
         <!-- ── USER GUIDE ── -->
-        <Tab text="📘  User Guide">
+        <Tab text="User Guide">
+            <graphic><FontIcon iconLiteral="fas-book" iconSize="13" iconColor="#5A6275"/></graphic>
             <VBox spacing="0" VBox.vgrow="ALWAYS">
                 <HBox spacing="12" alignment="CENTER_LEFT"
                       style="-fx-padding:16 20;-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;">
@@ -19,7 +21,9 @@
                         <Label text="A complete, step-by-step guide to every module in the system."
                                style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
                     </VBox>
-                    <Button text="⬇  Download"  styleClass="btn-primary" onAction="#handleExportUserGuide"/>
+                    <Button minWidth="-Infinity" text="Download" graphicTextGap="8" styleClass="btn-primary" onAction="#handleExportUserGuide">
+                        <graphic><FontIcon iconLiteral="fas-download" iconSize="13" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
                             style="-fx-background-color:transparent;-fx-background:transparent;">
@@ -29,7 +33,8 @@
         </Tab>
 
         <!-- ── SYSTEM USAGE POLICY ── -->
-        <Tab text="📄  System Usage Policy">
+        <Tab text="System Usage Policy">
+            <graphic><FontIcon iconLiteral="fas-file-alt" iconSize="13" iconColor="#5A6275"/></graphic>
             <VBox spacing="0" VBox.vgrow="ALWAYS">
                 <HBox spacing="12" alignment="CENTER_LEFT"
                       style="-fx-padding:16 20;-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;">
@@ -38,7 +43,9 @@
                         <Label text="Acceptable use, access levels, data privacy, and security — no church letterhead, by design."
                                style="-fx-text-fill:#5A6275;-fx-font-size:12px;" wrapText="true"/>
                     </VBox>
-                    <Button text="⬇  Download"  styleClass="btn-secondary" onAction="#handleExportPolicy"/>
+                    <Button minWidth="-Infinity" text="Download" graphicTextGap="8" styleClass="btn-primary" onAction="#handleExportPolicy">
+                        <graphic><FontIcon iconLiteral="fas-download" iconSize="13" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
                             style="-fx-background-color:transparent;-fx-background:transparent;">

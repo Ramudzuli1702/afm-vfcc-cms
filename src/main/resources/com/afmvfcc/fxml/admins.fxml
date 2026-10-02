@@ -1,25 +1,101 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
-<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.afmvfcc.controllers.AdminsController" spacing="16">
-    <Label fx:id="accessDeniedLabel" text="⛔  Access denied. Only the super admin can manage admin accounts."
-           style="-fx-text-fill:#e74c3c;-fx-font-size:14px;-fx-padding:40;" visible="false" managed="false"/>
-    <VBox fx:id="contentBox" spacing="16">
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <TextField fx:id="adminSearchField" styleClass="search-field" promptText="🔍  Search admins..." onKeyReleased="#handleSearch"/>
-            <HBox HBox.hgrow="ALWAYS"/>
-            <Button text="＋  Add Admin" styleClass="btn-primary" onAction="#handleAddAdmin"/>
-        </HBox>
-        <TableView fx:id="adminsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:540px;">
-            <columns>
-                <TableColumn fx:id="colAdminName"     text="FULL NAME"  prefWidth="200"/>
-                <TableColumn fx:id="colAdminUsername" text="USERNAME"   prefWidth="150"/>
-                <TableColumn fx:id="colAdminType"     text="TYPE"       prefWidth="90"/>
-                <TableColumn fx:id="colAdminRole"     text="ROLE"       prefWidth="160"/>
-                <TableColumn fx:id="colAdminEmail"    text="EMAIL"      prefWidth="200"/>
-                <TableColumn fx:id="colAdminStatus"   text="STATUS"     prefWidth="100"/>
-                <TableColumn fx:id="colAdminActions"  text="ACTIONS"    prefWidth="200"/>
-            </columns>
-        </TableView>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<!-- Admins & Audit Log: account management and the activity trail on one page.
+     The Audit Log tab is audit_log.fxml included as-is (it keeps its own controller). -->
+<ScrollPane fitToWidth="true" fitToHeight="true" styleClass="root"
+            style="-fx-background-color:transparent;-fx-background:transparent;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.AdminsController">
+<VBox spacing="16" style="-fx-padding:4 0 24 0;">
+    <HBox fx:id="accessDeniedBox" spacing="10" alignment="CENTER_LEFT"
+          style="-fx-padding:40;" visible="false" managed="false">
+        <FontIcon iconLiteral="fas-ban" iconSize="16" iconColor="#e74c3c"/>
+        <Label fx:id="accessDeniedLabel" text="Access denied. Only the super admin can manage admin accounts and view the audit log."
+               style="-fx-text-fill:#e74c3c;-fx-font-size:14px;"/>
+    </HBox>
+    <VBox fx:id="contentBox" spacing="16" VBox.vgrow="ALWAYS">
+
+        <!-- ── STAT CARDS ── -->
+        <GridPane hgap="14" vgap="14">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+                <ColumnConstraints percentWidth="25"/>
+            </columnConstraints>
+
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="0" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-blue">
+                    <FontIcon iconLiteral="fas-user-shield" styleClass="stat-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="ADMIN ACCOUNTS" styleClass="stat-label"/>
+                    <Label fx:id="statAdmins" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="1" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-amber">
+                    <FontIcon iconLiteral="fas-mobile-alt" styleClass="stat-icon" iconColor="#C07800"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="USHER ACCOUNTS" styleClass="stat-label"/>
+                    <Label fx:id="statUshers" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="2" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-red">
+                    <FontIcon iconLiteral="fas-user-lock" styleClass="stat-icon" iconColor="#D94040"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="INACTIVE ACCOUNTS" styleClass="stat-label"/>
+                    <Label fx:id="statInactive" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+            <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="3" spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="stat-icon-chip, chip-green">
+                    <FontIcon iconLiteral="fas-clipboard-list" styleClass="stat-icon" iconColor="#2E7D4F"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="ACTIONS TODAY" styleClass="stat-label"/>
+                    <Label fx:id="statActionsToday" text="0" styleClass="stat-number"/>
+                </VBox>
+            </HBox>
+        </GridPane>
+
+        <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+            <Tab text="Accounts">
+                <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <TextField fx:id="adminSearchField" styleClass="search-field" promptText="Search admins..." onKeyReleased="#handleSearch"/>
+                        <HBox HBox.hgrow="ALWAYS"/>
+                        <Button minWidth="-Infinity" text="Add Admin" graphicTextGap="8" styleClass="btn-primary" onAction="#handleAddAdmin">
+                            <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                        </Button>
+                    </HBox>
+                    <TableView fx:id="adminsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                        <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
+                        <columns>
+                            <TableColumn fx:id="colAdminName"     text="FULL NAME"  prefWidth="200"/>
+                            <TableColumn fx:id="colAdminUsername" text="USERNAME"   prefWidth="150"/>
+                            <TableColumn fx:id="colAdminType"     text="TYPE"       prefWidth="90"/>
+                            <TableColumn fx:id="colAdminRole"     text="ROLE"       prefWidth="160"/>
+                            <TableColumn fx:id="colAdminEmail"    text="EMAIL"      prefWidth="200"/>
+                            <TableColumn fx:id="colAdminStatus"   text="STATUS"     prefWidth="100"/>
+                            <TableColumn fx:id="colAdminActions"  text="ACTIONS"    prefWidth="110"/>
+                        </columns>
+                        <placeholder>
+                            <Label text="No accounts yet. Click &quot;Add Admin&quot; to create one."/>
+                        </placeholder>
+                    </TableView>
+                </VBox>
+            </Tab>
+            <Tab text="Audit Log">
+                <fx:include source="audit_log.fxml"/>
+            </Tab>
+        </TabPane>
     </VBox>
 </VBox>
+</ScrollPane>

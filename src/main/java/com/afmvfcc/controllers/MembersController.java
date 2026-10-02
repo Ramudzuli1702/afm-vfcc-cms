@@ -4,6 +4,12 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.Member;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Avatars;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.Icons;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
@@ -84,6 +90,9 @@ public class MembersController {
     @FXML private TabPane      memberTabs;
     @FXML private Tab          pendingTab;
 
+    // Stat cards
+    @FXML private Label statTotal, statActive, statPending, statGuests;
+
     private final ObservableList<Member> allMembers = FXCollections.observableArrayList();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
@@ -137,7 +146,7 @@ public class MembersController {
                     "WHERE m.id = ?");
                 ps.setInt(1, memberId);
                 ResultSet rs = ps.executeQuery();
-                if (rs.next()) openReadOnlyDialog(mapMember(rs));
+                if (rs.next()) showMember(mapMember(rs));
             } catch (SQLException ex) { ex.printStackTrace(); }
         };
         deceasedCtrl.initialize();
@@ -184,32 +193,15 @@ public class MembersController {
             }
         });
 
-        colActions.setCellFactory(col -> new TableCell<Member, Void>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, editBtn, deleteBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        openAddEditDialog(getTableView().getItems().get(idx));
-                });
-                deleteBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        handleDelete(getTableView().getItems().get(idx));
-                });
-            }
+        colPhoto.setCellFactory(col -> new TableCell<Member, Void>() {
             @Override protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
+                Member m = empty || getTableRow() == null ? null : getTableRow().getItem();
+                setGraphic(m == null ? null : Avatars.of(m.getPhotoPath(), 30));
+                setText(null);
             }
         });
+        TableActions.viewOnly(membersTable, colActions, this::showMember);
 
         membersTable.setItems(allMembers);
     }
@@ -218,47 +210,8 @@ public class MembersController {
         colFamilyName.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
         colFamilyMembers.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
 
-        colFamilyActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button viewBtn   = new Button("View");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, viewBtn, deleteBtn);
-            {
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-
-                viewBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        openFamilyDetailDialog(Integer.parseInt(row[2]), row[0]);
-                    }
-                });
-                deleteBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        deleteFamilyById(Integer.parseInt(getTableView().getItems().get(idx)[2]));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
-
-        // Double-click a row to open family detail
-        familiesTable.setRowFactory(tv -> {
-            TableRow<String[]> row = new TableRow<>();
-            row.setOnMouseClicked(e -> {
-                if (e.getClickCount() == 2 && !row.isEmpty()) {
-                    String[] data = row.getItem();
-                    openFamilyDetailDialog(Integer.parseInt(data[2]), data[0]);
-                }
-            });
-            return row;
-        });
+        TableActions.viewOnly(familiesTable, colFamilyActions,
+            row -> openFamilyDetailDialog(Integer.parseInt(row[2]), row[0]));
     }
 
     private void setupPendingTable() {
@@ -268,33 +221,22 @@ public class MembersController {
         colPendingMinistry.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
         colPendingDate.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[4]));
 
-        colPendingActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button approveBtn = new Button("Approve");
-            private final Button rejectBtn  = new Button("Reject");
-            private final HBox   box        = new HBox(6, approveBtn, rejectBtn);
-            {
-                approveBtn.getStyleClass().add("btn-primary");
-                approveBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                rejectBtn.getStyleClass().add("btn-danger");
-                rejectBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                approveBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        approvePending(Integer.parseInt(row[5]), row[0], row[1], row[2]);
-                    }
-                });
-                rejectBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        rejectPending(Integer.parseInt(getTableView().getItems().get(idx)[5]));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(pendingTable, colPendingActions, this::showPending);
+    }
+
+    private void showPending(String[] row) {
+        new DocumentViewer("Pending Member", row[0])
+            .icon("fas-user-clock")
+            .status("Awaiting approval", "badge-pending")
+            .width(620)
+            .meta("Phone",      row[1])
+            .meta("Sub-Branch", row[2])
+            .meta("Ministry",   row[3])
+            .meta("Submitted",  row[4])
+            .closingAction("Reject", "fas-times", "btn-danger", () -> rejectPending(Integer.parseInt(row[5]), row[0]))
+            .closingAction("Approve as Member", "fas-check", "btn-primary",
+                () -> approvePending(Integer.parseInt(row[5]), row[0], row[1], row[2]))
+            .show();
     }
 
     // =========================================================
@@ -310,18 +252,19 @@ public class MembersController {
         List<Member> familyMembers = loadFamilyMembers(familyId);
 
         Stage stage = new Stage();
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-home");
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("Family — " + familyName);
 
         // ── Header ──────────────────────────────────────────────
         HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
+        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:16 28;" +
                 "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
         VBox headerText = new VBox(2);
         Label titleLbl = new Label(familyName);
-        titleLbl.setStyle("-fx-font-size:17px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
+        titleLbl.setStyle("-fx-font-size:18px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
         Label subLbl = new Label(familyMembers.size() + " member" + (familyMembers.size() != 1 ? "s" : ""));
-        subLbl.setStyle("-fx-font-size:12px;-fx-text-fill:#9099AA;");
+        subLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
         headerText.getChildren().addAll(titleLbl, subLbl);
         header.getChildren().add(headerText);
 
@@ -345,25 +288,29 @@ public class MembersController {
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
         // ── Footer ───────────────────────────────────────────────
-        HBox footer = new HBox();
+        HBox footer = new HBox(10);
         footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:12 24;" +
+        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 28;" +
                 "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
+        Button deleteBtn = new Button("Delete Family");
+        deleteBtn.getStyleClass().add("btn-danger");
+        deleteBtn.setGraphic(Icons.of("fas-trash-alt", 13, Icons.RED));
+        deleteBtn.setGraphicTextGap(8);
+        deleteBtn.setOnAction(e -> { if (deleteFamilyById(familyId)) stage.close(); });
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
         Button closeBtn = new Button("Close");
         closeBtn.getStyleClass().add("btn-secondary");
         closeBtn.setOnAction(e -> stage.close());
-        footer.getChildren().add(closeBtn);
+        footer.getChildren().addAll(deleteBtn, spacer, closeBtn);
 
         // ── Root ─────────────────────────────────────────────────
         VBox root = new VBox(0, header, scroll, footer);
         root.setStyle("-fx-background-color:#F5F6FA;");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        Scene scene = new Scene(root, 560, 540);
-        scene.setFill(Color.web("#F5F6FA"));
-        scene.getStylesheets().add(
-                getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
+        Dialogs.ownByActiveWindow(stage);
+        stage.setScene(Dialogs.fittedScene(root, scroll, 600));
         stage.showAndWait();
 
         // Refresh in case any member was edited
@@ -380,12 +327,7 @@ public class MembersController {
         card.setStyle("-fx-background-color:#FFFFFF;-fx-background-radius:10;" +
                 "-fx-border-color:#DDE1EA;-fx-border-radius:10;-fx-padding:14 16;");
 
-        // Avatar / Initials
-        Label avatar = new Label(m.getFullName().substring(0, 1).toUpperCase());
-        avatar.setStyle("-fx-background-color:#E8EAF6;-fx-background-radius:24;" +
-                "-fx-min-width:44;-fx-min-height:44;-fx-max-width:44;-fx-max-height:44;" +
-                "-fx-alignment:center;-fx-font-weight:700;-fx-font-size:16px;" +
-                "-fx-text-fill:#1A237E;");
+        StackPane avatar = Avatars.of(m.getPhotoPath(), 44);
 
         // Info block
         VBox info = new VBox(3);
@@ -395,41 +337,51 @@ public class MembersController {
         nameLbl.setStyle("-fx-font-size:14px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
 
         // Detail line: phone · sub-branch · gender
-        List<String> details = new ArrayList<>();
-        if (m.getPhone() != null && !m.getPhone().isBlank())
-            details.add("📞 " + m.getPhone());
-        if (m.getSubBranchName() != null && !m.getSubBranchName().isBlank())
-            details.add("🏠 " + m.getSubBranchName());
-        if (m.getGender() != null && !m.getGender().isBlank())
-            details.add(m.getGender());
-
-        Label detailLbl = new Label(String.join("   ·   ", details));
-        detailLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#5A6275;");
+        HBox detailRow = new HBox(6);
+        detailRow.setAlignment(Pos.CENTER_LEFT);
+        boolean firstDetail = true;
+        if (m.getPhone() != null && !m.getPhone().isBlank()) {
+            detailRow.getChildren().add(detailChip("fas-phone", m.getPhone()));
+            firstDetail = false;
+        }
+        if (m.getSubBranchName() != null && !m.getSubBranchName().isBlank()) {
+            if (!firstDetail) detailRow.getChildren().add(detailDot());
+            detailRow.getChildren().add(detailChip("fas-home", m.getSubBranchName()));
+            firstDetail = false;
+        }
+        if (m.getGender() != null && !m.getGender().isBlank()) {
+            if (!firstDetail) detailRow.getChildren().add(detailDot());
+            Label genderLbl = new Label(m.getGender());
+            genderLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#5A6275;");
+            detailRow.getChildren().add(genderLbl);
+        }
 
         // Ministry line
         String ministries = loadMinistriesForMember(m.getId());
         if (!ministries.equals("-")) {
-            Label minLbl = new Label("⛪ " + ministries);
+            HBox minRow = new HBox(5);
+            minRow.setAlignment(Pos.CENTER_LEFT);
+            javafx.scene.Node minIcon = Icons.of("fas-church", 11, "#D4A017");
+            Label minLbl = new Label(ministries);
             minLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#D4A017;-fx-font-weight:600;");
-            info.getChildren().addAll(nameLbl, detailLbl, minLbl);
+            minRow.getChildren().addAll(minIcon, minLbl);
+            info.getChildren().addAll(nameLbl, detailRow, minRow);
         } else {
-            info.getChildren().addAll(nameLbl, detailLbl);
+            info.getChildren().addAll(nameLbl, detailRow);
         }
 
         // Status badge
         Label statusBadge = new Label(m.isActive() ? "Active" : "Inactive");
         statusBadge.getStyleClass().add(m.isActive() ? "badge-active" : "badge-inactive");
 
-        // View/Edit button — opens the full member dialog
-        Button editBtn = new Button(m.isDeceased() ? "View" : "View / Edit");
+        // View — opens the member's read-only profile (Edit is inside it)
+        Button editBtn = new Button("View");
         editBtn.getStyleClass().add("btn-secondary");
         editBtn.setStyle("-fx-padding:6 14;-fx-font-size:11px;");
+        editBtn.setGraphic(Icons.of("fas-eye", 11, Icons.NAVY));
         editBtn.setOnAction(e -> {
-            if (m.isDeceased()) openReadOnlyDialog(m);
-            else {
-                openAddEditDialog(m);
-                nameLbl.setText(m.getFullName());
-            }
+            showMember(m);
+            nameLbl.setText(m.getFullName());
         });
 
         card.getChildren().addAll(avatar, info, statusBadge, editBtn);
@@ -510,6 +462,20 @@ public class MembersController {
             e.printStackTrace();
         }
         applyFilters();
+        refreshStats();
+    }
+
+    private void refreshStats() {
+        statTotal.setText(String.valueOf(allMembers.size()));
+        statActive.setText(String.valueOf(allMembers.stream().filter(Member::isActive).count()));
+        statPending.setText(String.valueOf(pendingTable.getItems() != null ? pendingTable.getItems().size() : 0));
+        try {
+            ResultSet rs = DatabaseConnection.getConnection().createStatement()
+                    .executeQuery("SELECT COUNT(*) FROM guests WHERE status='Guest'");
+            statGuests.setText(rs.next() ? rs.getString(1) : "0");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private void loadFamilies() {
@@ -572,6 +538,7 @@ public class MembersController {
         }
 
         pendingTable.setItems(pending);
+        refreshStats();
         int count = pending.size();
         if (count > 0) {
             pendingBanner.setVisible(true);
@@ -632,14 +599,6 @@ public class MembersController {
 
     @FXML public void handleAdd() { openAddEditDialog(null); }
 
-    @FXML
-    public void handleTableClick(javafx.scene.input.MouseEvent e) {
-        if (e.getClickCount() == 2) {
-            Member selected = membersTable.getSelectionModel().getSelectedItem();
-            if (selected != null) openAddEditDialog(selected);
-        }
-    }
-
     private void openAddEditDialog(Member member) {
         try {
             FXMLLoader loader = new FXMLLoader(
@@ -647,81 +606,122 @@ public class MembersController {
             VBox root = loader.load();
             AddEditMemberController ctrl = loader.getController();
             ctrl.setMember(member);
-            ctrl.setOnSaved(this::loadMembers);
+            ctrl.setOnSaved(() -> { loadMembers(); loadFamilies(); });
             Stage stage = new Stage();
+            com.afmvfcc.utils.Icons.setWindowIcon(stage, member == null ? "fas-user-plus" : "fas-user-edit");
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setTitle(member == null ? "Add New Member" : "Edit Member");
-            Scene scene = new Scene(root, 700, 720);
-            scene.setFill(Color.web("#F5F6FA"));
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-            stage.setScene(scene);
+            Dialogs.ownByActiveWindow(stage);
+            stage.setScene(Dialogs.fittedScene(root, ctrl.getBodyScroll(), 960));
             stage.showAndWait();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void openReadOnlyDialog(Member member) {
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/com/afmvfcc/fxml/add_edit_member.fxml"));
-            VBox root = loader.load();
-            AddEditMemberController ctrl = loader.getController();
-            ctrl.setMember(member);
-            ctrl.setReadOnly();
-            Stage stage = new Stage();
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setTitle("View Member — " + member.getFullName());
-            Scene scene = new Scene(root, 700, 720);
-            scene.setFill(Color.web("#F5F6FA"));
-            scene.getStylesheets().add(
-                    getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-            stage.setScene(scene);
-            stage.showAndWait();
-        } catch (Exception e) {
-            e.printStackTrace();
+    /** Read-only member profile. Departed members can be viewed but not edited from here. */
+    private void showMember(Member m) {
+        String ministries = loadMinistriesForMember(m.getId());
+        String spouse = null;
+        if (m.getSpouseMemberId() != null) {
+            try {
+                PreparedStatement ps = DatabaseConnection.getConnection()
+                        .prepareStatement("SELECT full_name FROM members WHERE id=?");
+                ps.setInt(1, m.getSpouseMemberId());
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) spouse = rs.getString(1);
+            } catch (SQLException e) { e.printStackTrace(); }
         }
+        String dob = m.getDateOfBirth() == null ? null : m.getDateOfBirth().format(FMT) + "  (age " +
+                java.time.Period.between(m.getDateOfBirth(), java.time.LocalDate.now()).getYears() + ")";
+        String marital = m.getMaritalStatus() == null ? null
+                : m.getMaritalStatus() + (spouse != null ? " to " + spouse : "");
+        String nok = m.getNextOfKinName() == null || m.getNextOfKinName().isBlank() ? null
+                : m.getNextOfKinName() + (m.getNextOfKinPhone() != null && !m.getNextOfKinPhone().isBlank()
+                        ? "  \u00b7  " + m.getNextOfKinPhone() : "");
+
+        DocumentViewer v = new DocumentViewer(m.isDeceased() ? "Faithful Departed" : "Member Profile", m.getFullName())
+            .icon(m.isDeceased() ? "fas-dove" : "fas-id-card")
+                .avatar(Avatars.of(m.getPhotoPath(), 76))
+                .status(m.isDeceased() ? "Faithful Departed" : m.getStatusLabel(),
+                        !m.isDeceased() && m.isActive() ? "badge-active" : "badge-inactive")
+                .meta("Phone",          m.getPhone())
+                .meta("Email",          m.getEmail())
+                .meta("Gender",         m.getGender())
+                .meta("Date of Birth",  dob)
+                .meta("Sub-Branch",     m.getSubBranchName())
+                .meta("Family",         m.getFamilyName())
+                .meta("Ministries",     "-".equals(ministries) ? null : ministries)
+                .meta("Availability",   m.getAvailabilityLabel())
+                .meta("Marital Status", marital)
+                .meta("Employment",     m.getEmploymentStatus())
+                .meta("Date Joined",    m.getDateJoined()  != null ? m.getDateJoined().format(FMT)  : null)
+                .meta("Baptism Date",   m.getBaptismDate() != null ? m.getBaptismDate().format(FMT) : null)
+                .meta("Next of Kin",    nok)
+                .section("Address", m.getAddress(), "No address recorded.")
+                .action("Print Form", "fas-print", () -> DocumentExporter.exportMemberForm(m));
+        if (!m.isDeceased()) {
+            v.closingAction("Faithful Departed", "fas-dove", "btn-secondary", () -> markDeparted(m))
+             .onEdit(() -> openAddEditDialog(m))
+             .onDelete(() -> handleDelete(m));
+        }
+        v.show();
     }
 
-    private void handleDelete(Member m) {
+    /** Opens the Faithful Departed dialog; returns true if the member was recorded as departed. */
+    private boolean markDeparted(Member m) {
+        boolean[] done = { false };
+        String css = getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm();
+        DeceasedMembersController.showMarkDeceasedDialog(m.getId(), m.getFullName(), () -> {
+            done[0] = true;
+            loadMembers();
+            if (deceasedCtrl != null) deceasedCtrl.loadDeceased();
+            javafx.application.Platform.runLater(() ->
+                    CommemorationsController.showDeathAnnouncementDialog(m.getFullName()));
+        }, css);
+        return done[0];
+    }
+
+    /** Confirms, then soft-deletes the member. Returns true if deleted. */
+    private boolean handleDelete(Member m) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Member");
         confirm.setHeaderText("Delete " + m.getFullName() + "?");
         confirm.setContentText("This member will be soft-deleted and removed from all views.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    PreparedStatement ps = conn.prepareStatement(
-                            "UPDATE members SET is_deleted=1 WHERE id=?");
-                    ps.setInt(1, m.getId());
-                    ps.executeUpdate();
-                    AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                            "Deleted member: " + m.getFullName());
-                    loadMembers();
-                    ToastManager.success("Member deleted successfully.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to delete member: " + e.getMessage());
-                }
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE members SET is_deleted=1 WHERE id=?");
+            ps.setInt(1, m.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                    "Deleted member: " + m.getFullName());
+            loadMembers();
+            loadFamilies();
+            ToastManager.success("Member deleted successfully.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete member: " + e.getMessage());
+            return false;
+        }
     }
 
     // =========================================================
     // PENDING ACTIONS
     // =========================================================
 
-    private void approvePending(int pendingId, String name, String phone, String branch) {
+    /** Creates the member from the pending submission. Returns true on success. */
+    private boolean approvePending(int pendingId, String name, String phone, String branch) {
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement getPending = conn.prepareStatement(
                     "SELECT * FROM pending_members WHERE id=?");
             getPending.setInt(1, pendingId);
             ResultSet pm = getPending.executeQuery();
-            if (!pm.next()) return;
+            if (!pm.next()) return false;
 
             PreparedStatement ins = conn.prepareStatement(
                     "INSERT INTO members (full_name, phone, sub_branch_id, " +
@@ -755,12 +755,23 @@ public class MembersController {
                     "Approved pending member: " + name);
             loadMembers();
             loadPending();
+            ToastManager.success(name + " approved and added to members.");
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
+            ToastManager.error("Failed to approve member: " + e.getMessage());
+            return false;
         }
     }
 
-    private void rejectPending(int pendingId) {
+    /** Confirms, then rejects the submission. Returns true if rejected. */
+    private boolean rejectPending(int pendingId, String name) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
+        confirm.setTitle("Reject Submission");
+        confirm.setHeaderText("Reject " + name + "?");
+        confirm.setContentText("They will not be added as a member.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement ps = conn.prepareStatement(
@@ -770,33 +781,41 @@ public class MembersController {
             ps.setInt(2, pendingId);
             ps.executeUpdate();
             AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                    "Rejected pending member ID " + pendingId);
+                    "Rejected pending member: " + name);
             loadPending();
+            ToastManager.success(name + " rejected.");
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
+            ToastManager.error("Failed to reject submission: " + e.getMessage());
+            return false;
         }
     }
 
-    private void deleteFamilyById(int id) {
+    /** Confirms, then deletes the family (members are unlinked, not deleted). Returns true if deleted. */
+    private boolean deleteFamilyById(int id) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Family");
         confirm.setHeaderText("Delete this family?");
         confirm.setContentText("Members in this family will not be deleted, just unlinked.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    conn.createStatement().executeUpdate(
-                            "UPDATE members SET family_id=NULL WHERE family_id=" + id);
-                    conn.createStatement().executeUpdate(
-                            "DELETE FROM families WHERE id=" + id);
-                    loadFamilies();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.createStatement().executeUpdate(
+                    "UPDATE members SET family_id=NULL WHERE family_id=" + id);
+            conn.createStatement().executeUpdate(
+                    "DELETE FROM families WHERE id=" + id);
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                    "Deleted family ID " + id);
+            loadFamilies();
+            ToastManager.success("Family deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete family: " + e.getMessage());
+            return false;
+        }
     }
 
     // =========================================================
@@ -851,6 +870,21 @@ public class MembersController {
         return m;
     }
 
+    private HBox detailChip(String iconLiteral, String text) {
+        HBox chip = new HBox(4);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        Label lbl = new Label(text);
+        lbl.setStyle("-fx-font-size:11px;-fx-text-fill:#5A6275;");
+        chip.getChildren().addAll(Icons.of(iconLiteral, 10, "#9099AA"), lbl);
+        return chip;
+    }
+
+    private Label detailDot() {
+        Label dot = new Label("·");
+        dot.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
+        return dot;
+    }
+
     private String loadMinistriesForMember(int memberId) {
         try {
             PreparedStatement ps = DatabaseConnection.getConnection().prepareStatement(
@@ -874,13 +908,7 @@ public class MembersController {
 
     @FXML
     public void handleAddFamily() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Add Family");
-        dialog.setHeaderText("Create a new family group");
-        dialog.setContentText("Family name:");
-        Main.applyStyles(dialog.getDialogPane());
-        dialog.showAndWait().ifPresent(name -> {
-            if (name.trim().isEmpty()) return;
+        FormBuilder.prompt("Create Family", "FAMILY NAME *", null, "Create Family", "fas-home").ifPresent(name -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(
@@ -917,41 +945,39 @@ public class MembersController {
                 setGraphic(b); setText(null);
             }
         });
-        colSbActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button toggleBtn = new Button("Deactivate");
-            private final HBox   box       = new HBox(6, editBtn, toggleBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                toggleBtn.getStyleClass().add("btn-danger");
-                toggleBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        editSubBranch(Integer.parseInt(row[3]), row[0]);
-                    }
-                });
-                toggleBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        toggleSubBranch(Integer.parseInt(row[3]), row[2]);
-                    }
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (!empty && getIndex() >= 0 && getIndex() < getTableView().getItems().size()) {
-                    String status = getTableView().getItems().get(getIndex())[2];
-                    toggleBtn.setText("1".equals(status) ? "Deactivate" : "Activate");
-                    toggleBtn.getStyleClass().setAll("1".equals(status) ? "btn-danger" : "btn-secondary");
-                }
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(subBranchTable, colSbActions, this::showSubBranch);
+    }
+
+    private void showSubBranch(String[] row) {
+        int id = Integer.parseInt(row[3]);
+        boolean active = "1".equals(row[2]);
+        new DocumentViewer("Sub-Branch", row[0])
+            .icon("fas-code-branch")
+            .status(active ? "Active" : "Inactive", active ? "badge-active" : "badge-inactive")
+            .width(620)
+            .meta("Members", row[1])
+            .section("Members", DocumentViewer.bulletList(
+                memberNames("SELECT full_name FROM members WHERE sub_branch_id=? " +
+                            "AND is_deleted=0 AND is_deceased=0 ORDER BY full_name", id),
+                "No members in this sub-branch."))
+            .closingAction(active ? "Deactivate" : "Activate", active ? "fas-toggle-off" : "fas-toggle-on",
+                active ? "btn-danger" : "btn-secondary", () -> toggleSubBranch(id, row[2]))
+            .editLabel("Rename")
+            .onEdit(() -> editSubBranch(id, row[0]))
+            .show();
+    }
+
+    private List<String> memberNames(String sql, int id) {
+        List<String> names = new ArrayList<>();
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection().prepareStatement(sql);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) names.add(rs.getString(1));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return names;
     }
 
     private void loadSubBranches() {
@@ -978,13 +1004,7 @@ public class MembersController {
 
     @FXML
     public void handleAddSubBranch() {
-        TextInputDialog dlg = new TextInputDialog();
-        dlg.setTitle("Add Sub-Branch");
-        dlg.setHeaderText("Create a new sub-branch");
-        dlg.setContentText("Sub-branch name:");
-        Main.applyStyles(dlg.getDialogPane());
-        dlg.showAndWait().ifPresent(name -> {
-            if (name.trim().isEmpty()) return;
+        FormBuilder.prompt("Add Sub-Branch", "SUB-BRANCH NAME *", null, "Add Sub-Branch", "fas-code-branch").ifPresent(name -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(
@@ -1002,13 +1022,7 @@ public class MembersController {
     }
 
     private void editSubBranch(int id, String currentName) {
-        TextInputDialog dlg = new TextInputDialog(currentName);
-        dlg.setTitle("Edit Sub-Branch");
-        dlg.setHeaderText("Rename sub-branch");
-        dlg.setContentText("New name:");
-        Main.applyStyles(dlg.getDialogPane());
-        dlg.showAndWait().ifPresent(name -> {
-            if (name.trim().isEmpty()) return;
+        FormBuilder.prompt("Rename Sub-Branch", "SUB-BRANCH NAME *", currentName, "Save Changes", "fas-code-branch").ifPresent(name -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement ps = conn.prepareStatement(
@@ -1027,7 +1041,7 @@ public class MembersController {
         });
     }
 
-    private void toggleSubBranch(int id, String currentStatus) {
+    private boolean toggleSubBranch(int id, String currentStatus) {
         int newStatus = "1".equals(currentStatus) ? 0 : 1;
         try {
             Connection conn = DatabaseConnection.getConnection();
@@ -1040,8 +1054,11 @@ public class MembersController {
                     (newStatus == 1 ? "Activated" : "Deactivated") + " sub-branch ID " + id);
             loadSubBranches();
             loadFilters();
+            ToastManager.success("Sub-branch " + (newStatus == 1 ? "activated." : "deactivated."));
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -1063,41 +1080,26 @@ public class MembersController {
                 setGraphic(b); setText(null);
             }
         });
-        colMinActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button toggleBtn = new Button("Deactivate");
-            private final HBox   box       = new HBox(6, editBtn, toggleBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                toggleBtn.getStyleClass().add("btn-danger");
-                toggleBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        editMinistry(Integer.parseInt(row[4]), row[0], row[1]);
-                    }
-                });
-                toggleBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size()) {
-                        String[] row = getTableView().getItems().get(idx);
-                        toggleMinistry(Integer.parseInt(row[4]), row[3]);
-                    }
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (!empty && getIndex() >= 0 && getIndex() < getTableView().getItems().size()) {
-                    String status = getTableView().getItems().get(getIndex())[3];
-                    toggleBtn.setText("1".equals(status) ? "Deactivate" : "Activate");
-                    toggleBtn.getStyleClass().setAll("1".equals(status) ? "btn-danger" : "btn-secondary");
-                }
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(ministriesTable, colMinActions, this::showMinistry);
+    }
+
+    private void showMinistry(String[] row) {
+        int id = Integer.parseInt(row[4]);
+        boolean active = "1".equals(row[3]);
+        new DocumentViewer("Ministry", row[0])
+            .icon("fas-church")
+            .status(active ? "Active" : "Inactive", active ? "badge-active" : "badge-inactive")
+            .width(620)
+            .meta("Members", row[2])
+            .section("Description", row[1], "No description.")
+            .section("Members", DocumentViewer.bulletList(
+                memberNames("SELECT m.full_name FROM member_ministries mm JOIN members m ON m.id=mm.member_id " +
+                            "WHERE mm.ministry_id=? AND m.is_deleted=0 AND m.is_deceased=0 ORDER BY m.full_name", id),
+                "No members in this ministry."))
+            .closingAction(active ? "Deactivate" : "Activate", active ? "fas-toggle-off" : "fas-toggle-on",
+                active ? "btn-danger" : "btn-secondary", () -> toggleMinistry(id, row[3]))
+            .onEdit(() -> editMinistry(id, row[0], row[1]))
+            .show();
     }
 
     private void loadMinistries() {
@@ -1130,61 +1132,19 @@ public class MembersController {
     }
 
     private void openMinistryDialog(int id, String existingName, String existingDesc) {
-        Stage stage = new Stage();
-        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-        stage.setTitle(id == 0 ? "Add Ministry" : "Edit Ministry");
+        FormBuilder f = new FormBuilder(id == 0 ? "Add Ministry" : "Edit Ministry").icon("fas-church");
+        TextField nameField = FormBuilder.text("e.g. Youth Ministry");
+        nameField.setText(existingName);
+        TextArea descField = FormBuilder.area("What this ministry does (optional)", 80);
+        descField.setText(existingDesc);
+        f.section("Ministry")
+         .field("MINISTRY NAME *", nameField)
+         .field("DESCRIPTION", descField);
 
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label titleLbl = new Label(id == 0 ? "Add Ministry" : "Edit Ministry");
-        titleLbl.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
-
-        VBox body = new VBox(14);
-        body.setStyle("-fx-padding:20 24;");
-
-        TextField nameField = new TextField(existingName);
-        nameField.getStyleClass().add("form-field");
-        nameField.setPromptText("Ministry name");
-        nameField.setMaxWidth(Double.MAX_VALUE);
-
-        TextArea descField = new TextArea(existingDesc);
-        descField.getStyleClass().add("form-textarea");
-        descField.setPromptText("Description (optional)");
-        descField.setPrefHeight(80);
-        descField.setMaxWidth(Double.MAX_VALUE);
-
-        VBox nameRow = new VBox(6);
-        Label nameLbl = new Label("MINISTRY NAME *");
-        nameLbl.getStyleClass().add("form-label");
-        nameRow.getChildren().addAll(nameLbl, nameField);
-
-        VBox descRow = new VBox(6);
-        Label descLbl = new Label("DESCRIPTION");
-        descLbl.getStyleClass().add("form-label");
-        descRow.getChildren().addAll(descLbl, descField);
-
-        body.getChildren().addAll(nameRow, descRow);
-
-        Button saveBtn   = new Button(id == 0 ? "Add Ministry" : "Save Changes");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, saveBtn);
-        footer.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-                "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        root.getChildren().addAll(header, body, footer);
-        cancelBtn.setOnAction(e -> stage.close());
-
+        Button saveBtn = f.saveButton(id == 0 ? "Add Ministry" : "Save Changes");
         saveBtn.setOnAction(e -> {
             String name = nameField.getText().trim();
-            if (name.isEmpty()) return;
+            if (name.isEmpty()) { f.showError("Ministry name is required."); return; }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 if (id == 0) {
@@ -1207,21 +1167,17 @@ public class MembersController {
                 }
                 loadMinistries();
                 loadFilters();
-                stage.close();
+                f.close();
+                ToastManager.success(id == 0 ? "Ministry added." : "Ministry updated.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                f.showError("Could not save the ministry: " + ex.getMessage());
             }
         });
-
-        javafx.scene.Scene scene = new javafx.scene.Scene(root, 460, 320);
-        scene.setFill(Color.web("#F5F6FA"));
-        scene.getStylesheets().add(
-                getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(520);
     }
 
-    private void toggleMinistry(int id, String currentStatus) {
+    private boolean toggleMinistry(int id, String currentStatus) {
         int newStatus = "1".equals(currentStatus) ? 0 : 1;
         try {
             Connection conn = DatabaseConnection.getConnection();
@@ -1234,8 +1190,11 @@ public class MembersController {
                     (newStatus == 1 ? "Activated" : "Deactivated") + " ministry ID " + id);
             loadMinistries();
             loadFilters();
+            ToastManager.success("Ministry " + (newStatus == 1 ? "activated." : "deactivated."));
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

@@ -3,6 +3,9 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AnnouncementsService;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.Icons;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.EmailService;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.SmsService;
@@ -51,6 +54,9 @@ public class CommunicationsController {
     @FXML private TableColumn<String[], String> colAnnTitle, colAnnDate,
                                                    colAnnChannels, colAnnPostedBy, colAnnStatus;
     @FXML private TableColumn<String[], Void> colAnnActions;
+
+    // ── Stat cards ─────────────────────────────────────────────
+    @FXML private Label statEmails, statSms, statAnnouncements, statThisMonth;
 
     // State
     private File selectedAttachment;
@@ -123,6 +129,7 @@ public class CommunicationsController {
 
     private void showRecipientsOnlyDialog(List<String[]> candidates, String channel, String group) {
         Stage stage = new Stage();
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-users");
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("Recipients in \"" + group + "\"  (" + candidates.size() + ")");
         stage.setMinWidth(560);
@@ -223,11 +230,11 @@ public class CommunicationsController {
                 ? "-fx-font-size:12px;-fx-text-fill:#5A6275;"
                 : "-fx-font-size:11px;-fx-text-fill:#C9A84C;-fx-font-style:italic;");
 
-            Label statusLabel = new Label(hasContact ? "✓" : "✗");
+            Label statusLabel = new Label();
             statusLabel.setMinWidth(80);
-            statusLabel.setStyle(hasContact
-                ? "-fx-text-fill:#2E7D4F;-fx-font-weight:700;"
-                : "-fx-text-fill:#D94040;-fx-font-weight:700;");
+            statusLabel.setGraphic(hasContact
+                ? Icons.of("fas-check-circle", 14, Icons.GREEN)
+                : Icons.of("fas-times-circle", 14, Icons.RED));
 
             row.getChildren().addAll(nameLabel, contactLabel, statusLabel);
             rowBox.getChildren().add(row);
@@ -275,6 +282,7 @@ public class CommunicationsController {
                                                        String subject,
                                                        String message) {
         Stage stage = new Stage();
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-users");
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("Review Recipients — " + candidates.size() + " found");
         stage.setMinWidth(620);
@@ -322,7 +330,8 @@ public class CommunicationsController {
                            "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
         colHeader.setAlignment(Pos.CENTER_LEFT);
 
-        Label hChk = colHeaderLabel("\u2714");
+        Label hChk = colHeaderLabel("");
+        hChk.setGraphic(Icons.of("fas-check", 10, "#5A6275"));
         hChk.setMinWidth(40); hChk.setPrefWidth(40); hChk.setMaxWidth(40);
 
         Label hName = colHeaderLabel("NAME");
@@ -498,7 +507,7 @@ public class CommunicationsController {
                 success + "/" + total + " delivered.");
 
             if (failed == 0) {
-                showStatus("✓ Sent to all " + success + " recipient(s).", true);
+                showStatus("Sent to all " + success + " recipient(s).", true);
                 ToastManager.success("Message sent to all " + success + " recipient(s).");
             } else {
                 showStatus(success + " sent, " + failed + " failed. Check addresses/settings.", false);
@@ -589,47 +598,8 @@ public class CommunicationsController {
         colSentSubject.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
         colSentDate.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
 
-        if (colSentActions != null) {
-            colSentActions.setCellFactory(col -> new TableCell<String[], Void>() {
-                private final Button viewBtn  = new Button("View");
-                private final Button namesBtn = new Button("Recipients");
-                private final HBox   box      = new HBox(6, viewBtn, namesBtn);
-                {
-                    viewBtn.getStyleClass().add("btn-secondary");
-                    viewBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                    namesBtn.getStyleClass().add("btn-secondary");
-                    namesBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                    box.setAlignment(Pos.CENTER_LEFT);
-                    viewBtn.setOnAction(e -> {
-                        int idx = getIndex();
-                        if (idx >= 0 && idx < getTableView().getItems().size())
-                            openSentMessageDialog(getTableView().getItems().get(idx));
-                    });
-                    namesBtn.setOnAction(e -> {
-                        int idx = getIndex();
-                        if (idx >= 0 && idx < getTableView().getItems().size()) {
-                            String[] row = getTableView().getItems().get(idx);
-                            // row[1] = recipient group name, row[0] = channel
-                            List<String[]> recs = getRecipients(row[1]);
-                            showRecipientsOnlyDialog(recs, row[0], row[1]);
-                        }
-                    });
-                }
-                @Override protected void updateItem(Void item, boolean empty) {
-                    super.updateItem(item, empty);
-                    setGraphic(empty ? null : box);
-                }
-            });
-        }
-
-        sentTable.setRowFactory(tv -> {
-            TableRow<String[]> row = new TableRow<>();
-            row.setOnMouseClicked(e -> {
-                if (e.getClickCount() == 2 && !row.isEmpty())
-                    openSentMessageDialog(row.getItem());
-            });
-            return row;
-        });
+        // View only — the message dialog has its own "View Recipients" button
+        TableActions.viewOnly(sentTable, colSentActions, this::openSentMessageDialog);
 
         sentTable.setItems(FXCollections.observableArrayList());
     }
@@ -657,75 +627,40 @@ public class CommunicationsController {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         sentTable.setItems(log);
+        refreshStats();
+    }
+
+    private void refreshStats() {
+        try {
+            ResultSet rs = DatabaseConnection.getConnection().createStatement().executeQuery(
+                "SELECT " +
+                "(SELECT COUNT(*) FROM communications WHERE channel='Email') AS emails, " +
+                "(SELECT COUNT(*) FROM communications WHERE channel='SMS') AS sms, " +
+                "(SELECT COUNT(*) FROM announcements) AS anns, " +
+                "(SELECT COUNT(*) FROM communications " +
+                "  WHERE sent_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS this_month");
+            if (rs.next()) {
+                statEmails.setText(rs.getString("emails"));
+                statSms.setText(rs.getString("sms"));
+                statAnnouncements.setText(rs.getString("anns"));
+                statThisMonth.setText(rs.getString("this_month"));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     private void openSentMessageDialog(String[] row) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Sent Message");
-        stage.setWidth(560);
-        stage.setMinHeight(400);
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:16 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        VBox headerText = new VBox(3);
-        Label titleLbl = new Label("Email".equals(row[0]) ? "Email Message" : "SMS Message");
-        titleLbl.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        Label dateLbl = new Label("Sent: " + row[3] + "   |   " + row[5] + " recipient(s)");
-        dateLbl.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
-        headerText.getChildren().addAll(titleLbl, dateLbl);
-        header.getChildren().add(headerText);
-
-        VBox meta = new VBox(10);
-        meta.setStyle("-fx-padding:16 24 8 24;-fx-background-color:#F5F6FA;");
-        meta.getChildren().add(metaField("CHANNEL", row[0]));
-        meta.getChildren().add(metaField("SENT TO GROUP", row[1]));
-        if (!"—".equals(row[2]) && !row[2].isEmpty()) {
-            meta.getChildren().add(metaField("SUBJECT", row[2]));
-        }
-
-        VBox bodyBox = new VBox(6);
-        bodyBox.setStyle("-fx-padding:0 24 16 24;");
-        Label bodyLbl = new Label("MESSAGE");
-        bodyLbl.setStyle("-fx-font-size:10px;-fx-font-weight:700;-fx-text-fill:#5A6275;");
-
-        TextArea bodyArea = new TextArea(row[4]);
-        bodyArea.setEditable(false);
-        bodyArea.setWrapText(true);
-        bodyArea.setPrefHeight(200);
-        bodyArea.setStyle("-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;" +
-                          "-fx-border-radius:6;-fx-background-radius:6;" +
-                          "-fx-font-size:13px;-fx-text-fill:#1E2130;");
-        VBox.setVgrow(bodyArea, Priority.ALWAYS);
-        bodyBox.getChildren().addAll(bodyLbl, bodyArea);
-
-        Button viewRecipientsBtn = new Button("View Recipients");
-        viewRecipientsBtn.getStyleClass().add("btn-secondary");
-        viewRecipientsBtn.setOnAction(e -> {
-            List<String[]> recs = getRecipients(row[1]);
-            showRecipientsOnlyDialog(recs, row[0], row[1]);
-        });
-
-        Button closeBtn = new Button("Close");
-        closeBtn.getStyleClass().add("btn-primary");
-        closeBtn.setOnAction(e -> stage.close());
-        HBox footer = new HBox(10, viewRecipientsBtn, closeBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:12 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        root.getChildren().addAll(header, meta, bodyBox, footer);
-        VBox.setVgrow(bodyBox, Priority.ALWAYS);
-
-        Scene scene = new Scene(root, 560, 480);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        boolean email = "Email".equals(row[0]);
+        new DocumentViewer(email ? "Email Message" : "SMS Message",
+                           email && !"—".equals(row[2]) && !row[2].isEmpty() ? row[2] : "Message to " + row[1])
+            .icon("fas-envelope-open-text")
+            .width(680)
+            .meta("Channel", row[0])
+            .meta("Sent To", row[1])
+            .meta("Sent", row[3])
+            .meta("Recipients", row[5])
+            .section("Message", row[4], "No message text.")
+            .action("View Recipients", "fas-users", () -> showRecipientsOnlyDialog(getRecipients(row[1]), row[0], row[1]))
+            .show();
     }
 
     private void logCommunication(String channel, String group, String subject,
@@ -766,7 +701,8 @@ public class CommunicationsController {
             selectedAttachment = file;
             long kb = file.length() / 1024;
             String size = kb > 1024 ? (kb / 1024) + " MB" : kb + " KB";
-            attachmentLabel.setText("📎 " + file.getName() + " (" + size + ")");
+            attachmentLabel.setText(file.getName() + " (" + size + ")");
+            attachmentLabel.setGraphic(com.afmvfcc.utils.Icons.of("fas-paperclip", 11, "#1B3A6B"));
             attachmentLabel.setStyle("-fx-text-fill:#1B3A6B;-fx-font-size:12px;");
         }
     }
@@ -775,6 +711,7 @@ public class CommunicationsController {
     public void handleRemoveAttachment() {
         selectedAttachment = null;
         attachmentLabel.setText("No attachment");
+        attachmentLabel.setGraphic(null);
         attachmentLabel.setStyle("-fx-text-fill:#9099AA;-fx-font-size:12px;");
     }
 
@@ -794,13 +731,16 @@ public class CommunicationsController {
         boolean toFB = sendToFacebook.isSelected();
         File attach = selectedAttachment;
 
-        showAnnStatus("Posting announcement...", true);
+        Icons.status(announcementStatus, "Posting announcement...", Icons.Status.BUSY);
+        announcementStatus.setVisible(true);
+        announcementStatus.setManaged(true);
 
         Task<String[]> task = new Task<>() {
             @Override
             protected String[] call() {
                 String waResult = null, fbResult = null;
                 String waPostId = null, fbPostId = null;
+                String waOk = "0", fbOk = "0";
 
                 if (toWA) {
                     AnnouncementsService.PostResult result;
@@ -809,7 +749,8 @@ public class CommunicationsController {
                     } else {
                         result = AnnouncementsService.sendWhatsApp(text);
                     }
-                    waResult = result.success ? "✓ Sent" : "✗ " + result.message;
+                    waResult = result.success ? "Sent" : "Failed (" + result.message + ")";
+                    waOk = result.success ? "1" : "0";
                     waPostId = result.postId;
                 }
 
@@ -827,10 +768,11 @@ public class CommunicationsController {
                     } else {
                         result = AnnouncementsService.postToFacebook(text);
                     }
-                    fbResult = result.success ? "✓ Posted" : "✗ " + result.message;
+                    fbResult = result.success ? "Posted" : "Failed (" + result.message + ")";
+                    fbOk = result.success ? "1" : "0";
                     fbPostId = result.postId;
                 }
-                return new String[]{ waResult, fbResult, waPostId, fbPostId };
+                return new String[]{ waResult, fbResult, waPostId, fbPostId, waOk, fbOk };
             }
         };
 
@@ -838,6 +780,7 @@ public class CommunicationsController {
             String[] results = task.getValue();
             String waResult = results[0], fbResult = results[1];
             String waPostId = results[2], fbPostId = results[3];
+            boolean waOk = "1".equals(results[4]), fbOk = "1".equals(results[5]);
 
             StringBuilder status = new StringBuilder();
             if (waResult != null) status.append("WhatsApp: ").append(waResult);
@@ -846,8 +789,7 @@ public class CommunicationsController {
                 status.append("Facebook: ").append(fbResult);
             }
 
-            boolean anySuccess = (waResult != null && waResult.startsWith("✓"))
-                              || (fbResult != null && fbResult.startsWith("✓"));
+            boolean anySuccess = waOk || fbOk;
             showAnnStatus(status.toString(), anySuccess);
             if (anySuccess) ToastManager.success("Announcement posted — " + status);
             else ToastManager.error("Announcement failed — " + status);
@@ -858,8 +800,8 @@ public class CommunicationsController {
             String channelStr = String.join(", ", channels);
 
             List<String> statuses = new ArrayList<>();
-            if (waResult != null) statuses.add("WA: " + (waResult.startsWith("✓") ? "Sent" : "Failed"));
-            if (fbResult != null) statuses.add("FB: " + (fbResult.startsWith("✓") ? "Posted" : "Failed"));
+            if (waResult != null) statuses.add("WA: " + (waOk ? "Sent" : "Failed"));
+            if (fbResult != null) statuses.add("FB: " + (fbOk ? "Posted" : "Failed"));
             String dbStatus = String.join(" | ", statuses);
 
             saveAnnouncement(text, channelStr,
@@ -895,30 +837,7 @@ public class CommunicationsController {
         colAnnPostedBy.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
         colAnnStatus.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[4]));
 
-        colAnnActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button viewBtn = new Button("View");
-            {
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:4 12;-fx-font-size:11px;");
-                viewBtn.setOnAction(e -> {
-                    if (getTableRow() != null && getTableRow().getItem() != null)
-                        openAnnouncementDialog(getTableRow().getItem());
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : viewBtn);
-            }
-        });
-
-        announcementTable.setRowFactory(tv -> {
-            TableRow<String[]> row = new TableRow<>();
-            row.setOnMouseClicked(e -> {
-                if (e.getClickCount() == 2 && !row.isEmpty())
-                    openAnnouncementDialog(row.getItem());
-            });
-            return row;
-        });
+        TableActions.viewOnly(announcementTable, colAnnActions, this::openAnnouncementDialog);
 
         announcementTable.setItems(FXCollections.observableArrayList());
     }
@@ -949,64 +868,19 @@ public class CommunicationsController {
             System.err.println("Announcements table not ready: " + e.getMessage());
         }
         announcementTable.setItems(rows);
+        refreshStats();
     }
 
     private void openAnnouncementDialog(String[] row) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Announcement");
-        stage.setWidth(560);
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:16 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        VBox ht = new VBox(3);
-        Label t = new Label("Announcement");
-        t.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        Label d = new Label("Posted: " + row[1] + " | Channels: " + row[2]);
-        d.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
-        ht.getChildren().addAll(t, d);
-        header.getChildren().add(ht);
-
-        VBox meta = new VBox(10);
-        meta.setStyle("-fx-padding:16 24 8 24;");
-        meta.getChildren().add(metaField("POSTED BY", row[3]));
-        meta.getChildren().add(metaField("STATUS", row[4]));
-        if (!row[5].isEmpty())
-            meta.getChildren().add(metaField("ATTACHMENT", row[5]));
-
-        VBox bodyBox = new VBox(6);
-        bodyBox.setStyle("-fx-padding:0 24 16 24;");
-        Label bl = new Label("ANNOUNCEMENT TEXT");
-        bl.setStyle("-fx-font-size:10px;-fx-font-weight:700;-fx-text-fill:#5A6275;");
-        TextArea ba = new TextArea(row[0]);
-        ba.setEditable(false);
-        ba.setWrapText(true);
-        ba.setPrefHeight(200);
-        ba.setStyle("-fx-background-color:#FFFFFF;-fx-border-color:#DDE1EA;" +
-                    "-fx-border-radius:6;-fx-background-radius:6;-fx-font-size:13px;");
-        VBox.setVgrow(ba, Priority.ALWAYS);
-        bodyBox.getChildren().addAll(bl, ba);
-
-        Button closeBtn = new Button("Close");
-        closeBtn.getStyleClass().add("btn-primary");
-        closeBtn.setOnAction(e -> stage.close());
-        HBox footer = new HBox(closeBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:12 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        root.getChildren().addAll(header, meta, bodyBox, footer);
-        VBox.setVgrow(bodyBox, Priority.ALWAYS);
-
-        Scene scene = new Scene(root, 560, 500);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        new DocumentViewer("Announcement", "Posted " + row[1])
+            .icon("fas-bullhorn")
+            .width(680)
+            .meta("Channels", row[2])
+            .meta("Posted By", row[3])
+            .meta("Status", row[4])
+            .meta("Attachment", row[5].isEmpty() ? null : row[5])
+            .section("Announcement Text", row[0], "No text.")
+            .show();
     }
 
     private void saveAnnouncement(String text, String channels,
@@ -1032,30 +906,13 @@ public class CommunicationsController {
     }
 
     // ── HELPERS ───────────────────────────────────────────────
-    private VBox metaField(String label, String value) {
-        VBox box = new VBox(3);
-        Label lbl = new Label(label);
-        lbl.setStyle("-fx-font-size:10px;-fx-font-weight:700;-fx-text-fill:#5A6275;");
-        Label val = new Label(value);
-        val.setStyle("-fx-font-size:13px;-fx-text-fill:#1E2130;");
-        val.setWrapText(true);
-        box.getChildren().addAll(lbl, val);
-        return box;
-    }
-
     private void showStatus(String msg, boolean success) {
-        statusLabel.setText(msg);
-        statusLabel.setStyle(success
-            ? "-fx-text-fill:#2E7D4F;-fx-font-size:12px;-fx-font-weight:600;"
-            : "-fx-text-fill:#D94040;-fx-font-size:12px;-fx-font-weight:600;");
+        Icons.status(statusLabel, msg, success ? Icons.Status.OK : Icons.Status.ERROR);
         statusLabel.setVisible(true);
     }
 
     private void showAnnStatus(String msg, boolean success) {
-        announcementStatus.setText(msg);
-        announcementStatus.setStyle(success
-            ? "-fx-text-fill:#2E7D4F;-fx-font-size:12px;-fx-font-weight:600;"
-            : "-fx-text-fill:#D94040;-fx-font-size:12px;-fx-font-weight:600;");
+        Icons.status(announcementStatus, msg, success ? Icons.Status.OK : Icons.Status.ERROR);
         announcementStatus.setVisible(true);
         announcementStatus.setManaged(true);
     }

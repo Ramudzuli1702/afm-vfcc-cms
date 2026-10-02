@@ -20,7 +20,7 @@ public class AuditLogger {
             ps.setString(2, action);
             ps.executeUpdate();
         } catch (Exception e) {
-            System.err.println("❌ Failed to write audit log: " + e.getMessage());
+            System.err.println("[Audit] Failed to write audit log: " + e.getMessage());
         }
     }
 }

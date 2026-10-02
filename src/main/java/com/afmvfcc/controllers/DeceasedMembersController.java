@@ -2,6 +2,11 @@ package com.afmvfcc.controllers;
 
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Avatars;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
@@ -52,59 +57,42 @@ public class DeceasedMembersController {
 
     private void setupTable() {
         colDecName.setCellValueFactory(d      -> new SimpleStringProperty(d.getValue()[0]));
+        Avatars.nameColumn(colDecName, row -> row[7]);
         colDecDod.setCellValueFactory(d       -> new SimpleStringProperty(d.getValue()[1]));
         colDecSubBranch.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
         colDecObituary.setCellValueFactory(d  -> new SimpleStringProperty(d.getValue()[3]));
         colDecRecorded.setCellValueFactory(d  -> new SimpleStringProperty(d.getValue()[4]));
 
-        colDecActions.setCellFactory(col -> new TableCell<String[], Void>() {
-            private final Button viewBtn    = new Button("View");
-            private final Button editBtn    = new Button("Edit");
-            private final Button restoreBtn = new Button("Restore");
-
-            private final HBox   box        = new HBox(6, viewBtn, editBtn, restoreBtn);
-
-            {
-                // View button
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                viewBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size() && onViewMember != null) {
-                        String[] row = getTableView().getItems().get(idx);
-                        onViewMember.accept(Integer.parseInt(row[5])); // member id is at index 5
-                    }
-                });
-
-                // Edit button
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                editBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        openEditDialog(getTableView().getItems().get(idx));
-                });
-
-                // Restore button
-                restoreBtn.getStyleClass().add("btn-primary");
-                restoreBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                restoreBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        restoreMember(getTableView().getItems().get(idx));
-                });
-
-                box.setAlignment(Pos.CENTER_LEFT);
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(deceasedTable, colDecActions, this::showDeparted);
 
         deceasedTable.setItems(allDeceased);
+    }
+
+    private void showDeparted(String[] row) {
+        int memberId = Integer.parseInt(row[5]);
+        String photo = null;
+        try {
+            PreparedStatement ps = DatabaseConnection.getConnection()
+                .prepareStatement("SELECT photo_path FROM members WHERE id=?");
+            ps.setInt(1, memberId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) photo = rs.getString(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+
+        DocumentViewer v = new DocumentViewer("Faithful Departed", row[0])
+            .icon("fas-dove")
+            .avatar(Avatars.of(photo, 64))
+            .width(680)
+            .meta("Date of Death", row[1])
+            .meta("Sub-Branch",    row[2])
+            .meta("Recorded",      row[4])
+            .section("Memorial Note", row[3], "No memorial note recorded.");
+        if (onViewMember != null)
+            v.action("Full Profile", "fas-id-card", () -> onViewMember.accept(memberId));
+        v.closingAction("Restore to Active", "fas-undo", "btn-secondary", () -> restoreMember(row))
+         .editLabel("Edit Record")
+         .onEdit(() -> openEditDialog(row))
+         .show();
     }
 
     public void loadDeceased() {
@@ -112,7 +100,7 @@ public class DeceasedMembersController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.createStatement().executeQuery(
-                "SELECT m.id, m.full_name, " +
+                "SELECT m.id, m.full_name, m.photo_path, " +
                 "       IFNULL(sb.name, '—') AS sub_branch, " +
                 "       IFNULL(DATE_FORMAT(dm.date_of_death,'%d %b %Y'),'—') AS dod, " +
                 "       IFNULL(dm.obituary,'') AS obituary, " +
@@ -132,7 +120,8 @@ public class DeceasedMembersController {
                     rs.getString("obituary"),       // 3
                     rs.getString("recorded"),       // 4
                     rs.getString("id"),             // 5 → member_id
-                    rs.getString("dm_id")           // 6 → deceased_members.id
+                    rs.getString("dm_id"),          // 6 → deceased_members.id
+                    rs.getString("photo_path")      // 7 → photo
                 });
             }
         } catch (SQLException e) {
@@ -169,42 +158,23 @@ public class DeceasedMembersController {
         String dmIdStr = row[6];
         boolean hasRecord = dmIdStr != null && !dmIdStr.equals("null") && !dmIdStr.isEmpty();
 
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Faithful Departed — " + row[0]);
-
-        VBox root = new VBox(16);
-        root.setStyle("-fx-background-color:#F5F6FA;-fx-padding:24;");
-
-        DatePicker dodPicker = new DatePicker();
+        FormBuilder f = new FormBuilder("Edit Faithful Departed Record", row[0]).icon("fas-dove");
+        DatePicker dodPicker = FormBuilder.date();
         if (!"—".equals(row[1])) {
             try {
-                dodPicker.setValue(LocalDate.parse(row[1], DateTimeFormatter.ofPattern("dd MMM yyyy")));
+                // Dates are formatted by MySQL ("Sep"), so parse in English, not the system locale ("Sept")
+                dodPicker.setValue(LocalDate.parse(row[1],
+                    DateTimeFormatter.ofPattern("dd MMM yyyy", java.util.Locale.ENGLISH)));
             } catch (Exception ignored) {}
         }
-        dodPicker.getStyleClass().add("form-date-picker");
-        dodPicker.setMaxWidth(Double.MAX_VALUE);
+        TextArea obituaryArea = FormBuilder.area("Memorial note or brief obituary...", 120);
+        obituaryArea.setText(row[3]);
 
-        TextArea obituaryArea = new TextArea(row[3]);
-        obituaryArea.getStyleClass().add("form-textarea");
-        obituaryArea.setPromptText("Memorial note or brief obituary...");
-        obituaryArea.setPrefHeight(120);
-        obituaryArea.setMaxWidth(Double.MAX_VALUE);
+        f.section("Record")
+         .field("DATE OF PASSING", dodPicker)
+         .field("MEMORIAL NOTE", obituaryArea);
 
-        Button saveBtn   = new Button("Save");
-        Button cancelBtn = new Button("Cancel");
-        saveBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox btns = new HBox(10, cancelBtn, saveBtn);
-        btns.setAlignment(Pos.CENTER_RIGHT);
-
-        root.getChildren().addAll(
-            makeRow("DATE OF PASSING", dodPicker),
-            makeRow("MEMORIAL NOTE",   obituaryArea),
-            btns
-        );
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton("Save Changes");
         saveBtn.setOnAction(e -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
@@ -236,65 +206,49 @@ public class DeceasedMembersController {
                     "Updated Faithful Departed record for: " + row[0]);
 
                 loadDeceased();
-                stage.close();
+                f.close();
                 ToastManager.success("Faithful Departed record updated.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                ToastManager.error("Failed to save record: " + ex.getMessage());
+                f.showError("Could not save the record: " + ex.getMessage());
             }
         });
-
-        Scene scene = new Scene(root, 460, 300);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm()
-        );
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(520);
     }
 
     // ── Restore to active ─────────────────────────────────────
 
-    private void restoreMember(String[] row) {
+    /** Confirms, then returns the member to the active list. Returns true if restored. */
+    private boolean restoreMember(String[] row) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        com.afmvfcc.Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Restore Member");
         confirm.setHeaderText("Restore " + row[0] + " to the active member list?");
         confirm.setContentText(
             "This will remove them from the Faithful Departed list and mark them as active again."
         );
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE members SET is_deceased=0, is_active=1 WHERE id=?"
-                    );
-                    ps.setInt(1, Integer.parseInt(row[5]));
-                    ps.executeUpdate();
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(
+                "UPDATE members SET is_deceased=0, is_active=1 WHERE id=?"
+            );
+            ps.setInt(1, Integer.parseInt(row[5]));
+            ps.executeUpdate();
 
-                    AuditLogger.log(
-                        SessionManager.getInstance().getCurrentUser().getId(),
-                        "Restored member from Faithful Departed: " + row[0]
-                    );
+            AuditLogger.log(
+                SessionManager.getInstance().getCurrentUser().getId(),
+                "Restored member from Faithful Departed: " + row[0]
+            );
 
-                    loadDeceased();
-                    ToastManager.success(row[0] + " restored to the active member list.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to restore member: " + e.getMessage());
-                }
-            }
-        });
-    }
-
-    private VBox makeRow(String labelText, javafx.scene.Node field) {
-        VBox box = new VBox(6);
-        Label lbl = new Label(labelText);
-        lbl.getStyleClass().add("form-label");
-        box.getChildren().addAll(lbl, field);
-        if (field instanceof Control) {
-            ((Control) field).setMaxWidth(Double.MAX_VALUE);
+            loadDeceased();
+            ToastManager.success(row[0] + " restored to the active member list.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to restore member: " + e.getMessage());
+            return false;
         }
-        return box;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -303,51 +257,20 @@ public class DeceasedMembersController {
 
     public static void showMarkDeceasedDialog(int memberId, String memberName,
                                                Runnable onComplete, String cssPath) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Record as Faithful Departed — " + memberName);
+        FormBuilder f = new FormBuilder("Record as Faithful Departed", memberName).icon("fas-dove");
 
-        VBox root = new VBox(16);
-        root.setStyle("-fx-background-color:#F5F6FA;-fx-padding:24;");
+        DatePicker dodPicker = FormBuilder.date();
+        dodPicker.setValue(LocalDate.now());
+        TextArea obituaryArea = FormBuilder.area("Optional: memorial note or brief obituary...", 100);
 
-        Label info = new Label(
-            memberName + " will be moved to the Faithful Departed list.\n" +
-            "Their full history, attendance, and records will be preserved.\n" +
-            "They will no longer appear in active member views or communications."
-        );
-        info.setStyle("-fx-font-size:12px;-fx-text-fill:#6B7280;");
-        info.setWrapText(true);
+        f.section("Record")
+         .hint(memberName + " will be moved to the Faithful Departed list. Their history, attendance and " +
+               "records are kept, but they no longer appear in active member lists or communications.")
+         .field("DATE OF PASSING", dodPicker)
+         .field("MEMORIAL NOTE", obituaryArea);
 
-        DatePicker dodPicker = new DatePicker(LocalDate.now());
-        dodPicker.getStyleClass().add("form-date-picker");
-        dodPicker.setMaxWidth(Double.MAX_VALUE);
-
-        TextArea obituaryArea = new TextArea();
-        obituaryArea.getStyleClass().add("form-textarea");
-        obituaryArea.setPromptText("Optional: memorial note or brief obituary...");
-        obituaryArea.setPrefHeight(100);
-        obituaryArea.setMaxWidth(Double.MAX_VALUE);
-
-        Button confirmBtn = new Button("Record as Faithful Departed");
-        Button cancelBtn  = new Button("Cancel");
-        confirmBtn.getStyleClass().add("btn-danger");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox btns = new HBox(10, cancelBtn, confirmBtn);
-        btns.setAlignment(Pos.CENTER_RIGHT);
-
-        VBox dodRow = new VBox(6);
-        Label dodLbl = new Label("DATE OF PASSING");
-        dodLbl.getStyleClass().add("form-label");
-        dodRow.getChildren().addAll(dodLbl, dodPicker);
-
-        VBox obitRow = new VBox(6);
-        Label obitLbl = new Label("MEMORIAL NOTE");
-        obitLbl.getStyleClass().add("form-label");
-        obitRow.getChildren().addAll(obitLbl, obituaryArea);
-
-        root.getChildren().addAll(info, dodRow, obitRow, btns);
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button confirmBtn = f.saveButton("Record as Faithful Departed");
+        confirmBtn.getStyleClass().setAll("button", "btn-danger");
         confirmBtn.setOnAction(e -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
@@ -379,18 +302,14 @@ public class DeceasedMembersController {
                     "Recorded as Faithful Departed: " + memberName
                 );
 
-                stage.close();
+                f.close();
                 if (onComplete != null) onComplete.run();
                 ToastManager.success(memberName + " recorded as Faithful Departed.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                ToastManager.error("Failed to record: " + ex.getMessage());
+                f.showError("Could not record: " + ex.getMessage());
             }
         });
-
-        Scene scene = new Scene(root, 480, 380);
-        if (cssPath != null) scene.getStylesheets().add(cssPath);
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(540);
     }
 }

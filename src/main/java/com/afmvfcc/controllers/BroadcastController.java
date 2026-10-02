@@ -2,6 +2,7 @@ package com.afmvfcc.controllers;
 
 import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
+import com.afmvfcc.utils.Icons;
 import com.afmvfcc.utils.AuditLogger;
 import com.afmvfcc.utils.BroadcastTaskManager;
 import com.afmvfcc.utils.SessionManager;
@@ -175,7 +176,7 @@ public class BroadcastController {
                 if (f != null && f.exists()) {
                     showDownloadProgress(true);
                     downloadProgressBar.setProgress(1.0);
-                    setDownloadStatus("✓ Download complete", false);
+                    setDownloadStatus("Download complete", false);
                     showDownloadedFileBox(f);
                     uploadBtn.setDisable(false);
                 }
@@ -199,7 +200,7 @@ public class BroadcastController {
             case SUCCEEDED -> {
                 showUploadProgress(true);
                 uploadProgressBar.setProgress(1.0);
-                setUploadStatus("✓ Upload complete!", false);
+                setUploadStatus("Upload complete!", false);
                 showUploadSuccess(tm.getLastYoutubeUrl());
             }
             case FAILED -> {
@@ -594,7 +595,7 @@ public class BroadcastController {
             }
 
             tm.notifyUploadFailure(msg);
-            setUploadStatus("✗ " + msg, true);
+            setUploadStatus("" + msg, true);
 
             saveUploadRecord(title, description,
                     facebookUrlField.getText().trim(),
@@ -614,7 +615,7 @@ public class BroadcastController {
         File f = tm.getDownloadedFile();
         downloadBtn.setDisable(false);
         downloadProgressBar.setProgress(1.0);
-        setDownloadStatus("✓ Download complete", false);
+        setDownloadStatus("Download complete", false);
         if (f != null) showDownloadedFileBox(f);
         uploadBtn.setDisable(false);
         // ── Resume inactivity timeout — user gets a fresh 15-minute window ──
@@ -624,14 +625,14 @@ public class BroadcastController {
     private void onDownloadFailure() {
         downloadBtn.setDisable(false);
         downloadProgressBar.setProgress(0);
-        setDownloadStatus("✗ " + tm.getDownloadStatus(), true);
+        setDownloadStatus("" + tm.getDownloadStatus(), true);
         // ── Resume even on failure so the session isn't frozen ──
         SessionManager.getInstance().resumeTimeout();
     }
 
     private void onUploadSuccess() {
         uploadProgressBar.setProgress(1.0);
-        setUploadStatus("✓ Upload complete!", false);
+        setUploadStatus("Upload complete!", false);
         uploadBtn.setDisable(false);
         showUploadSuccess(tm.getLastYoutubeUrl());
         loadHistory();
@@ -642,7 +643,7 @@ public class BroadcastController {
     private void onUploadFailure() {
         uploadBtn.setDisable(false);
         uploadProgressBar.setProgress(0);
-        setUploadStatus("✗ " + tm.getUploadStatus(), true);
+        setUploadStatus("" + tm.getUploadStatus(), true);
         loadHistory();
         // ── Resume even on failure so the session isn't frozen ──
         SessionManager.getInstance().resumeTimeout();
@@ -865,17 +866,18 @@ public class BroadcastController {
     }
 
     private void setDownloadStatus(String msg, boolean error) {
-        downloadStatusLabel.setText(msg);
-        downloadStatusLabel.setStyle(error
-                ? "-fx-text-fill:#D94040;-fx-font-size:12px;"
-                : "-fx-text-fill:#5A6275;-fx-font-size:12px;");
+        Icons.status(downloadStatusLabel, msg, statusKind(msg, error));
+    }
+
+    /** Errors in red; finished steps ("... complete", "... selected") in green; anything else is progress. */
+    private static Icons.Status statusKind(String msg, boolean error) {
+        if (error) return Icons.Status.ERROR;
+        String m = msg.toLowerCase();
+        return m.contains("complete") || m.contains("selected") ? Icons.Status.OK : Icons.Status.BUSY;
     }
 
     private void setUploadStatus(String msg, boolean error) {
-        uploadStatusLabel.setText(msg);
-        uploadStatusLabel.setStyle(error
-                ? "-fx-text-fill:#D94040;-fx-font-size:12px;"
-                : "-fx-text-fill:#5A6275;-fx-font-size:12px;");
+        Icons.status(uploadStatusLabel, msg, statusKind(msg, error));
     }
 
     private void openUrl(String url) {

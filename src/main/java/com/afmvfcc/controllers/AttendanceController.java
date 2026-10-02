@@ -4,6 +4,11 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.AttendanceSession;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Icons;
+import com.afmvfcc.utils.Avatars;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.NetworkUtils;
 import com.afmvfcc.utils.QrCodeGenerator;
 import com.afmvfcc.utils.SessionManager;
@@ -46,6 +51,11 @@ public class AttendanceController {
     @FXML private TableColumn<AttendanceSession, Void>     colSessActions;
     @FXML private TextField                                sessionSearchField;
 
+    // Stat cards
+    @FXML private Label statSessions, statOpenSessions, statLatestPresent, statAvgPresent;
+    private final javafx.animation.PauseTransition statsRefresh =
+        new javafx.animation.PauseTransition(javafx.util.Duration.millis(400));
+
     // ── State ─────────────────────────────────────────────────
     private int     currentSessionId     = -1;
     private boolean currentSessionClosed = false;
@@ -58,6 +68,7 @@ public class AttendanceController {
     private final Map<Integer, CheckBox> memberCheckboxes = new LinkedHashMap<>();
     private final Map<Integer, String>   memberNames      = new LinkedHashMap<>();
     private final Map<Integer, String>   memberMinistries = new LinkedHashMap<>();
+    private final Map<Integer, String>   memberPhotos     = new LinkedHashMap<>();
 
     private final ObservableList<AttendanceSession> allSessions =
         FXCollections.observableArrayList();
@@ -70,6 +81,7 @@ public class AttendanceController {
 
     @FXML
     public void initialize() {
+        statsRefresh.setOnFinished(e -> refreshStats());
         loadMinistryFilter();
         setupPresenceFilter();
         loadSessionCombo();
@@ -100,7 +112,7 @@ public class AttendanceController {
             );
             while (rs.next()) {
                 boolean closed = rs.getInt("is_closed") == 1;
-                String suffix  = closed ? " \uD83D\uDD12" : ""; 
+                String suffix  = closed ? "  (closed)" : ""; 
                 sessionCombo.getItems().add(
                     rs.getString("session_name") + " - " +
                     rs.getDate("session_date").toLocalDate().format(FMT) +
@@ -138,9 +150,9 @@ public class AttendanceController {
             syncBar.setVisible(true);
             syncBar.setManaged(true);
             String sessName = selected.split(" - ")[0];
-            syncStatusLabel.setText(currentSessionClosed
-                ? "\uD83D\uDD12 Viewing closed session: " + sessName
-                : "Session active: " + sessName);
+            Icons.status(syncStatusLabel,
+                currentSessionClosed ? "Viewing closed session: " + sessName : "Session active: " + sessName,
+                currentSessionClosed ? Icons.Status.LOCKED : Icons.Status.OK);
 
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -151,22 +163,7 @@ public class AttendanceController {
 
     @FXML
     public void handleNewSession() {
-        Stage stage = new Stage();
-        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-        stage.setTitle("New Attendance Session");
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label titleLbl = new Label("New Attendance Session");
-        titleLbl.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
-
-        VBox body = new VBox(14);
-        body.setStyle("-fx-padding:20 24;-fx-background-color:#F5F6FA;");
+        FormBuilder f = new FormBuilder("New Attendance Session").icon("fas-clipboard-check");
 
         TextField nameField = new TextField();
         nameField.setPromptText("e.g. Sunday Service");
@@ -183,33 +180,17 @@ public class AttendanceController {
         ministryCombo.setMaxWidth(Double.MAX_VALUE);
         loadMinistriesInto(ministryCombo);
 
-        body.getChildren().addAll(
-            makeFormRow("SESSION NAME *", nameField),
-            makeFormRow("DATE *",         datePicker),
-            makeFormRow("MINISTRY",       ministryCombo)
-        );
+        f.section("Session")
+         .field("SESSION NAME *", nameField)
+         .row("DATE *", datePicker, "MINISTRY", ministryCombo)
+         .hint("Choose a ministry to take attendance for that ministry only; leave it blank for everyone.");
 
-        Button createBtn = new Button("Create Session");
-        Button cancelBtn = new Button("Cancel");
-        createBtn.getStyleClass().add("btn-primary");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, createBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-                        "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        ScrollPane bodyScroll = new ScrollPane(body);
-        bodyScroll.setFitToWidth(true);
-        bodyScroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;" +
-                            "-fx-border-color:transparent;");
-        VBox.setVgrow(bodyScroll, Priority.ALWAYS);
-
-        root.getChildren().addAll(header, bodyScroll, footer);
-        cancelBtn.setOnAction(e -> stage.close());
+        Button createBtn = f.saveButton("Create Session");
 
         createBtn.setOnAction(e -> {
             String name = nameField.getText().trim();
-            if (name.isEmpty()) return;
+            if (name.isEmpty()) { f.showError("Please enter a session name, e.g. Sunday Service."); return; }
+            if (datePicker.getValue() == null) { f.showError("Please choose the date."); return; }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 int ministryId = getMinistryId(conn, ministryCombo.getValue());
@@ -237,20 +218,16 @@ public class AttendanceController {
                 }
                 loadMembersForAttendance();
                 loadSessionHistory();
-                stage.close();
+                f.close();
                 ToastManager.success("Session \"" + name + "\" created.");
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                f.showError("Could not create the session: " + ex.getMessage());
                 ToastManager.error("Failed to create session: " + ex.getMessage());
             }
         });
 
-        javafx.scene.Scene scene = new javafx.scene.Scene(root, 480, 340);
-        scene.setFill(javafx.scene.paint.Color.web("#F5F6FA"));
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(540);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -287,7 +264,7 @@ public class AttendanceController {
                         "Closed attendance session ID: " + currentSessionId);
                     currentSessionClosed = true;
                     memberCheckboxes.values().forEach(cb -> cb.setDisable(true));
-                    syncStatusLabel.setText("\uD83D\uDD12 Session closed.");
+                    Icons.status(syncStatusLabel, "Session closed.", Icons.Status.LOCKED);
                     loadSessionCombo();
                     loadSessionHistory();
 
@@ -314,6 +291,7 @@ public class AttendanceController {
         memberCheckboxes.clear();
         memberNames.clear();
         memberMinistries.clear();
+        memberPhotos.clear();
         currentSessionClosed    = false;
         currentSessionMinistryName = null;
         if (currentSessionId < 0) return;
@@ -344,18 +322,19 @@ public class AttendanceController {
 
             // Load all active members
             ResultSet rs = conn.createStatement().executeQuery(
-                "SELECT m.id, m.full_name, " +
+                "SELECT m.id, m.full_name, m.photo_path, " +
                 "IFNULL(GROUP_CONCAT(mi.name ORDER BY mi.name SEPARATOR ', '),'-') AS ministries " +
                 "FROM members m " +
                 "LEFT JOIN member_ministries mm ON mm.member_id = m.id " +
                 "LEFT JOIN ministries mi ON mi.id = mm.ministry_id " +
                 "WHERE m.is_deleted=0 AND m.is_active=1 AND m.is_deceased=0 " +
-                "GROUP BY m.id, m.full_name ORDER BY m.full_name ASC"
+                "GROUP BY m.id, m.full_name, m.photo_path ORDER BY m.full_name ASC"
             );
             while (rs.next()) {
                 int id = rs.getInt("id");
                 memberNames.put(id, rs.getString("full_name"));
                 memberMinistries.put(id, rs.getString("ministries"));
+                memberPhotos.put(id, rs.getString("photo_path"));
                 CheckBox cb = new CheckBox();
                 cb.setSelected(presentIds.contains(id));
                 cb.setDisable(currentSessionClosed);
@@ -427,13 +406,15 @@ public class AttendanceController {
             if (!currentSessionClosed) {
                 row.setOnMouseClicked(e -> cb.setSelected(!cb.isSelected()));
             }
-            row.getChildren().addAll(cb, info, spacer, presLabel);
+            row.getChildren().addAll(cb, Avatars.of(memberPhotos.get(id), 34), info, spacer, presLabel);
             attendanceMembersBox.getChildren().add(row);
         }
 
         if (currentSessionClosed && !memberCheckboxes.isEmpty()) {
             // Show a read-only banner at the top
-            Label banner = new Label("\uD83D\uDD12  This session is closed — records are read-only.");
+            Label banner = new Label("This session is closed — records are read-only.");
+            banner.setGraphic(Icons.of("fas-lock", 12, "#7A4F00"));
+            banner.setGraphicTextGap(8);
             banner.setStyle("-fx-background-color:#FDF3E0;-fx-text-fill:#7A4F00;" +
                             "-fx-font-size:12px;-fx-font-weight:600;-fx-padding:8 16;" +
                             "-fx-background-radius:8;");
@@ -462,6 +443,7 @@ public class AttendanceController {
             ps.setInt(3, isPresent ? 1 : 0);
             ps.setInt(4, isPresent ? 1 : 0);
             ps.executeUpdate();
+            statsRefresh.playFromStart(); // debounced: "Mark All" saves many rows at once
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
@@ -569,91 +551,61 @@ public class AttendanceController {
             });
         }
 
-        // Actions column: View | Close | Delete
-        colSessActions.setCellFactory(col -> new TableCell<>() {
-            private final Button viewBtn   = new Button("View");
-            private final Button closeBtn  = new Button("Close");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, viewBtn, closeBtn, deleteBtn);
-            {
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                closeBtn.getStyleClass().add("btn-primary");
-                closeBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-
-                viewBtn.setOnAction(e -> {
-                    AttendanceSession s = safeItem();
-                    if (s != null) selectSession(s.getId(), s.getSessionName());
-                });
-                closeBtn.setOnAction(e -> {
-                    AttendanceSession s = safeItem();
-                    if (s != null) closeSessionInHistory(s);
-                });
-                deleteBtn.setOnAction(e -> {
-                    AttendanceSession s = safeItem();
-                    if (s != null) deleteSession(s);
-                });
-            }
-
-            private AttendanceSession safeItem() {
-                int idx = getIndex();
-                return (idx >= 0 && idx < getTableView().getItems().size())
-                    ? getTableView().getItems().get(idx) : null;
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (!empty) {
-                    AttendanceSession s = safeItem();
-                    if (s != null) {
-                        boolean closed = s.isClosed();
-                        closeBtn.setDisable(closed);
-                        closeBtn.setText(closed ? "\uD83D\uDD12" : "Close");
-                    }
-                }
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(sessionsTable, colSessActions, this::showSession);
 
         sessionsTable.setItems(allSessions);
     }
 
-    private void closeSessionInHistory(AttendanceSession s) {
-        if (s.isClosed()) return;
+    private void showSession(AttendanceSession s) {
+        int present = getPresentCount(s.getId());
+        int total   = getTotalCount(s.getId());
+        DocumentViewer v = new DocumentViewer("Attendance Session", s.getSessionName())
+            .icon("fas-clipboard-list")
+            .status(s.isClosed() ? "Closed" : "Open", s.isClosed() ? "badge-inactive" : "badge-active")
+            .width(640)
+            .meta("Date",     s.getSessionDate() != null ? s.getSessionDate().format(FMT) : null)
+            .meta("Ministry", s.getMinistryName() != null ? s.getMinistryName() : "All")
+            .meta("Present",  present + " of " + total)
+            .meta("Attendance Rate", total > 0 ? Math.round(present * 100.0 / total) + "%" : "—")
+            .closingAction("Open Register", "fas-clipboard-check", "btn-secondary",
+                () -> { selectSession(s.getId(), s.getSessionName()); return true; });
+        if (!s.isClosed())
+            v.closingAction("Close Session", "fas-lock", "btn-secondary", () -> closeSessionInHistory(s));
+        v.onDelete(() -> deleteSession(s)).show();
+    }
+
+    /** Confirms, then locks the session. Returns true if it was closed. */
+    private boolean closeSessionInHistory(AttendanceSession s) {
+        if (s.isClosed()) return false;
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Close Session");
         confirm.setHeaderText("Close \"" + s.getSessionName() + "\"?");
         confirm.setContentText("Attendance records will be locked.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE attendance_sessions SET is_closed=1 WHERE id=?");
-                    ps.setInt(1, s.getId());
-                    ps.executeUpdate();
-                    AuditLogger.log(
-                        SessionManager.getInstance().getCurrentUser().getId(),
-                        "Closed attendance session: " + s.getSessionName());
-                    if (currentSessionId == s.getId()) {
-                        currentSessionClosed = true;
-                        memberCheckboxes.values().forEach(cb -> cb.setDisable(true));
-                        syncStatusLabel.setText("\uD83D\uDD12 Session closed.");
-                    }
-                    loadSessionCombo();
-                    loadSessionHistory();
-                    ToastManager.success("Session \"" + s.getSessionName() + "\" closed.");
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                    ToastManager.error("Failed to close session: " + ex.getMessage());
-                }
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(
+                "UPDATE attendance_sessions SET is_closed=1 WHERE id=?");
+            ps.setInt(1, s.getId());
+            ps.executeUpdate();
+            AuditLogger.log(
+                SessionManager.getInstance().getCurrentUser().getId(),
+                "Closed attendance session: " + s.getSessionName());
+            if (currentSessionId == s.getId()) {
+                currentSessionClosed = true;
+                memberCheckboxes.values().forEach(cb -> cb.setDisable(true));
+                Icons.status(syncStatusLabel, "Session closed.", Icons.Status.LOCKED);
             }
-        });
+            loadSessionCombo();
+            loadSessionHistory();
+            ToastManager.success("Session \"" + s.getSessionName() + "\" closed.");
+            return true;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            ToastManager.error("Failed to close session: " + ex.getMessage());
+            return false;
+        }
     }
 
     private void loadSessionHistory() {
@@ -678,6 +630,21 @@ public class AttendanceController {
                 catch (SQLException ignored) { s.setClosed(false); }
                 allSessions.add(s);
             }
+        } catch (SQLException e) { e.printStackTrace(); }
+        refreshStats();
+    }
+
+    private void refreshStats() {
+        statSessions.setText(String.valueOf(allSessions.size()));
+        statOpenSessions.setText(String.valueOf(allSessions.stream().filter(x -> !x.isClosed()).count()));
+        // allSessions is newest-first, so the first entry is the latest session
+        statLatestPresent.setText(allSessions.isEmpty() ? "0"
+            : String.valueOf(getPresentCount(allSessions.get(0).getId())));
+        try {
+            ResultSet rs = DatabaseConnection.getConnection().createStatement().executeQuery(
+                "SELECT ROUND(AVG(p)) FROM (SELECT SUM(is_present) AS p " +
+                "FROM attendance_records GROUP BY session_id) per_session");
+            statAvgPresent.setText(rs.next() && rs.getObject(1) != null ? rs.getString(1) : "0");
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
@@ -706,42 +673,42 @@ public class AttendanceController {
         loadMembersForAttendance();
         syncBar.setVisible(true);
         syncBar.setManaged(true);
-        syncStatusLabel.setText("Viewing: " + name);
+        Icons.status(syncStatusLabel, "Viewing: " + name, Icons.Status.INFO);
         if (attendanceTabs != null) attendanceTabs.getSelectionModel().selectFirst();
     }
 
-    private void deleteSession(AttendanceSession s) {
+    /** Confirms, then deletes the session and its records. Returns true if deleted. */
+    private boolean deleteSession(AttendanceSession s) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Session");
         confirm.setHeaderText("Delete session: " + s.getSessionName() + "?");
         confirm.setContentText("All attendance records for this session will also be deleted.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    conn.createStatement().executeUpdate(
-                        "DELETE FROM attendance_records WHERE session_id=" + s.getId());
-                    conn.createStatement().executeUpdate(
-                        "DELETE FROM attendance_sessions WHERE id=" + s.getId());
-                    AuditLogger.log(
-                        SessionManager.getInstance().getCurrentUser().getId(),
-                        "Deleted attendance session: " + s.getSessionName());
-                    if (currentSessionId == s.getId()) {
-                        currentSessionId = -1;
-                        currentSessionClosed = false;
-                        attendanceMembersBox.getChildren().clear();
-                        memberCheckboxes.clear();
-                    }
-                    loadSessionCombo();
-                    loadSessionHistory();
-                    ToastManager.success("Session \"" + s.getSessionName() + "\" deleted.");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    ToastManager.error("Failed to delete session: " + e.getMessage());
-                }
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.createStatement().executeUpdate(
+                "DELETE FROM attendance_records WHERE session_id=" + s.getId());
+            conn.createStatement().executeUpdate(
+                "DELETE FROM attendance_sessions WHERE id=" + s.getId());
+            AuditLogger.log(
+                SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted attendance session: " + s.getSessionName());
+            if (currentSessionId == s.getId()) {
+                currentSessionId = -1;
+                currentSessionClosed = false;
+                attendanceMembersBox.getChildren().clear();
+                memberCheckboxes.clear();
             }
-        });
+            loadSessionCombo();
+            loadSessionHistory();
+            ToastManager.success("Session \"" + s.getSessionName() + "\" deleted.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete session: " + e.getMessage());
+            return false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -796,15 +763,6 @@ public class AttendanceController {
             ResultSet rs = ps.executeQuery();
             return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) { return 0; }
-    }
-
-    private VBox makeFormRow(String label, javafx.scene.Node field) {
-        VBox box = new VBox(5);
-        Label l = new Label(label);
-        l.getStyleClass().add("form-label");
-        box.getChildren().addAll(l, field);
-        if (field instanceof Control) ((Control) field).setMaxWidth(Double.MAX_VALUE);
-        return box;
     }
 
     private static final int APP_SERVER_PORT = 8080;

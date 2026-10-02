@@ -28,7 +28,7 @@ public class UserGuideContent {
                 "can unlock it again (Admins module, Unlock button).",
                 "The sidebar on the left is organised into sections: MAIN (Dashboard, Members, Attendance), " +
                 "CHURCH (Church Board, Calendar, Welfare, Finance, Inventory), COMMUNICATIONS (Communications, " +
-                "Website, Broadcast), CEREMONIES (Commemorations), and SYSTEM (Admins, Audit Log, Settings, " +
+                "Website, Broadcast), CEREMONIES (Commemorations), and SYSTEM (Admins & Audit, Settings, " +
                 "Documentation). Click any item to open that module in the main content area; the item you are " +
                 "on is highlighted.",
                 "Your name and role appear at the bottom of the sidebar, with a Logout button beneath them.",
@@ -36,7 +36,13 @@ public class UserGuideContent {
                 "Save your work regularly if you plan to step away.",
                 "Notifications: whenever you add, edit, delete, or send something anywhere in the system, a small " +
                 "\"Success\" (green) or \"Failed\" (red) card briefly appears in the bottom-right corner of the " +
-                "window confirming what happened. If an action fails, read this message — it usually explains why."
+                "window confirming what happened. If an action fails, read this message — it usually explains why.",
+                "Viewing and changing records: every list in the system works the same way. Each row has a single " +
+                "View button (or double-click the row) which opens the record read-only. Nothing can be changed " +
+                "from the list itself — Edit, Delete and any other actions for that record (for example Restore, " +
+                "Approve, Unlock or Mark Completed) are buttons at the bottom of the View window.",
+                "Summary cards: most modules show four cards across the top with the key numbers for that area " +
+                "(for example total and active members, open sessions, or upcoming events). They update as you work."
             )),
 
             new GuideSection("2. Dashboard", List.of(
@@ -51,7 +57,7 @@ public class UserGuideContent {
                 "A Welfare Cases by Status chart shows how many welfare cases are Pending, In Progress, or " +
                 "Completed, so leadership can see at a glance whether cases are being followed up on.",
                 "A Recent Activity feed lists the latest actions taken across the system (who did what, and when), " +
-                "pulled from the Audit Log, so you can see what has changed recently without opening Audit Log " +
+                "pulled from the Audit Log, so you can see what has changed recently without opening the Audit Log " +
                 "yourself.",
                 "The reminders grid shows Upcoming Events in the next 7 days, Birthdays This Week, Welfare Cases " +
                 "needing attention, and Pending Member Approvals awaiting review — each with a count badge and a " +
@@ -61,35 +67,47 @@ public class UserGuideContent {
             new GuideSection("3. Members", List.of(
                 "The Members module is organised into tabs: All Members, Sub-Branches, Ministries, Families, " +
                 "Guests, Pending Review, and Faithful Departed.",
-                "All Members — Adding a member: click \"+ Add Member\", fill in the form (full name, date of " +
-                "birth, gender, marital status, employment status, contact details, sub-branch, baptism date, " +
-                "next of kin, and ministries via the checkboxes), then click Save.",
-                "Editing a member: click Edit on their row, change any field, and Save. Deleting a member performs " +
-                "a soft delete — the record is hidden from lists but preserved in the database for history.",
+                "All Members — Adding a member: click \"+ Add Member\". The form is grouped into Personal Details, " +
+                "Contact, Church and Next of Kin, with the member's photo, status and availability on the left. " +
+                "Fill in the details (only full name and sub-branch are required) and click Save Member.",
+                "Member photos: click \"Choose Photo...\" on the form to add a JPG or PNG picture; a square, " +
+                "head-and-shoulders photo looks best. The photo is copied into the system's own folder, so it keeps " +
+                "working even if the original file is moved. Members without a photo show a grey person icon. " +
+                "Photos appear in the member list, the member's profile and family views.",
+                "Viewing a member: click View on their row to open their profile (photo, contact details, ministries, " +
+                "family, spouse, dates and next of kin). From the profile you can Print Form, record them as " +
+                "Faithful Departed, Edit, or Delete. Deleting performs a soft delete — the record is hidden from " +
+                "lists but preserved in the database for history.",
+                "Married members: tick \"Spouse is also a member of this church\" and choose the spouse from the " +
+                "list; the spouse's name then appears on the member's profile.",
                 "Use the search bar to find a member by name, phone, or email, and the filter dropdowns to narrow " +
                 "the list by status, sub-branch, or ministry. Click \"Export\" to save the current list as a PDF, " +
                 "Word document, or Excel file with the church letterhead.",
                 "Sub-Branches and Ministries — these two tabs let you maintain the list of sub-branches and " +
-                "ministries members can be assigned to. Add, rename, or deactivate them here; deactivating hides " +
-                "them from new-member forms without deleting historical assignments.",
+                "ministries members can be assigned to. Click View on one to see its members, then rename/edit or " +
+                "deactivate it from there; deactivating hides it from new-member forms without deleting historical " +
+                "assignments.",
                 "Families — group related members into a family unit for record-keeping (e.g. so a household's " +
                 "attendance and giving history can be viewed together). Create a family, then link members to it " +
                 "from their member record.",
                 "Guests — every guest recorded by an usher on the Android app (name, phone, gender, sub-branch, " +
                 "who invited them, whether they want to join, and any prayer request) appears here automatically " +
                 "after the usher syncs. Click View to see the full record, including the prayer request highlighted " +
-                "for the Bishop. Click Promote to move a guest into Pending Review for consideration as a full " +
-                "member, or Dismiss if no further follow-up is needed.",
+                "for the Bishop. From that window, click Promote to Member to move a guest into Pending Review for " +
+                "consideration as a full member, or Dismiss if no further follow-up is needed.",
                 "Pending Review — new member applications, whether promoted from Guests or submitted directly from " +
-                "the app, wait here for an admin to Approve (which creates the full member record) or Reject.",
+                "the app, wait here. Click View, then Approve as Member (which creates the full member record) " +
+                "or Reject.",
                 "Faithful Departed — deceased members are moved here rather than deleted, so their full history is " +
-                "preserved. From a member's row in All Members, use \"Record as Faithful Departed\" to set the " +
-                "date of passing and an optional memorial note. From this tab you can edit that record or Restore " +
-                "a member back to the active list if they were recorded in error."
+                "preserved. Open a member's profile in All Members and click \"Faithful Departed\" to set the " +
+                "date of passing and an optional memorial note. In this tab, View a record to see the full profile, " +
+                "edit the memorial record, or Restore a member back to the active list if recorded in error."
             )),
 
             new GuideSection("4. Attendance", List.of(
-                "Attendance has two tabs: Take Attendance and Session History.",
+                "Attendance has two tabs: Take Attendance and Session History. Cards at the top show the total " +
+                "number of sessions, how many are still open, how many were present at the latest session, and the " +
+                "average attendance per session.",
                 "Creating a session: click \"+ New Session\", give it a name (e.g. \"Sunday Service\"), pick the " +
                 "date, and optionally restrict it to one ministry. Click Create Session.",
                 "Marking attendance: select the session from the dropdown, then tap a member's row (or its " +
@@ -106,26 +124,40 @@ public class UserGuideContent {
                 "app.",
                 "Exporting: \"Print All\" exports every member (present and absent); \"Print Present\" exports " +
                 "only those marked present — both produce a branded PDF/Word/Excel document.",
-                "Session History — search past sessions by name or ministry, click View to reopen a session for " +
-                "review, Close to lock an open one, or Delete to permanently remove a session and its attendance " +
-                "records (this cannot be undone)."
+                "Session History — search past sessions by name or ministry and click View to see a session's " +
+                "summary. From there, Open Register reopens it in Take Attendance, Close Session locks an open one, " +
+                "and Delete permanently removes the session and its attendance records (this cannot be undone)."
             )),
 
             new GuideSection("5. Church Board", List.of(
-                "Manage the church's board membership and its meetings.",
+                "Manage the church's board membership, its meetings, and the tasks that come out of them. Cards " +
+                "at the top show the number of board members, upcoming meetings, open tasks and overdue tasks.",
                 "Board Members: add a member to the board with their role/title and a start date; set an end date " +
                 "(or deactivate) when their term ends. The list can be searched by name or role.",
                 "Meetings: create a meeting with a title, date, location, and a typed agenda. After the meeting, " +
                 "fill in the minutes text field with what was discussed and decided. Mark attendees present or " +
                 "note an apology for each board member. Meetings default to \"Upcoming\" status and can be marked " +
                 "\"Completed\" once held.",
+                "Meetings open as a read-only record: clicking View (or double-clicking the row) opens " +
+                "the meeting as a document showing the agenda, minutes, attendance, action items and uploaded " +
+                "files. Nothing can be changed there unless you click Edit (which opens the normal form) or " +
+                "Delete. Use Export to save the minutes as a PDF or Word document, or Add Task to record an " +
+                "action item that came out of the meeting.",
+                "Tasks: click \"Add Task\" to record something that needs to be done, assign it to a member, " +
+                "optionally link it to the meeting it was raised at, and set a due date. Track it through Open, " +
+                "In Progress and Done; a task past its due date and not Done is flagged Overdue. The Progress " +
+                "Report field holds the assigned person's feedback, and the time it was last updated is shown. " +
+                "Done tasks open read-only like completed meetings. \"Export Report\" saves the currently " +
+                "filtered task list as a PDF or Word report.",
                 "Attendee counts and meeting history are searchable, so you can quickly find how a particular " +
                 "meeting went or how consistently a board member has attended."
             )),
 
             new GuideSection("6. Calendar", List.of(
                 "The Calendar tracks church events — services, meetings, outreach programmes, youth events, and " +
-                "anything else — separately from the public website's event listing.",
+                "anything else — separately from the public website's event listing. Cards at the top show events " +
+                "in the month being viewed, events in the next 7 days, all upcoming events, and services this month.",
+                "Click an event on the calendar to view it; Edit and Delete are in that window.",
                 "Click a date to add an event with a title, time, category, location, and description. Use the " +
                 "category filter to show only certain types of events.",
                 "Past dates are greyed out and locked: you cannot add a new event to a date that has already " +
@@ -141,7 +173,11 @@ public class UserGuideContent {
                 "of members registered as welfare workers) to follow up. The case starts as \"Pending\".",
                 "Following up: the assigned worker updates the Report field with progress notes as they visit or " +
                 "check in, and changes the status to \"In Progress\" and eventually \"Completed\" once resolved. " +
-                "There is a quick \"Close\" button on the table for marking a case completed in one click.",
+                "Click View on a case to open it as a document (reason, agent report, dates) with Print, Edit and " +
+                "Delete buttons; open cases also have Mark Completed for closing a case in one click. Nothing " +
+                "changes unless you use one of those buttons.",
+                "Cards at the top show how many cases are Pending, In Progress and Completed, and how many " +
+                "welfare agents are designated.",
                 "Cases that are Pending or In Progress appear on the Dashboard's reminders grid and in the Welfare " +
                 "Cases by Status chart, so nothing gets forgotten."
             )),
@@ -164,7 +200,8 @@ public class UserGuideContent {
 
             new GuideSection("9. Communications", List.of(
                 "Communications has two tabs: Compose Message and Announcements, plus a Sent Log of everything " +
-                "that has gone out.",
+                "that has gone out. Cards at the top count emails sent, SMS sent, announcements posted, and " +
+                "messages sent this month.",
                 "Compose Message: choose a recipient group (All Active Members, Full Time, Part Time, a specific " +
                 "ministry, a specific sub-branch, or the Board), choose the channel (Email via SMTP, or SMS via " +
                 "BulkSMS), write the subject (for email) and message, and click Send. A preview screen lists every " +
@@ -214,9 +251,11 @@ public class UserGuideContent {
                 "as a PDF."
             )),
 
-            new GuideSection("13. Admins", List.of(
-                "This module is only visible to the Super Admin and manages every login account in the system — " +
-                "both desktop Admins and mobile-only Ushers.",
+            new GuideSection("13. Admins & Audit Log", List.of(
+                "This module is only visible to the Super Admin. The Accounts tab manages every login account in " +
+                "the system — both desktop Admins and mobile-only Ushers — and the Audit Log tab shows the " +
+                "activity trail. Cards at the top count admin accounts, usher accounts, inactive accounts and " +
+                "actions logged today.",
                 "Adding an account: click \"+ Add Admin\", fill in the full name, username, a password, optional " +
                 "email/phone/role title, and choose the Account Type:",
                 "- Admin — full access to the desktop CMS and the mobile app.",
@@ -226,12 +265,12 @@ public class UserGuideContent {
                 "Editing an account works the same way; leave the password field blank to keep the existing " +
                 "password unchanged.",
                 "Unlock: if an account has been locked out after 5 failed login attempts (desktop or mobile app), " +
-                "click Unlock next to their name to restore access immediately.",
+                "click View on their account and then Unlock to restore access immediately.",
                 "Delete permanently removes an account (not available for the Super Admin account, which cannot " +
                 "be deleted or demoted)."
             )),
 
-            new GuideSection("14. Audit Log", List.of(
+            new GuideSection("14. Audit Log (tab in Admins & Audit)", List.of(
                 "A read-only, Super-Admin-only record of the last 500 admin actions across the system — logins, " +
                 "record changes, deletions, sends, and more — each with who performed it and when.",
                 "Use the search bar to find actions by admin name or by keywords in the action text (e.g. " +
@@ -240,9 +279,15 @@ public class UserGuideContent {
             )),
 
             new GuideSection("15. Settings", List.of(
-                "Settings is where all system-wide configuration lives, grouped into cards.",
+                "Settings is where all system-wide configuration lives, grouped into cards laid out two per " +
+                "row so related settings sit side by side. Click \"Save All Settings\" at the bottom to save.",
                 "Backup: export the full database to a file at any time, or restore from a previous backup " +
-                "(restoring replaces all current data, so use with care). A history of recent backups is kept.",
+                "(restoring replaces all current data, so use with care). A history of recent backups is kept. " +
+                "Member photos are stored separately in the AFM_VFCC_CMS\\member_photos folder under your " +
+                "Windows AppData, so copy that folder too when moving to a new computer.",
+                "Installing on a new computer: after the setup wizard creates the database it asks how you want to " +
+                "start. Choose \"Restore a backup\" and pick a .sql file made with Backup Now to bring all your data " +
+                "across; you then log in with an existing account. Choose \"Start fresh\" for an empty system.",
                 "Email (SMTP): host, port, and login details for the email account used to send member " +
                 "communications.",
                 "SMS (BulkSMS): API token and sender ID for sending SMS through BulkSMS South Africa.",

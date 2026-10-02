@@ -16,7 +16,7 @@
      xmlns:bal="http://schemas.microsoft.com/wix/BalExtension">
 
   <Bundle Name="AFM VFCC CMS Setup"
-          Version="1.0.0.0"
+          Version="1.1.0.0"
           Manufacturer="Ralidzhivha RR"
           UpgradeCode="1372e4d2-f5e8-405c-80f0-e44f3df296c6"
           IconSourceFile="$(var.AppIcon)">

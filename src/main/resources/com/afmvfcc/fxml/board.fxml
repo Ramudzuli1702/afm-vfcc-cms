@@ -2,60 +2,164 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.afmvfcc.controllers.BoardController"
-      spacing="16">
+<ScrollPane fitToWidth="true" fitToHeight="true" styleClass="root"
+            style="-fx-background-color:transparent;-fx-background:transparent;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.afmvfcc.controllers.BoardController">
+
+<VBox spacing="16" style="-fx-padding:4 0 24 0;">
+
+    <!-- ── STAT CARDS ── -->
+    <GridPane hgap="14" vgap="14">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+        </columnConstraints>
+
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="0" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue">
+                <FontIcon iconLiteral="fas-landmark" styleClass="stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="BOARD MEMBERS" styleClass="stat-label"/>
+                <Label fx:id="statBoardMembers" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="1" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue-dark">
+                <FontIcon iconLiteral="fas-calendar-check" styleClass="stat-icon" iconColor="#2A6BA8"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="UPCOMING MEETINGS" styleClass="stat-label"/>
+                <Label fx:id="statUpcomingMeetings" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="2" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-amber">
+                <FontIcon iconLiteral="fas-tasks" styleClass="stat-icon" iconColor="#C07800"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="OPEN TASKS" styleClass="stat-label"/>
+                <Label fx:id="statOpenTasks" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="3" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-red">
+                <FontIcon iconLiteral="fas-hourglass-end" styleClass="stat-icon" iconColor="#D94040"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="OVERDUE TASKS" styleClass="stat-label"/>
+                <Label fx:id="statOverdueTasks" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+    </GridPane>
 
     <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
 
         <!-- Board Members Tab -->
         <Tab text="Board Members">
-            <VBox spacing="12">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <TextField fx:id="boardSearchField" styleClass="search-field"
-                               promptText="🔍  Search board members..."
+                               promptText="Search board members..."
                                onKeyReleased="#handleBoardSearch"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="＋  Add Board Member" styleClass="btn-primary"
-                            onAction="#handleAddBoardMember"/>
+                    <Button minWidth="-Infinity" text="Add Board Member" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleAddBoardMember">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="boardTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                <TableView fx:id="boardTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colBoardName"    text="FULL NAME"   prefWidth="220"/>
                         <TableColumn fx:id="colBoardRole"    text="ROLE / TITLE" prefWidth="200"/>
                         <TableColumn fx:id="colBoardPhone"   text="PHONE"       prefWidth="140"/>
                         <TableColumn fx:id="colBoardEmail"   text="EMAIL"       prefWidth="200"/>
                         <TableColumn fx:id="colBoardStart"   text="SINCE"       prefWidth="120"/>
-                        <TableColumn fx:id="colBoardActions" text="ACTIONS"     prefWidth="140"/>
+                        <TableColumn fx:id="colBoardActions" text="ACTIONS"     prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No board members yet. Click &quot;Add Board Member&quot; to add one."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
 
         <!-- Meetings Tab -->
         <Tab text="Board Meetings">
-            <VBox spacing="12">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <TextField fx:id="meetingSearchField" styleClass="search-field"
-                               promptText="🔍  Search meetings..."
+                               promptText="Search meetings..."
                                onKeyReleased="#handleMeetingSearch"/>
+                    <Label text="Click View on a meeting to read its agenda, minutes and attendance."
+                           style="-fx-text-fill:#5A6275;-fx-font-size:12px;"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="＋  Add Meeting" styleClass="btn-primary"
-                            onAction="#handleAddMeeting"/>
+                    <Button minWidth="-Infinity" text="Add Meeting" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleAddMeeting">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                 </HBox>
-                <TableView fx:id="meetingsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:460px;">
+                <TableView fx:id="meetingsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colMeetTitle"    text="MEETING TITLE"  prefWidth="220"/>
                         <TableColumn fx:id="colMeetDate"     text="DATE"           prefWidth="120"/>
                         <TableColumn fx:id="colMeetLocation" text="LOCATION"       prefWidth="160"/>
                         <TableColumn fx:id="colMeetStatus"   text="STATUS"         prefWidth="100"/>
                         <TableColumn fx:id="colMeetAttend"   text="ATTENDEES"      prefWidth="90"/>
-                        <TableColumn fx:id="colMeetActions"  text="ACTIONS"        prefWidth="200"/>
+                        <TableColumn fx:id="colMeetActions"  text="ACTIONS"        prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No meetings yet. Click &quot;Add Meeting&quot; to schedule one."/>
+                    </placeholder>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- Tasks Tab -->
+        <Tab text="Tasks">
+            <VBox spacing="12" style="-fx-padding:16 0 0 0;">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="taskSearchField" styleClass="search-field"
+                               promptText="Search tasks or people..."
+                               onKeyReleased="#handleTaskFilter"/>
+                    <ComboBox fx:id="taskStatusFilter" styleClass="form-combo"
+                              prefWidth="150" onAction="#handleTaskFilter"/>
+                    <HBox HBox.hgrow="ALWAYS"/>
+                    <Button minWidth="-Infinity" text="Export Report" graphicTextGap="8" styleClass="btn-secondary"
+                            onAction="#handleExportTasks">
+                        <graphic><FontIcon iconLiteral="fas-file-export" iconSize="13" iconColor="#1E2130"/></graphic>
+                    </Button>
+                    <Button minWidth="-Infinity" text="Add Task" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleAddTask">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
+                </HBox>
+                <TableView fx:id="tasksTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
+                    <columns>
+                        <TableColumn fx:id="colTaskTitle"    text="TASK"         prefWidth="230"/>
+                        <TableColumn fx:id="colTaskAssignee" text="ASSIGNED TO"  prefWidth="160"/>
+                        <TableColumn fx:id="colTaskMeeting"  text="MEETING"      prefWidth="160"/>
+                        <TableColumn fx:id="colTaskDue"      text="DUE"          prefWidth="110"/>
+                        <TableColumn fx:id="colTaskStatus"   text="STATUS"       prefWidth="110"/>
+                        <TableColumn fx:id="colTaskReport"   text="REPORT"       prefWidth="90"/>
+                        <TableColumn fx:id="colTaskActions"  text="ACTIONS"      prefWidth="110"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="No tasks yet. Click &quot;Add Task&quot; to assign one to a member."
+                               style="-fx-text-fill:#9099AA;"/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>
 
     </TabPane>
 </VBox>
+</ScrollPane>

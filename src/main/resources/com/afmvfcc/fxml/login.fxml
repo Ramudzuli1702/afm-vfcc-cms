@@ -53,7 +53,7 @@
         </VBox>
 
         <!-- Login button -->
-        <Button fx:id="loginButton" text="SIGN IN" styleClass="btn-login"
+        <Button minWidth="-Infinity" fx:id="loginButton" text="SIGN IN" styleClass="btn-login"
                 maxWidth="Infinity" onAction="#handleLogin"/>
 
         <!-- Lock status -->

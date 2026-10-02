@@ -3,6 +3,8 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
@@ -76,46 +78,7 @@ public class GuestsController {
             }
         });
 
-        colGuestActions.setCellFactory(col -> new TableCell<>() {
-            private final Button viewBtn    = new Button("View");
-            private final Button promoteBtn = new Button("Promote");
-            private final Button dismissBtn = new Button("Dismiss");
-            private final HBox   box        = new HBox(5, viewBtn, promoteBtn, dismissBtn);
-            {
-                viewBtn.getStyleClass().add("btn-secondary");
-                viewBtn.setStyle("-fx-padding:3 8;-fx-font-size:10px;");
-                promoteBtn.getStyleClass().add("btn-primary");
-                promoteBtn.setStyle("-fx-padding:3 8;-fx-font-size:10px;");
-                dismissBtn.getStyleClass().add("btn-danger");
-                dismissBtn.setStyle("-fx-padding:3 8;-fx-font-size:10px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                viewBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        showGuestDetail(getTableView().getItems().get(idx));
-                });
-                promoteBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        promoteGuest(getTableView().getItems().get(idx));
-                });
-                dismissBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        dismissGuest(getTableView().getItems().get(idx));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (!empty && getIndex() >= 0 && getIndex() < getTableView().getItems().size()) {
-                    String status = getTableView().getItems().get(getIndex())[9];
-                    boolean isGuest = "Guest".equals(status);
-                    promoteBtn.setVisible(isGuest); promoteBtn.setManaged(isGuest);
-                    dismissBtn.setVisible(isGuest); dismissBtn.setManaged(isGuest);
-                }
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(guestsTable, colGuestActions, this::showGuestDetail);
 
         guestsTable.setItems(allGuests);
     }
@@ -174,60 +137,25 @@ public class GuestsController {
     }
 
     private void showGuestDetail(String[] g) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Guest Details - " + g[1]);
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-            "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label titleLbl = new Label(g[1]);
-        titleLbl.setStyle("-fx-font-size:17px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(titleLbl);
-
-        VBox body = new VBox(12);
-        body.setStyle("-fx-padding:20 24;");
-        body.getChildren().addAll(
-            detailRow("Phone",            g[2]),
-            detailRow("Gender",           g[3]),
-            detailRow("Sub-Branch",       g[4]),
-            detailRow("Invited By",       g[5]),
-            detailRow("Wants Membership", "1".equals(g[6]) ? "Yes" : "No"),
-            detailRow("Visit Date",       g[8]),
-            detailRow("Session",          g[10])
-        );
-
-        if (g[7] != null && !g[7].isEmpty()) {
-            VBox prayBox = new VBox(6);
-            prayBox.setStyle("-fx-background-color:#FFF8E8;-fx-border-color:#F0C040;" +
-                "-fx-border-radius:8;-fx-background-radius:8;-fx-border-width:1;-fx-padding:12;");
-            Label prayLabel = new Label("PRAYER REQUEST FOR THE BISHOP");
-            prayLabel.setStyle("-fx-font-size:9px;-fx-font-weight:700;" +
-                "-fx-text-fill:#B5862A;-fx-letter-spacing:1px;");
-            Label prayText = new Label(g[7]);
-            prayText.setStyle("-fx-text-fill:#1E2130;-fx-font-size:13px;");
-            prayText.setWrapText(true);
-            prayBox.getChildren().addAll(prayLabel, prayText);
-            body.getChildren().add(prayBox);
+        String status = g[9];
+        DocumentViewer v = new DocumentViewer("Guest", g[1])
+            .icon("fas-user-friends")
+            .status(status, "Guest".equals(status) ? "badge-pending"
+                          : "Converted".equals(status) ? "badge-active" : "badge-inactive")
+            .width(640)
+            .meta("Phone",            g[2])
+            .meta("Gender",           g[3])
+            .meta("Sub-Branch",       g[4])
+            .meta("Invited By",       g[5])
+            .meta("Wants Membership", "1".equals(g[6]) ? "Yes" : "No")
+            .meta("Visit Date",       g[8])
+            .meta("Session",          g[10])
+            .section("Prayer Request for the Bishop", g[7], "No prayer request.");
+        if ("Guest".equals(status)) {
+            v.closingAction("Dismiss", "fas-user-times", "btn-danger", () -> dismissGuest(g));
+            v.closingAction("Promote to Member", "fas-user-plus", "btn-primary", () -> promoteGuest(g));
         }
-
-        Button closeBtn = new Button("Close");
-        closeBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(closeBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-            "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-        closeBtn.setOnAction(e -> stage.close());
-
-        root.getChildren().addAll(header, body, footer);
-        Scene scene = new Scene(root, 460, 500);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        v.show();
     }
 
     private VBox detailRow(String label, String value) {
@@ -240,42 +168,49 @@ public class GuestsController {
         return box;
     }
 
-    private void promoteGuest(String[] g) {
+    /** Confirms, then sends the guest to Pending Review. Returns true if promoted. */
+    private boolean promoteGuest(String[] g) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Promote Guest");
         confirm.setHeaderText("Send " + g[1] + " to Pending Review?");
         confirm.setContentText("This will add them to Pending Review for approval as a full member.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn != ButtonType.OK) return;
-            try {
-                Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO pending_members " +
-                    "(full_name, phone, sub_branch_id, ministry_id, submitted_at, status) " +
-                    "VALUES (?, ?, NULL, NULL, NOW(), 'Pending')");
-                ps.setString(1, g[1]);
-                ps.setString(2, g[2] != null && !g[2].equals("-") ? g[2] : null);
-                ps.executeUpdate();
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO pending_members " +
+                "(full_name, phone, sub_branch_id, ministry_id, submitted_at, status) " +
+                "VALUES (?, ?, NULL, NULL, NOW(), 'Pending')");
+            ps.setString(1, g[1]);
+            ps.setString(2, g[2] != null && !g[2].equals("-") ? g[2] : null);
+            ps.executeUpdate();
 
-                PreparedStatement upd = conn.prepareStatement(
-                    "UPDATE guests SET status='Converted' WHERE id=?");
-                upd.setInt(1, Integer.parseInt(g[0]));
-                upd.executeUpdate();
+            PreparedStatement upd = conn.prepareStatement(
+                "UPDATE guests SET status='Converted' WHERE id=?");
+            upd.setInt(1, Integer.parseInt(g[0]));
+            upd.executeUpdate();
 
-                AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                    "Promoted guest to Pending Review: " + g[1]);
-                loadGuests();
-                ToastManager.success(g[1] + " moved to Pending Review.");
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-                ToastManager.error("Failed to promote guest: " + e.getMessage());
-            }
-        });
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Promoted guest to Pending Review: " + g[1]);
+            loadGuests();
+            ToastManager.success(g[1] + " moved to Pending Review.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to promote guest: " + e.getMessage());
+            return false;
+        }
     }
 
-    private void dismissGuest(String[] g) {
+    /** Confirms, then marks the guest Dismissed. Returns true if dismissed. */
+    private boolean dismissGuest(String[] g) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        Main.applyStyles(confirm.getDialogPane());
+        confirm.setTitle("Dismiss Guest");
+        confirm.setHeaderText("Dismiss " + g[1] + "?");
+        confirm.setContentText("They stay in the guest list, marked Dismissed.");
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement ps = conn.prepareStatement(
@@ -286,9 +221,11 @@ public class GuestsController {
                 "Dismissed guest: " + g[1]);
             loadGuests();
             ToastManager.success("Guest \"" + g[1] + "\" dismissed.");
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
             ToastManager.error("Failed to dismiss guest: " + e.getMessage());
+            return false;
         }
     }
 

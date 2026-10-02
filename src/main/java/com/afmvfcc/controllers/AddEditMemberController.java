@@ -3,17 +3,25 @@ package com.afmvfcc.controllers;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.Member;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Avatars;
 import com.afmvfcc.utils.SessionManager;
 import com.afmvfcc.utils.ToastManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AddEditMemberController {
 
@@ -27,22 +35,34 @@ public class AddEditMemberController {
 
     @FXML private DatePicker dobPicker, baptismPicker, joinedPicker;
 
-    // Spouse section — single checkbox, same pattern as ministriesBox
+    // Spouse section — shown only when Married
     @FXML private VBox     spouseSection;
-    @FXML private HBox     spouseCheckBox;        // container HBox (fx:id="spouseCheckBox")
-    @FXML private CheckBox spouseIsMemberCheck;   // the single checkbox (fx:id="spouseIsMemberCheck")
+    @FXML private HBox     spouseCheckBox;
+    @FXML private CheckBox spouseIsMemberCheck;
     @FXML private VBox     spouseSelectBox;
     @FXML private ComboBox<String> spouseCombo;
 
-    @FXML private HBox  ministriesBox;
-    @FXML private Label errorLabel;
-    @FXML private HBox  footerBox;
+    // Photo
+    @FXML private StackPane photoHolder;
+    @FXML private Label     photoNameLabel;
+    @FXML private Button    removePhotoBtn;
+
+    @FXML private FlowPane   ministriesBox;
+    @FXML private Label      errorLabel;
+    @FXML private HBox       footerBox;
+    @FXML private ScrollPane bodyScroll;
 
     private Member   editingMember = null;
     private Runnable onSaved;
 
+    /** Photo currently stored for the member (null = none). */
+    private String photoPath;
+    /** A newly chosen file, copied into the photo folder only when Save is clicked. */
+    private File   pendingPhoto;
+
     private final List<int[]>    ministryIds    = new ArrayList<>();
     private final List<CheckBox> ministryChecks = new ArrayList<>();
+    private final Map<String, Integer> spouseIds = new LinkedHashMap<>();
 
     @FXML
     public void initialize() {
@@ -62,11 +82,7 @@ public class AddEditMemberController {
             boolean isMarried = "Married".equals(newVal);
             spouseSection.setVisible(isMarried);
             spouseSection.setManaged(isMarried);
-            if (!isMarried) {
-                spouseIsMemberCheck.setSelected(false);
-                spouseSelectBox.setVisible(false);
-                spouseSelectBox.setManaged(false);
-            }
+            if (!isMarried) spouseIsMemberCheck.setSelected(false);
         });
 
         // Show spouse picker only when checkbox is ticked
@@ -75,11 +91,19 @@ public class AddEditMemberController {
             spouseSelectBox.setManaged(isNow);
         });
 
+        // Keep the name under the photo in step with the form
+        fullNameField.textProperty().addListener((o, a, b) ->
+            photoNameLabel.setText(b == null || b.isBlank() ? "New member" : b.trim()));
+
         loadSubBranches();
         loadMinistries();
         loadFamilies();
         loadSpouseCandidates();
+        refreshPhoto();
     }
+
+    /** The body scroller, so the opener can size the window to fit the form. */
+    public ScrollPane getBodyScroll() { return bodyScroll; }
 
     public void setMember(Member member) {
         this.editingMember = member;
@@ -112,20 +136,53 @@ public class AddEditMemberController {
         loadSelectedFamily(member.getFamilyId());
         loadSelectedMinistries(member.getId());
 
-        if ("Married".equals(member.getMaritalStatus())) {
-            spouseSection.setVisible(true);
-            spouseSection.setManaged(true);
-            spouseIsMemberCheck.setSelected(member.isSpouseMember());
-        } else {
-            spouseSection.setVisible(false);
-            spouseSection.setManaged(false);
-            spouseIsMemberCheck.setSelected(false);
-        }
+        boolean married = "Married".equals(member.getMaritalStatus());
+        spouseSection.setVisible(married);
+        spouseSection.setManaged(married);
+        spouseIsMemberCheck.setSelected(married && member.isSpouseMember());
+        if (member.getSpouseMemberId() != null)
+            spouseIds.forEach((name, id) -> { if (id.equals(member.getSpouseMemberId())) spouseCombo.setValue(name); });
+        // A member can't be their own spouse
+        spouseIds.entrySet().removeIf(en -> en.getValue() == member.getId());
+        spouseCombo.getItems().setAll(spouseIds.keySet());
 
-        addFaithfulDepartedButton();
+        photoPath = member.getPhotoPath();
+        refreshPhoto();
     }
 
     public void setOnSaved(Runnable onSaved) { this.onSaved = onSaved; }
+
+    // ── PHOTO ──────────────────────────────────────────────────
+
+    @FXML
+    public void handleChoosePhoto() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Choose Member Photo");
+        fc.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("Images (*.jpg, *.jpeg, *.png)", "*.jpg", "*.jpeg", "*.png"));
+        File f = fc.showOpenDialog(fullNameField.getScene().getWindow());
+        if (f != null) {
+            pendingPhoto = f;
+            refreshPhoto();
+        }
+    }
+
+    @FXML
+    public void handleRemovePhoto() {
+        pendingPhoto = null;
+        photoPath = null;
+        refreshPhoto();
+    }
+
+    private void refreshPhoto() {
+        String shown = pendingPhoto != null ? pendingPhoto.getAbsolutePath() : photoPath;
+        photoHolder.getChildren().setAll(Avatars.of(shown, 140));
+        boolean has = shown != null && !shown.isBlank();
+        removePhotoBtn.setVisible(has);
+        removePhotoBtn.setManaged(has);
+    }
+
+    // ── SAVE ───────────────────────────────────────────────────
 
     @FXML
     public void handleSave() {
@@ -136,6 +193,23 @@ public class AddEditMemberController {
 
         String subBranch = subBranchCombo.getValue();
         if (subBranch == null || subBranch.isEmpty()) { showError("Sub-branch is required."); return; }
+
+        String spouse = spouseCombo.getValue();
+        if ("Married".equals(maritalStatusCombo.getValue()) && spouseIsMemberCheck.isSelected()
+                && (spouse == null || !spouseIds.containsKey(spouse))) {
+            showError("Please select the spouse from the list, or untick \"Spouse is also a member\".");
+            return;
+        }
+
+        if (pendingPhoto != null) {
+            try {
+                photoPath = Avatars.storePhoto(pendingPhoto, fullName);
+                pendingPhoto = null;
+            } catch (IOException e) {
+                showError("Could not save the photo: " + e.getMessage());
+                return;
+            }
+        }
 
         boolean isNewMember = editingMember == null;
         try {
@@ -158,8 +232,8 @@ public class AddEditMemberController {
                 INSERT INTO members
                 (full_name, gender, marital_status, employment_status, is_spouse_member, spouse_member_id,
                  date_of_birth, phone, email, address, sub_branch_id, baptism_date, date_joined,
-                 next_of_kin_name, next_of_kin_phone, family_id, is_full_time, is_active)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 next_of_kin_name, next_of_kin_phone, family_id, is_full_time, is_active, photo_path)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """;
         PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         fillStatement(ps, fullName, subBranchId);
@@ -181,12 +255,12 @@ public class AddEditMemberController {
                 UPDATE members SET
                  full_name=?, gender=?, marital_status=?, employment_status=?, is_spouse_member=?, spouse_member_id=?,
                  date_of_birth=?, phone=?, email=?, address=?, sub_branch_id=?, baptism_date=?, date_joined=?,
-                 next_of_kin_name=?, next_of_kin_phone=?, family_id=?, is_full_time=?, is_active=?
+                 next_of_kin_name=?, next_of_kin_phone=?, family_id=?, is_full_time=?, is_active=?, photo_path=?
                 WHERE id=?
                 """;
         PreparedStatement ps = conn.prepareStatement(sql);
         fillStatement(ps, fullName, subBranchId);
-        ps.setInt(19, editingMember.getId());
+        ps.setInt(20, editingMember.getId());
         ps.executeUpdate();
         saveMinistries(conn, editingMember.getId());
         updateEditingMemberFromUI(fullName);
@@ -201,10 +275,9 @@ public class AddEditMemberController {
         ps.setString(idx++, maritalStatusCombo.getValue());
         ps.setString(idx++, employmentCombo.getValue());
 
-        boolean isMarried      = "Married".equals(maritalStatusCombo.getValue());
-        boolean spouseIsMember = isMarried && spouseIsMemberCheck.isSelected();
-        ps.setInt (idx++, spouseIsMember ? 1 : 0);
-        ps.setNull(idx++, Types.INTEGER); // spouse_member_id
+        Integer spouseId = selectedSpouseId();
+        ps.setInt(idx++, spouseId != null ? 1 : 0);
+        if (spouseId != null) ps.setInt(idx++, spouseId); else ps.setNull(idx++, Types.INTEGER);
 
         ps.setDate  (idx++, dobPicker.getValue()     != null ? Date.valueOf(dobPicker.getValue())     : null);
         ps.setString(idx++, phoneField.getText().trim());
@@ -226,6 +299,14 @@ public class AddEditMemberController {
 
         ps.setInt(idx++, "Full Time".equals(availabilityCombo.getValue()) ? 1 : 0);
         ps.setInt(idx++, "Active".equals(statusCombo.getValue()) ? 1 : 0);
+        ps.setString(idx++, photoPath);
+    }
+
+    /** The chosen spouse's member id, or null if not married to a member. */
+    private Integer selectedSpouseId() {
+        boolean isMarried = "Married".equals(maritalStatusCombo.getValue());
+        if (!isMarried || !spouseIsMemberCheck.isSelected()) return null;
+        return spouseIds.get(spouseCombo.getValue());
     }
 
     private void updateEditingMemberFromUI(String fullName) {
@@ -235,12 +316,14 @@ public class AddEditMemberController {
         editingMember.setGender(genderCombo.getValue());
         editingMember.setMaritalStatus(maritalStatusCombo.getValue());
         editingMember.setEmploymentStatus(employmentCombo.getValue());
-        editingMember.setSpouseMember(spouseIsMemberCheck.isSelected());
+        editingMember.setSpouseMember(selectedSpouseId() != null);
+        editingMember.setSpouseMemberId(selectedSpouseId());
         editingMember.setAddress(addressField.getText().trim());
         editingMember.setNextOfKinName(nokNameField.getText().trim());
         editingMember.setNextOfKinPhone(nokPhoneField.getText().trim());
         editingMember.setFullTime("Full Time".equals(availabilityCombo.getValue()));
         editingMember.setActive("Active".equals(statusCombo.getValue()));
+        editingMember.setPhotoPath(photoPath);
         if (dobPicker.getValue()     != null) editingMember.setDateOfBirth(dobPicker.getValue());
         if (baptismPicker.getValue() != null) editingMember.setBaptismDate(baptismPicker.getValue());
         if (joinedPicker.getValue()  != null) editingMember.setDateJoined(joinedPicker.getValue());
@@ -279,8 +362,6 @@ public class AddEditMemberController {
                 int id = rs.getInt("id");
                 String name = rs.getString("name");
                 CheckBox cb = new CheckBox(name);
-                cb.getStyleClass().add("check-box");
-                cb.setStyle("-fx-text-fill:#1E2130;-fx-font-size:13px;");
                 ministryIds.add(new int[]{id});
                 ministryChecks.add(cb);
                 ministriesBox.getChildren().add(cb);
@@ -300,13 +381,14 @@ public class AddEditMemberController {
     }
 
     private void loadSpouseCandidates() {
-        spouseCombo.getItems().clear();
+        spouseIds.clear();
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.createStatement().executeQuery(
-                    "SELECT full_name FROM members WHERE is_deleted=0 AND is_deceased=0 ORDER BY full_name");
-            while (rs.next()) spouseCombo.getItems().add(rs.getString("full_name"));
+                    "SELECT id, full_name FROM members WHERE is_deleted=0 AND is_deceased=0 ORDER BY full_name");
+            while (rs.next()) spouseIds.put(rs.getString("full_name"), rs.getInt("id"));
         } catch (SQLException e) { e.printStackTrace(); }
+        spouseCombo.getItems().setAll(spouseIds.keySet());
     }
 
     private void loadSelectedSubBranch(int subBranchId) {
@@ -388,76 +470,5 @@ public class AddEditMemberController {
     private void clearError() {
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
-    }
-
-    public void setReadOnly() {
-        dialogTitle.setText("View Member");
-
-        // Disable all inputs
-        fullNameField.setEditable(false);
-        phoneField.setEditable(false);
-        emailField.setEditable(false);
-        addressField.setEditable(false);
-        nokNameField.setEditable(false);
-        nokPhoneField.setEditable(false);
-        genderCombo.setDisable(true);
-        maritalStatusCombo.setDisable(true);
-        employmentCombo.setDisable(true);
-        subBranchCombo.setDisable(true);
-        availabilityCombo.setDisable(true);
-        statusCombo.setDisable(true);
-        familyCombo.setDisable(true);
-        spouseCombo.setDisable(true);
-        spouseIsMemberCheck.setDisable(true);
-        dobPicker.setDisable(true);
-        baptismPicker.setDisable(true);
-        joinedPicker.setDisable(true);
-        ministryChecks.forEach(cb -> cb.setDisable(true));
-
-        // Replace footer with a single Close button
-        footerBox.getChildren().clear();
-        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
-        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-        Button closeBtn = new Button("Close");
-        closeBtn.getStyleClass().add("btn-secondary");
-        closeBtn.setOnAction(e -> closeDialog());
-        footerBox.getChildren().addAll(spacer, closeBtn);
-    }
-
-    private void addFaithfulDepartedButton() {
-        if (footerBox == null || editingMember == null) return;
-
-        Button departedBtn = new Button("Faithful Departed");
-        departedBtn.setStyle(
-            "-fx-padding:6 14;-fx-font-size:11px;-fx-background-color:transparent;" +
-            "-fx-text-fill:#9099AA;-fx-border-color:#C8CDD8;-fx-border-radius:6;" +
-            "-fx-background-radius:6;-fx-cursor:hand;");
-        departedBtn.setTooltip(new Tooltip("Record this member as Faithful Departed"));
-        departedBtn.setOnMouseEntered(e -> departedBtn.setStyle(
-            "-fx-padding:6 14;-fx-font-size:11px;-fx-background-color:#F0F1F5;" +
-            "-fx-text-fill:#5A6275;-fx-border-color:#9099AA;-fx-border-radius:6;" +
-            "-fx-background-radius:6;-fx-cursor:hand;"));
-        departedBtn.setOnMouseExited(e -> departedBtn.setStyle(
-            "-fx-padding:6 14;-fx-font-size:11px;-fx-background-color:transparent;" +
-            "-fx-text-fill:#9099AA;-fx-border-color:#C8CDD8;-fx-border-radius:6;" +
-            "-fx-background-radius:6;-fx-cursor:hand;"));
-
-        departedBtn.setOnAction(e -> {
-            String cssPath    = getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm();
-            String memberName = editingMember.getFullName();
-            DeceasedMembersController.showMarkDeceasedDialog(
-                    editingMember.getId(), memberName,
-                    () -> {
-                        if (onSaved != null) onSaved.run();
-                        closeDialog();
-                        javafx.application.Platform.runLater(() ->
-                            CommemorationsController.showDeathAnnouncementDialog(memberName));
-                    }, cssPath);
-        });
-
-        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
-        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-        footerBox.getChildren().add(0, departedBtn);
-        footerBox.getChildren().add(1, spacer);
     }
 }

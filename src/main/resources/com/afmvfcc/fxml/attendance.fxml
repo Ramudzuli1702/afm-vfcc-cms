@@ -3,10 +3,58 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.geometry.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.afmvfcc.controllers.AttendanceController"
       spacing="16">
+
+    <!-- ── STAT CARDS ── -->
+    <GridPane hgap="14" vgap="14">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+        </columnConstraints>
+
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="0" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue">
+                <FontIcon iconLiteral="fas-clipboard-list" styleClass="stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="TOTAL SESSIONS" styleClass="stat-label"/>
+                <Label fx:id="statSessions" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="1" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-amber">
+                <FontIcon iconLiteral="fas-door-open" styleClass="stat-icon" iconColor="#C07800"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="OPEN SESSIONS" styleClass="stat-label"/>
+                <Label fx:id="statOpenSessions" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="2" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-green">
+                <FontIcon iconLiteral="fas-user-check" styleClass="stat-icon" iconColor="#2E7D4F"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="PRESENT LAST SESSION" styleClass="stat-label"/>
+                <Label fx:id="statLatestPresent" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+        <HBox styleClass="stat-card, stat-card-compact" GridPane.columnIndex="3" spacing="14" alignment="CENTER_LEFT">
+            <StackPane styleClass="stat-icon-chip, chip-blue-dark">
+                <FontIcon iconLiteral="fas-chart-line" styleClass="stat-icon" iconColor="#2A6BA8"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="AVERAGE PER SESSION" styleClass="stat-label"/>
+                <Label fx:id="statAvgPresent" text="0" styleClass="stat-number"/>
+            </VBox>
+        </HBox>
+    </GridPane>
 
     <TabPane fx:id="attendanceTabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
 
@@ -46,7 +94,10 @@
                           style="-fx-cursor:hand;">
                         <ImageView fx:id="attendanceQrThumb" fitWidth="52" fitHeight="52"/>
                         <VBox spacing="3" alignment="CENTER_LEFT">
-                            <Label text="📱 APP SERVER IP" styleClass="form-label"/>
+                            <HBox spacing="5" alignment="CENTER_LEFT">
+                                <FontIcon iconLiteral="fas-mobile-alt" iconSize="10" iconColor="#9099AA"/>
+                                <Label text="APP SERVER IP" styleClass="form-label"/>
+                            </HBox>
                             <Label fx:id="ipAddressLabel" text="Detecting..."
                                    style="-fx-font-size:15px;-fx-font-weight:700;
                                           -fx-text-fill:#1B3A6B;-fx-font-family:'Courier New';"/>
@@ -61,21 +112,31 @@
                       style="-fx-background-color:#FFFFFF;-fx-background-radius:10;
                              -fx-border-color:#DDE1EA;-fx-border-radius:10;
                              -fx-border-width:1;-fx-padding:10 16;">
-                    <Button text="＋  New Session"    styleClass="btn-primary"
-                            onAction="#handleNewSession"/>
+                    <Button minWidth="-Infinity" text="New Session" graphicTextGap="8" styleClass="btn-primary"
+                            onAction="#handleNewSession">
+                        <graphic><FontIcon iconLiteral="fas-plus" iconSize="12" iconColor="#FFFFFF"/></graphic>
+                    </Button>
                     <Separator orientation="VERTICAL" style="-fx-padding:0 4;"/>
-                    <Button text="📊  Print All"      styleClass="btn-secondary"
-                            onAction="#handleExportExcel"/>
-                    <Button text="✅  Print Present"  styleClass="btn-secondary"
-                            onAction="#handleExportPresentOnly"/>
+                    <Button minWidth="-Infinity" text="Print All" graphicTextGap="8" styleClass="btn-secondary"
+                            onAction="#handleExportExcel">
+                        <graphic><FontIcon iconLiteral="fas-print" iconSize="13" iconColor="#1E2130"/></graphic>
+                    </Button>
+                    <Button minWidth="-Infinity" text="Print Present" graphicTextGap="8" styleClass="btn-secondary"
+                            onAction="#handleExportPresentOnly">
+                        <graphic><FontIcon iconLiteral="fas-check-circle" iconSize="13" iconColor="#1E2130"/></graphic>
+                    </Button>
                     <Separator orientation="VERTICAL" style="-fx-padding:0 4;"/>
-                    <Button text="🔒  Close Session"  styleClass="btn-secondary"
+                    <Button minWidth="-Infinity" text="Close Session" graphicTextGap="8" styleClass="btn-secondary"
                             style="-fx-text-fill:#D94040;"
-                            onAction="#handleCloseSession"/>
+                            onAction="#handleCloseSession">
+                        <graphic><FontIcon iconLiteral="fas-lock" iconSize="13" iconColor="#D94040"/></graphic>
+                    </Button>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="🔄  Sync with App"  styleClass="btn-secondary"
+                    <Button minWidth="-Infinity" text="Sync with App" graphicTextGap="8" styleClass="btn-secondary"
                             style="-fx-padding:6 12;-fx-font-size:11px;"
-                            onAction="#handleSyncWithApp"/>
+                            onAction="#handleSyncWithApp">
+                        <graphic><FontIcon iconLiteral="fas-sync-alt" iconSize="11" iconColor="#1E2130"/></graphic>
+                    </Button>
                 </HBox>
 
                 <!-- ── Sync status bar ── -->
@@ -90,7 +151,7 @@
 
                 <!-- ── Member search bar ── -->
                 <TextField fx:id="attendanceSearchField" styleClass="search-field"
-                           promptText="🔍  Search member..."
+                           promptText="Search member..."
                            onKeyReleased="#handleAttendanceSearch"/>
 
                 <!-- ── Present count + bulk actions ── -->
@@ -98,10 +159,10 @@
                     <Label fx:id="presentCountLabel" text="Present: 0  /  Total: 0"
                            style="-fx-text-fill:#888;-fx-font-size:12px;"/>
                     <HBox HBox.hgrow="ALWAYS"/>
-                    <Button text="Mark All Present" styleClass="btn-secondary"
+                    <Button minWidth="-Infinity" text="Mark All Present" styleClass="btn-secondary"
                             style="-fx-padding:6 14;-fx-font-size:11px;"
                             onAction="#handleMarkAllPresent"/>
-                    <Button text="Clear All" styleClass="btn-secondary"
+                    <Button minWidth="-Infinity" text="Clear All" styleClass="btn-secondary"
                             style="-fx-padding:6 14;-fx-font-size:11px;"
                             onAction="#handleClearAll"/>
                 </HBox>
@@ -120,11 +181,12 @@
             <VBox spacing="12" style="-fx-padding:16;-fx-background-color:#F5F6FA;">
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <TextField fx:id="sessionSearchField" styleClass="search-field"
-                               promptText="🔍  Search sessions..."
+                               promptText="Search sessions..."
                                onKeyReleased="#handleSessionSearch"
                                HBox.hgrow="ALWAYS"/>
                 </HBox>
-                <TableView fx:id="sessionsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:500px;">
+                <TableView fx:id="sessionsTable" VBox.vgrow="ALWAYS" style="-fx-min-height:400px;">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS"/></columnResizePolicy>
                     <columns>
                         <TableColumn fx:id="colSessName"     text="SESSION NAME"  prefWidth="195"/>
                         <TableColumn fx:id="colSessDate"     text="DATE"          prefWidth="115"/>
@@ -132,8 +194,11 @@
                         <TableColumn fx:id="colSessPresent"  text="PRESENT"       prefWidth="80"/>
                         <TableColumn fx:id="colSessTotal"    text="TOTAL"         prefWidth="70"/>
                         <TableColumn fx:id="colSessStatus"   text="STATUS"        prefWidth="85"/>
-                        <TableColumn fx:id="colSessActions"  text="ACTIONS"       prefWidth="230"/>
+                        <TableColumn fx:id="colSessActions"  text="ACTIONS"       prefWidth="110"/>
                     </columns>
+                    <placeholder>
+                        <Label text="No attendance sessions yet. Create one with &quot;New Session&quot; on the Take Attendance tab."/>
+                    </placeholder>
                 </TableView>
             </VBox>
         </Tab>

@@ -4,7 +4,11 @@ import com.afmvfcc.Main;
 import com.afmvfcc.db.DatabaseConnection;
 import com.afmvfcc.models.InventoryItem;
 import com.afmvfcc.utils.AuditLogger;
+import com.afmvfcc.utils.Dialogs;
+import com.afmvfcc.utils.DocumentViewer;
+import com.afmvfcc.utils.FormBuilder;
 import com.afmvfcc.utils.SessionManager;
+import com.afmvfcc.utils.TableActions;
 import com.afmvfcc.utils.ToastManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -105,32 +109,7 @@ public class InventoryController {
             }
         });
 
-        colActions.setCellFactory(col -> new TableCell<>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, editBtn, deleteBtn);
-            {
-                editBtn.getStyleClass().add("btn-secondary");
-                editBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                deleteBtn.getStyleClass().add("btn-danger");
-                deleteBtn.setStyle("-fx-padding:4 10;-fx-font-size:11px;");
-                box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        openItemDialog(getTableView().getItems().get(idx));
-                });
-                deleteBtn.setOnAction(e -> {
-                    int idx = getIndex();
-                    if (idx >= 0 && idx < getTableView().getItems().size())
-                        deleteItem(getTableView().getItems().get(idx));
-                });
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+        TableActions.viewOnly(inventoryTable, colActions, this::showItem);
 
         inventoryTable.setItems(allItems);
     }
@@ -190,22 +169,30 @@ public class InventoryController {
 
     @FXML public void handleAddItem() { openItemDialog(null); }
 
+    private void showItem(InventoryItem it) {
+        String qty = it.getQuantity() + (it.getUnit() != null && !it.getUnit().isBlank() ? " " + it.getUnit() : "");
+        String status = it.getCondition();
+        new DocumentViewer("Inventory Item", it.getItemName())
+            .icon("fas-boxes")
+            .status(status, ("Needs Repair".equals(status) || "Damaged".equals(status)) ? "badge-inactive"
+                          : "Fair".equals(status) ? "badge-pending" : "badge-active")
+            .width(720)
+            .meta("Category",      it.getCategory())
+            .meta("Quantity",      qty + (it.isLowStock() ? "  (low stock)" : ""))
+            .meta("Location",      it.getLocation())
+            .meta("Custodian",     it.getCustodian())
+            .meta("Purchase Date", it.getPurchaseDate() != null
+                ? it.getPurchaseDate().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")) : null)
+            .meta("Value",         it.getPurchaseValue() != null ? "R" + it.getPurchaseValue().toPlainString() : null)
+            .meta("Low Stock Alert", it.getLowStockThreshold() > 0 ? "At " + it.getLowStockThreshold() + " or fewer" : "Off")
+            .section("Notes", it.getNotes(), "No notes.")
+            .onEdit(() -> openItemDialog(it))
+            .onDelete(() -> deleteItem(it))
+            .show();
+    }
+
     private void openItemDialog(InventoryItem existing) {
-        Stage stage = new Stage();
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle(existing == null ? "Add Inventory Item" : "Edit: " + existing.getItemName());
-        stage.setMinWidth(500);
-
-        HBox header = new HBox();
-        header.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24;" +
-            "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
-        Label title = new Label(existing == null ? "Add Inventory Item" : "Edit Inventory Item");
-        title.setStyle("-fx-font-size:16px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        header.getChildren().add(title);
-
-        GridPane form = new GridPane();
-        form.setHgap(12); form.setVgap(14);
-        form.setPadding(new Insets(22, 24, 8, 24));
+        FormBuilder f = new FormBuilder(existing == null ? "Add Inventory Item" : "Edit Inventory Item").icon("fas-boxes");
 
         TextField nameField = field("e.g. Yamaha Keyboard");
         ComboBox<String> categoryCombo = new ComboBox<>();
@@ -224,14 +211,15 @@ public class InventoryController {
         conditionCombo.setMaxWidth(Double.MAX_VALUE);
 
         TextField locationField  = field("e.g. Main Hall Storeroom");
-        TextField custodianField = field("Person/department responsible (optional)");
+        TextField custodianField = field("Person or department (optional)");
         DatePicker purchaseDatePicker = new DatePicker();
         purchaseDatePicker.getStyleClass().add("form-date-picker");
         purchaseDatePicker.setMaxWidth(Double.MAX_VALUE);
         TextField valueField = field("e.g. 4500.00 (optional)");
-        TextField lowStockField = field("Alert when qty falls to/below this (0 = off)");
+        TextField lowStockField = field("0 = off");
         TextArea notesArea = new TextArea();
         notesArea.getStyleClass().add("form-textarea");
+        notesArea.setWrapText(true);
         notesArea.setPromptText("Optional notes...");
         notesArea.setPrefHeight(70);
         notesArea.setMaxWidth(Double.MAX_VALUE);
@@ -254,73 +242,44 @@ public class InventoryController {
             lowStockField.setText("0");
         }
 
-        String[] labels = {"ITEM NAME *", "CATEGORY *", "QUANTITY *", "UNIT", "CONDITION *",
-            "LOCATION", "CUSTODIAN", "PURCHASE DATE", "VALUE (R)", "LOW STOCK ALERT", "NOTES"};
-        javafx.scene.Node[] controls = {nameField, categoryCombo, quantityField, unitField, conditionCombo,
-            locationField, custodianField, purchaseDatePicker, valueField, lowStockField, notesArea};
+        f.section("Item")
+         .field("ITEM NAME *", nameField)
+         .row("CATEGORY *", categoryCombo, "CONDITION *", conditionCombo)
+         .row("QUANTITY *", quantityField, "UNIT", unitField, "LOW STOCK ALERT", lowStockField)
+         .hint("Low stock alert: you're warned when the quantity falls to this number (0 = off).");
+        f.section("Location")
+         .row("LOCATION", locationField, "CUSTODIAN", custodianField);
+        f.section("Purchase")
+         .row("PURCHASE DATE", purchaseDatePicker, "VALUE (R)", valueField);
+        f.section("Notes")
+         .field("NOTES", notesArea);
 
-        for (int i = 0; i < labels.length; i++) {
-            Label lbl = new Label(labels[i]);
-            lbl.setStyle("-fx-font-size:10px;-fx-font-weight:700;-fx-text-fill:#9099AA;");
-            form.add(lbl, 0, i);
-            form.add(controls[i], 1, i);
-            GridPane.setHgrow(controls[i], Priority.ALWAYS);
-        }
-
-        Label errLabel = new Label();
-        errLabel.setStyle("-fx-text-fill:#D94040;-fx-font-size:11px;");
-        errLabel.setVisible(false);
-        errLabel.setWrapText(true);
-        form.add(errLabel, 0, labels.length, 2, 1);
-
-        Button saveBtn   = new Button(existing == null ? "Add Item" : "Save Changes");
-        saveBtn.getStyleClass().add("btn-primary");
-        Button cancelBtn = new Button("Cancel");
-        cancelBtn.getStyleClass().add("btn-secondary");
-        HBox footer = new HBox(10, cancelBtn, saveBtn);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
-            "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color:#F5F6FA;");
-        ScrollPane scroll = new ScrollPane(form);
-        scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;" +
-            "-fx-border-color:transparent;");
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        root.getChildren().addAll(header, scroll, footer);
-
-        cancelBtn.setOnAction(e -> stage.close());
+        Button saveBtn = f.saveButton(existing == null ? "Add Item" : "Save Changes");
 
         saveBtn.setOnAction(e -> {
-            errLabel.setVisible(false);
+            f.clearError();
             String name = nameField.getText().trim();
             String category = categoryCombo.getValue() != null ? categoryCombo.getValue().trim() : "";
             String qtyText = quantityField.getText().trim();
 
             if (name.isEmpty() || category.isEmpty()) {
-                errLabel.setText("Item name and category are required.");
-                errLabel.setVisible(true); return;
+                f.showError("Item name and category are required."); return;
             }
             int qty;
             try { qty = Integer.parseInt(qtyText); if (qty < 0) throw new NumberFormatException(); }
             catch (NumberFormatException nfe) {
-                errLabel.setText("Quantity must be a whole number (0 or more).");
-                errLabel.setVisible(true); return;
+                f.showError("Quantity must be a whole number (0 or more)."); return;
             }
             int lowStock;
             try { lowStock = lowStockField.getText().trim().isEmpty() ? 0 : Integer.parseInt(lowStockField.getText().trim()); }
             catch (NumberFormatException nfe) {
-                errLabel.setText("Low stock alert must be a whole number.");
-                errLabel.setVisible(true); return;
+                f.showError("Low stock alert must be a whole number."); return;
             }
             BigDecimal value = null;
             if (!valueField.getText().trim().isEmpty()) {
                 try { value = new BigDecimal(valueField.getText().trim()); }
                 catch (NumberFormatException nfe) {
-                    errLabel.setText("Value must be a number, e.g. 4500.00");
-                    errLabel.setVisible(true); return;
+                    f.showError("Value must be a number, e.g. 4500.00"); return;
                 }
             }
 
@@ -373,49 +332,45 @@ public class InventoryController {
                     ToastManager.success("Item \"" + name + "\" updated.");
                 }
                 loadItems();
-                stage.close();
+                f.close();
             } catch (SQLException ex) {
-                errLabel.setText("Database error: " + ex.getMessage());
-                errLabel.setVisible(true);
+                f.showError("Database error: " + ex.getMessage());
                 ex.printStackTrace();
                 ToastManager.error("Failed to save item: " + ex.getMessage());
             }
         });
 
-        Scene scene = new Scene(root, 520, 640);
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
-        stage.showAndWait();
+        f.show(620);
     }
 
     // ══════════════════════════════════════════════════════════
     // DELETE
     // ══════════════════════════════════════════════════════════
 
-    private void deleteItem(InventoryItem item) {
+    /** Confirms, then removes the item. Returns true if it was removed. */
+    private boolean deleteItem(InventoryItem item) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         Main.applyStyles(confirm.getDialogPane());
         confirm.setTitle("Delete Inventory Item");
         confirm.setHeaderText("Remove \"" + item.getItemName() + "\" from inventory?");
         confirm.setContentText("This item will no longer appear in the inventory list.");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn != ButtonType.OK) return;
-            try {
-                Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE inventory_items SET is_deleted=1 WHERE id=?");
-                ps.setInt(1, item.getId());
-                ps.executeUpdate();
-                AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
-                    "Deleted inventory item: " + item.getItemName());
-                loadItems();
-                ToastManager.success("Item \"" + item.getItemName() + "\" removed from inventory.");
-            } catch (SQLException e) {
-                e.printStackTrace();
-                ToastManager.error("Failed to delete item: " + e.getMessage());
-            }
-        });
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(
+                "UPDATE inventory_items SET is_deleted=1 WHERE id=?");
+            ps.setInt(1, item.getId());
+            ps.executeUpdate();
+            AuditLogger.log(SessionManager.getInstance().getCurrentUser().getId(),
+                "Deleted inventory item: " + item.getItemName());
+            loadItems();
+            ToastManager.success("Item \"" + item.getItemName() + "\" removed from inventory.");
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            ToastManager.error("Failed to delete item: " + e.getMessage());
+            return false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════

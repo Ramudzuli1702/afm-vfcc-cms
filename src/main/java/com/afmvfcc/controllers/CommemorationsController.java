@@ -37,6 +37,7 @@ public class CommemorationsController {
     @FXML
     public void handleBaptismCert() {
         Stage stage = buildStage("Certificate of Baptism", 560, 560);
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-water");
         VBox root = stageRoot();
 
         root.getChildren().add(sectionHeader("Certificate of Baptism",
@@ -84,7 +85,7 @@ public class CommemorationsController {
             String date     = datePicker.getValue() != null ? datePicker.getValue().format(DISPLAY_FMT) : "";
             String minister = minField.getText().trim();
             if (name == null || name.trim().isEmpty()) { showError("Enter the recipient name."); return; }
-            File out = chooseSaveFile(stage, "BaptismCert_" + safeName(name));
+            File out = chooseSaveFile(stage, "BaptismCert_" + safeName(name), "Certificates/Baptism");
             if (out == null) return;
             try {
                 CertificateGenerator.generateBaptism(name, date, minister, out.getAbsolutePath());
@@ -105,6 +106,7 @@ public class CommemorationsController {
     @FXML
     public void handleAppreciationCert() {
         Stage stage = buildStage("Certificate of Appreciation", 560, 460);
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-award");
         VBox root = stageRoot();
         root.getChildren().add(sectionHeader("Certificate of Appreciation", "APPRECIATION", "#3A86C8"));
 
@@ -142,7 +144,7 @@ public class CommemorationsController {
             String name = memberCombo.getValue();
             String date = datePicker.getValue() != null ? datePicker.getValue().format(DISPLAY_FMT) : "";
             if (name == null || name.trim().isEmpty()) { showError("Enter the recipient name."); return; }
-            File out = chooseSaveFile(stage, "Appreciation_" + safeName(name));
+            File out = chooseSaveFile(stage, "Appreciation_" + safeName(name), "Certificates/Appreciation");
             if (out == null) return;
             try {
                 CertificateGenerator.generateAppreciation(name, date, out.getAbsolutePath());
@@ -163,6 +165,7 @@ public class CommemorationsController {
     @FXML
     public void handleBlessingCert() {
         Stage stage = buildStage("Marriage Blessing", 580, 640);
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-heart");
         VBox root = stageRoot();
         root.getChildren().add(sectionHeader("Marriage Blessing", "MARRIAGE", "#B5862A"));
 
@@ -225,7 +228,7 @@ public class CommemorationsController {
             String groom = groomField.getText().trim();
             String date  = datePicker.getValue() != null ? datePicker.getValue().format(DISPLAY_FMT) : "";
             if (bride.isEmpty() || groom.isEmpty()) { showError("Enter both bride and groom names."); return; }
-            File out = chooseSaveFile(stage, "Blessing_" + safeName(bride) + "_" + safeName(groom));
+            File out = chooseSaveFile(stage, "Blessing_" + safeName(bride) + "_" + safeName(groom), "Certificates/Blessing");
             if (out == null) return;
             try {
                 CertificateGenerator.generateBlessing(bride, groom, date, photoPath[0], out.getAbsolutePath());
@@ -264,6 +267,7 @@ public class CommemorationsController {
 
     private void openDeathAnnouncementDialog(String prefilledName) {
         Stage stage = buildStage("Death Announcement", 560, 560);
+        com.afmvfcc.utils.Icons.setWindowIcon(stage, "fas-dove");
         VBox root = stageRoot();
         root.getChildren().add(sectionHeader(
             "Death Announcement", "ANNOUNCEMENT", "#4A5568"));
@@ -334,12 +338,16 @@ public class CommemorationsController {
             if (name == null || name.trim().isEmpty()) { showError("Enter the deceased member's name."); return; }
             if (date.isEmpty()) { showError("Enter the burial date."); return; }
 
-            FileChooser fc = new FileChooser();
-            fc.setTitle("Save Announcement Image");
-            fc.setInitialFileName("Announcement_" + safeName(name) + ".png");
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image", "*.png"));
-            File out = fc.showSaveDialog(stage);
-            if (out == null) return;
+            File out = com.afmvfcc.utils.DocumentPaths.resolveFile("Certificates/Death Announcements",
+                    "Announcement_" + safeName(name) + ".png");
+            if (out == null) {
+                FileChooser fc = new FileChooser();
+                fc.setTitle("Save Announcement Image");
+                fc.setInitialFileName("Announcement_" + safeName(name) + ".png");
+                fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image", "*.png"));
+                out = fc.showSaveDialog(stage);
+                if (out == null) return;
+            }
             try {
                 CertificateGenerator.generateAnnouncement(name, date, time, venue, out.getAbsolutePath());
                 audit("Generated Death Announcement for: " + name);
@@ -416,31 +424,31 @@ public class CommemorationsController {
 
     private VBox sectionHeader(String title, String badge, String badgeColor) {
         VBox h = new VBox(4);
-        h.setStyle("-fx-background-color:#FFFFFF;-fx-padding:18 24 14 24;" +
+        h.setStyle("-fx-background-color:#FFFFFF;-fx-padding:16 28;" +
             "-fx-border-color:#DDE1EA;-fx-border-width:0 0 1 0;");
         Label badgeLbl = new Label(badge);
         badgeLbl.setStyle("-fx-font-size:9px;-fx-font-weight:700;" +
             "-fx-text-fill:" + badgeColor + ";-fx-letter-spacing:2px;");
         Label titleLbl = new Label(title);
-        titleLbl.setStyle("-fx-font-size:17px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
-        h.getChildren().addAll(badgeLbl, titleLbl);
+        titleLbl.setStyle("-fx-font-size:18px;-fx-font-weight:700;-fx-text-fill:#1E2130;");
+        Label hint = new Label("Fields marked * are required. Preview before saving the PDF.");
+        hint.setStyle("-fx-font-size:11px;-fx-text-fill:#9099AA;");
+        h.getChildren().addAll(badgeLbl, titleLbl, hint);
         return h;
     }
 
+    /** The details card (standard form section); fields and the preview go inside it. */
     private VBox formBody() {
-        VBox v = new VBox(14);
-        v.setStyle("-fx-padding:18 24 8 24;");
-        VBox.setVgrow(v, Priority.ALWAYS);
+        VBox v = new VBox(12);
+        v.getStyleClass().add("form-section");
+        Label t = new Label("CERTIFICATE DETAILS");
+        t.getStyleClass().add("form-section-title");
+        v.getChildren().add(t);
         return v;
     }
 
     private VBox formRow(String label, javafx.scene.Node field) {
-        VBox box = new VBox(5);
-        Label l = new Label(label);
-        l.setStyle("-fx-font-size:10px;-fx-font-weight:700;-fx-text-fill:#5A6275;-fx-letter-spacing:1px;");
-        box.getChildren().addAll(l, field);
-        if (field instanceof Region) ((Region) field).setMaxWidth(Double.MAX_VALUE);
-        return box;
+        return com.afmvfcc.utils.FormBuilder.labelled(label, field);
     }
 
     private ComboBox<String> memberCombo() {
@@ -500,7 +508,7 @@ public class CommemorationsController {
 
     private ImageView previewImg() {
         ImageView iv = new ImageView();
-        iv.setFitWidth(500);
+        iv.setFitWidth(460);
         iv.setPreserveRatio(true);
         iv.setSmooth(true);
         iv.setVisible(false);
@@ -522,7 +530,7 @@ public class CommemorationsController {
     private HBox footer(Button cancel, Button preview, Button save) {
         HBox h = new HBox(10, cancel, preview, save);
         h.setAlignment(Pos.CENTER_RIGHT);
-        h.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 24;" +
+        h.setStyle("-fx-background-color:#FFFFFF;-fx-padding:14 28;" +
             "-fx-border-color:#DDE1EA;-fx-border-width:1 0 0 0;");
         return h;
     }
@@ -533,19 +541,33 @@ public class CommemorationsController {
         cancel.getStyleClass().add("btn-secondary");
     }
 
+    /**
+     * Shows a certificate form: header and footer stay fixed, only the body
+     * between them scrolls, and the window is sized to fit ({@code h} is unused).
+     */
     private void launch(Stage stage, VBox root, double w, double h) {
-        ScrollPane scroll = new ScrollPane(root);
+        int n = root.getChildren().size();
+        javafx.scene.Node header = root.getChildren().get(0);
+        javafx.scene.Node footer = root.getChildren().get(n - 1);
+        java.util.List<javafx.scene.Node> middle = new java.util.ArrayList<>(root.getChildren().subList(1, n - 1));
+        root.getChildren().clear();
+
+        VBox body = new VBox(14);
+        body.getChildren().addAll(middle);
+        body.setStyle("-fx-padding:22 28;-fx-background-color:#F5F6FA;");
+        ScrollPane scroll = new ScrollPane(body);
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color:#F5F6FA;-fx-background:transparent;");
-        Scene scene = new Scene(scroll, w, h);
-        scene.setFill(javafx.scene.paint.Color.web("#F5F6FA"));
-        scene.getStylesheets().add(
-            getClass().getResource("/com/afmvfcc/css/styles.css").toExternalForm());
-        stage.setScene(scene);
+        scroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        root.getChildren().addAll(header, scroll, footer);
+
+        stage.setScene(com.afmvfcc.utils.Dialogs.fittedScene(root, scroll, Math.max(w, 600)));
         stage.showAndWait();
     }
 
-    private File chooseSaveFile(Stage owner, String defaultName) {
+    private File chooseSaveFile(Stage owner, String defaultName, String subfolder) {
+        File auto = com.afmvfcc.utils.DocumentPaths.resolveFile(subfolder, defaultName + ".pdf");
+        if (auto != null) return auto;
         FileChooser fc = new FileChooser();
         fc.setTitle("Save Certificate");
         fc.setInitialFileName(defaultName + ".pdf");

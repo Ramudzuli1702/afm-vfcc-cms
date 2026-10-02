@@ -34,6 +34,9 @@ public class Main extends Application {
         } catch (Exception e) {
             System.err.println("[Main] Could not load window icon: " + e.getMessage());
         }
+        // Every other window gets the church logo unless it sets its own icon
+        com.afmvfcc.utils.Icons.useAppIconByDefault();
+        styleAllDialogs();
 
         Application.setUserAgentStylesheet(Application.STYLESHEET_MODENA);
 
@@ -175,6 +178,26 @@ public class Main extends Application {
 
         applyStyles(alert.getDialogPane());
         alert.showAndWait();
+    }
+
+    /**
+     * Gives every standard dialog (Alert, confirmation, export notices...) the
+     * app stylesheet as it opens, so no pop-up falls back to the plain JavaFX
+     * look even where the code that created it forgot {@link #applyStyles}.
+     */
+    private static void styleAllDialogs() {
+        javafx.stage.Window.getWindows().addListener(
+            (javafx.collections.ListChangeListener<javafx.stage.Window>) change -> {
+                while (change.next()) {
+                    for (javafx.stage.Window w : change.getAddedSubList()) {
+                        if (w.getScene() != null
+                                && w.getScene().getRoot() instanceof javafx.scene.control.DialogPane pane
+                                && pane.getStylesheets().isEmpty()) {
+                            applyStyles(pane);
+                        }
+                    }
+                }
+            });
     }
 
     public static void applyStyles(javafx.scene.layout.Region region) {

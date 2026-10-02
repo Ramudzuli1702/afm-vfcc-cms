@@ -29,6 +29,8 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
 
+import com.afmvfcc.utils.DocumentPaths;
+
 import org.apache.poi.util.Units;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -108,6 +110,15 @@ public class DocumentExporter {
     public record AttendanceRow(String memberName, String ministry, String status) {
     }
 
+    public record TaskRow(String title, String assignedTo, String meeting,
+            String dueDate, String status, String report) {
+    }
+
+    public record MinutesDoc(String title, String date, String location, String status,
+            String agenda, String minutes, List<String> present, List<String> apologies,
+            List<TaskRow> tasks) {
+    }
+
     // ══════════════════════════════════════════════════════════
     // PUBLIC ENTRY POINTS
     // ══════════════════════════════════════════════════════════
@@ -116,7 +127,7 @@ public class DocumentExporter {
         String fmt = pickFormat(true);
         if (fmt == null)
             return;
-        File out = chooseSave("AFM_VFCC_Members_" + today(), fmt);
+        File out = chooseSave("AFM_VFCC_Members_" + today(), fmt, "Members");
         if (out == null)
             return;
         bg(() -> {
@@ -134,7 +145,7 @@ public class DocumentExporter {
         String fmt = pickFormat(false);
         if (fmt == null)
             return;
-        File out = chooseSave("AFM_VFCC_Welfare_" + today(), fmt);
+        File out = chooseSave("AFM_VFCC_Welfare_" + today(), fmt, "Welfare");
         if (out == null)
             return;
         bg(() -> {
@@ -146,12 +157,45 @@ public class DocumentExporter {
         });
     }
 
+    public static void exportBoardTasks(List<TaskRow> rows) {
+        String fmt = pickFormat(false);
+        if (fmt == null)
+            return;
+        File out = chooseSave("AFM_VFCC_Board_Tasks_" + today(), fmt, "Board");
+        if (out == null)
+            return;
+        bg(() -> {
+            if ("pdf".equals(fmt))
+                tasksPdf(rows, out);
+            else
+                tasksDocx(rows, out);
+            showOk("Board tasks report saved to:\n" + out.getAbsolutePath());
+        });
+    }
+
+    public static void exportMeetingMinutes(MinutesDoc m) {
+        String fmt = pickFormat(false);
+        if (fmt == null)
+            return;
+        String safe = m.title().replaceAll("[^\\w\\s-]", "").trim().replace(' ', '_');
+        File out = chooseSave("AFM_VFCC_Minutes_" + safe + "_" + today(), fmt, "Board");
+        if (out == null)
+            return;
+        bg(() -> {
+            if ("pdf".equals(fmt))
+                minutesPdf(m, out);
+            else
+                minutesDocx(m, out);
+            showOk("Meeting minutes saved to:\n" + out.getAbsolutePath());
+        });
+    }
+
     public static void exportAttendance(String sessName, String sessDate,
             List<AttendanceRow> rows) {
         String fmt = pickFormat(true);
         if (fmt == null)
             return;
-        File out = chooseSave("AFM_VFCC_Attendance_" + today(), fmt);
+        File out = chooseSave("AFM_VFCC_Attendance_" + today(), fmt, "Attendance");
         if (out == null)
             return;
         bg(() -> {
@@ -169,7 +213,7 @@ public class DocumentExporter {
         String fmt = pickFormat(false);
         if (fmt == null)
             return;
-        File out = chooseSave("AFM_VFCC_Events_" + today(), fmt);
+        File out = chooseSave("AFM_VFCC_Events_" + today(), fmt, "Events");
         if (out == null)
             return;
         bg(() -> {
@@ -190,7 +234,7 @@ public class DocumentExporter {
         String safe = member.getFullName() != null
                 ? member.getFullName().replaceAll("[^\\w\\s-]", "").replace(' ', '_')
                 : "Member";
-        File out = chooseSave("AFM_VFCC_Member_" + safe + "_" + today(), "pdf");
+        File out = chooseSave("AFM_VFCC_Member_" + safe + "_" + today(), "pdf", "Member Forms");
         if (out == null)
             return;
         bg(() -> {
@@ -205,7 +249,7 @@ public class DocumentExporter {
     public static void exportUserGuide() {
         String fmt = pickFormat(false);
         if (fmt == null) return;
-        File out = chooseSave("AFM_VFCC_User_Guide_" + today(), fmt);
+        File out = chooseSave("AFM_VFCC_User_Guide_" + today(), fmt, "Documentation");
         if (out == null) return;
         List<DocSection> sections = UserGuideContent.sections().stream()
                 .map(s -> new DocSection(s.heading(), s.body())).toList();
@@ -217,7 +261,7 @@ public class DocumentExporter {
     }
 
     public static void exportPolicy() {
-        File out = chooseSave("AFM_VFCC_System_Usage_Policy_" + today(), "pdf");
+        File out = chooseSave("AFM_VFCC_System_Usage_Policy_" + today(), "pdf", "Documentation");
         if (out == null) return;
         List<DocSection> sections = PolicyContent.sections().stream()
                 .map(s -> new DocSection(s.heading(), s.body())).toList();
@@ -284,6 +328,76 @@ public class DocumentExporter {
             pad(t, 6);
         doc.add(t);
         footer(doc, r, "Total cases: " + rows.size());
+        doc.close();
+    }
+
+    private static void tasksPdf(List<TaskRow> rows, File out) throws Exception {
+        Document doc = openDoc(out, true);
+        PdfFont b = bold(), r = reg();
+        letterhead(doc, b, r, "Board Tasks Report");
+
+        float[] cw = { 150f, 105f, 115f, 70f, 70f, 210f };
+        Table t = table(cw);
+        for (String h : new String[] { "Task", "Assigned To", "Meeting", "Due", "Status", "Report" })
+            t.addHeaderCell(hdrCell(h, b));
+        for (int i = 0; i < rows.size(); i++) {
+            TaskRow w = rows.get(i);
+            DeviceRgb bg = i % 2 == 0 ? WHITE : LIGHT_ROW;
+            t.addCell(dc(w.title(), bg, BODY, r, false));
+            t.addCell(dc(w.assignedTo(), bg, BODY, r, false));
+            t.addCell(dc(w.meeting(), bg, BODY, r, false));
+            t.addCell(dc(w.dueDate(), bg, BODY, r, false));
+            DeviceRgb[] sc = taskSt(w.status());
+            t.addCell(dc(w.status(), sc[0], sc[1], b, true));
+            t.addCell(dc(w.report(), bg, BODY, r, false));
+        }
+        if (rows.isEmpty())
+            pad(t, 6);
+        doc.add(t);
+        footer(doc, r, "Total tasks: " + rows.size());
+        doc.close();
+    }
+
+    private static void minutesPdf(MinutesDoc m, File out) throws Exception {
+        Document doc = openDoc(out, false);
+        PdfFont b = bold(), r = reg();
+        letterhead(doc, b, r, "Minutes of Meeting");
+
+        doc.add(new Paragraph(m.title()).setFont(b).setFontSize(13).setFontColor(BODY).setMarginBottom(8));
+        Table info = new Table(UnitValue.createPointArray(new float[] { 120f, 400f }))
+                .setWidth(UnitValue.createPercentValue(100));
+        profileRow(info, b, r, "Date", m.date());
+        profileRow(info, b, r, "Location", m.location());
+        profileRow(info, b, r, "Status", m.status());
+        profileRow(info, b, r, "Present", String.join(", ", m.present()));
+        profileRow(info, b, r, "Apologies", String.join(", ", m.apologies()));
+        doc.add(info);
+
+        for (String[] s : new String[][] { { "Agenda", m.agenda() }, { "Minutes", m.minutes() } }) {
+            doc.add(new Paragraph(s[0]).setFont(b).setFontSize(11).setFontColor(NAVY)
+                    .setMarginTop(16).setMarginBottom(4));
+            doc.add(new Paragraph(s[1] != null && !s[1].isBlank() ? s[1].strip() : "—")
+                    .setFont(r).setFontSize(10).setFontColor(BODY).setMultipliedLeading(1.4f));
+        }
+
+        if (!m.tasks().isEmpty()) {
+            doc.add(new Paragraph("Action Items").setFont(b).setFontSize(11).setFontColor(NAVY)
+                    .setMarginTop(16).setMarginBottom(6));
+            Table t = table(new float[] { 190f, 120f, 70f, 70f });
+            for (String h : new String[] { "Task", "Assigned To", "Due", "Status" })
+                t.addHeaderCell(hdrCell(h, b));
+            for (int i = 0; i < m.tasks().size(); i++) {
+                TaskRow w = m.tasks().get(i);
+                DeviceRgb bg = i % 2 == 0 ? WHITE : LIGHT_ROW;
+                t.addCell(dc(w.title(), bg, BODY, r, false));
+                t.addCell(dc(w.assignedTo(), bg, BODY, r, false));
+                t.addCell(dc(w.dueDate(), bg, BODY, r, false));
+                DeviceRgb[] sc = taskSt(w.status());
+                t.addCell(dc(w.status(), sc[0], sc[1], b, true));
+            }
+            doc.add(t);
+        }
+        footer(doc, r, null);
         doc.close();
     }
 
@@ -572,6 +686,15 @@ public class DocumentExporter {
         };
     }
 
+    private static DeviceRgb[] taskSt(String s) {
+        return switch (s != null ? s : "") {
+            case "Done" -> new DeviceRgb[] { GREEN_BG, GREEN_FG };
+            case "In Progress" -> new DeviceRgb[] { BLUE_BG, BLUE_FG };
+            case "Overdue" -> new DeviceRgb[] { RED_BG, RED_FG };
+            default -> new DeviceRgb[] { AMBER_BG, AMBER_FG };
+        };
+    }
+
     private static DeviceRgb[] evCat(String c) {
         return switch (c != null ? c : "") {
             case "Service" -> new DeviceRgb[] { BLUE_BG, BLUE_FG };
@@ -639,6 +762,105 @@ public class DocumentExporter {
                 doc.write(f);
             }
         }
+    }
+
+    private static void tasksDocx(List<TaskRow> rows, File out) throws Exception {
+        try (XWPFDocument doc = new XWPFDocument()) {
+            setLandscape(doc);
+            docxLetterhead(doc, "Board Tasks Report");
+            String[] hs = { "Task", "Assigned To", "Meeting", "Due", "Status", "Report" };
+            int[] ws = { 2100, 1500, 1600, 1100, 1100, 2400 };
+            XWPFTable t = doc.createTable(rows.size() + 1, hs.length);
+            rmBorders(t);
+            for (int c = 0; c < hs.length; c++)
+                dxHdr(t.getRow(0).getCell(c), hs[c], ws[c]);
+            for (int i = 0; i < rows.size(); i++) {
+                TaskRow w = rows.get(i);
+                String sh = i % 2 == 0 ? POI_WHITE : POI_LIGHT;
+                String[] st = taskStPoi(w.status());
+                String[] bgs = { sh, sh, sh, sh, st[0], sh };
+                String[] fgs = { POI_BODY, POI_BODY, POI_BODY, POI_BODY, st[1], POI_BODY };
+                String[] v = { w.title(), w.assignedTo(), w.meeting(), w.dueDate(), w.status(), w.report() };
+                for (int c = 0; c < v.length; c++)
+                    dxDat(t.getRow(i + 1).getCell(c), v[c], ws[c], bgs[c], fgs[c]);
+            }
+            docxFooter(doc, "Total tasks: " + rows.size());
+            try (FileOutputStream f = new FileOutputStream(out)) {
+                doc.write(f);
+            }
+        }
+    }
+
+    private static void minutesDocx(MinutesDoc m, File out) throws Exception {
+        try (XWPFDocument doc = new XWPFDocument()) {
+            docxLetterhead(doc, "Minutes of Meeting");
+            XWPFParagraph tp = doc.createParagraph();
+            tp.setSpacingAfter(120);
+            dxRun(tp, m.title(), POI_BODY, 13, true);
+
+            String[][] info = {
+                    { "Date", m.date() }, { "Location", m.location() }, { "Status", m.status() },
+                    { "Present", String.join(", ", m.present()) },
+                    { "Apologies", String.join(", ", m.apologies()) } };
+            XWPFTable it = doc.createTable(info.length, 2);
+            rmBorders(it);
+            for (int i = 0; i < info.length; i++) {
+                dxDat(it.getRow(i).getCell(0), info[i][0], 1800, POI_LIGHT, "9099AA");
+                dxDat(it.getRow(i).getCell(1), nvl(info[i][1]).isEmpty() ? "—" : info[i][1],
+                        7200, POI_WHITE, POI_BODY);
+            }
+
+            for (String[] s : new String[][] { { "Agenda", m.agenda() }, { "Minutes", m.minutes() } }) {
+                XWPFParagraph hp = doc.createParagraph();
+                hp.setSpacingBefore(240);
+                dxRun(hp, s[0], POI_NAVY, 12, true);
+                XWPFParagraph bp = doc.createParagraph();
+                XWPFRun run = bp.createRun();
+                run.setColor(POI_BODY);
+                run.setFontSize(10);
+                String body = s[1] != null && !s[1].isBlank() ? s[1].strip() : "—";
+                String[] lines = body.split("\\R", -1);
+                for (int i = 0; i < lines.length; i++) {
+                    if (i > 0)
+                        run.addBreak();
+                    run.setText(lines[i], i);
+                }
+            }
+
+            if (!m.tasks().isEmpty()) {
+                XWPFParagraph hp = doc.createParagraph();
+                hp.setSpacingBefore(240);
+                dxRun(hp, "Action Items", POI_NAVY, 12, true);
+                String[] hs = { "Task", "Assigned To", "Due", "Status" };
+                int[] ws = { 3800, 2400, 1400, 1400 };
+                XWPFTable t = doc.createTable(m.tasks().size() + 1, hs.length);
+                rmBorders(t);
+                for (int c = 0; c < hs.length; c++)
+                    dxHdr(t.getRow(0).getCell(c), hs[c], ws[c]);
+                for (int i = 0; i < m.tasks().size(); i++) {
+                    TaskRow w = m.tasks().get(i);
+                    String sh = i % 2 == 0 ? POI_WHITE : POI_LIGHT;
+                    String[] st = taskStPoi(w.status());
+                    String[] v = { w.title(), w.assignedTo(), w.dueDate(), w.status() };
+                    for (int c = 0; c < v.length; c++)
+                        dxDat(t.getRow(i + 1).getCell(c), v[c], ws[c],
+                                c == 3 ? st[0] : sh, c == 3 ? st[1] : POI_BODY);
+                }
+            }
+            docxFooter(doc, null);
+            try (FileOutputStream f = new FileOutputStream(out)) {
+                doc.write(f);
+            }
+        }
+    }
+
+    private static String[] taskStPoi(String s) {
+        return switch (s != null ? s : "") {
+            case "Done" -> new String[] { POI_GRBG, POI_GRFG };
+            case "In Progress" -> new String[] { POI_BLBG, POI_BLFG };
+            case "Overdue" -> new String[] { POI_REBG, POI_REFG };
+            default -> new String[] { POI_AMBG, POI_AMFG };
+        };
     }
 
     private static void attendanceDocx(String sn, String sd, List<AttendanceRow> rows, File out) throws Exception {
@@ -1069,6 +1291,13 @@ public class DocumentExporter {
                 setContentText("Choose export format:");
             }
         }.showAndWait().map(v -> v.contains("Excel") ? "xlsx" : v.contains("PDF") ? "pdf" : "docx").orElse(null);
+    }
+
+    /** Auto-saves into the configured document folder's subfolder when one is set; otherwise prompts as before. */
+    private static File chooseSave(String name, String ext, String subfolder) {
+        File auto = DocumentPaths.resolveFile(subfolder, name + "." + ext);
+        if (auto != null) return auto;
+        return chooseSave(name, ext);
     }
 
     private static File chooseSave(String name, String ext) {

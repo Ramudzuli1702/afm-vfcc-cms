@@ -32,30 +32,29 @@
             <VBox spacing="2" style="-fx-padding:12 10;">
 
                 <Label text="MAIN" styleClass="sidebar-section-label"/>
-                <Button fx:id="btnDashboard"  text="⬛  Dashboard"      styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnMembers"    text="⬛  Members"         styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnAttendance" text="⬛  Attendance"      styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnDashboard"  text="Dashboard"      styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnMembers"    text="Members"         styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnAttendance" text="Attendance"      styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
 
                 <Label text="CHURCH" styleClass="sidebar-section-label"/>
-                <Button fx:id="btnBoard"      text="⬛  Church Board"    styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnCalendar"   text="⬛  Calendar"        styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnWelfare"    text="⬛  Welfare"         styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnFinance"    text="⬛  Finance"         styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnInventory"  text="⬛  Inventory"       styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnBoard"      text="Church Board"    styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnCalendar"   text="Calendar"        styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnWelfare"    text="Welfare"         styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnFinance"    text="Finance"         styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnInventory"  text="Inventory"       styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
 
                 <Label text="COMMUNICATIONS" styleClass="sidebar-section-label"/>
-                <Button fx:id="btnComms"      text="⬛  Communications"  styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnWebsite"    text="⬛  Website"         styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>    
-                <Button fx:id="btnBroadcast" text="⬛  Broadcast"        styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnComms"      text="Communications"  styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnWebsite"    text="Website"         styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>    
+                <Button minWidth="-Infinity" fx:id="btnBroadcast" text="Broadcast"        styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
 
                 <Label text="CEREMONIES" styleClass="sidebar-section-label"/>
-                <Button fx:id="btnCommems"    text="⬛  Commemorations"  styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnCommems"    text="Commemorations"  styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
 
                 <Label text="SYSTEM" styleClass="sidebar-section-label"/>
-                <Button fx:id="btnAdmins"     text="⬛  Admins"          styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnAuditLog"   text="⬛  Audit Log"       styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnSettings"   text="⬛  Settings"        styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
-                <Button fx:id="btnDocumentation" text="⬛  Documentation" styleClass="nav-btn" maxWidth="Infinity" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnAdmins"     text="Admins &amp; Audit"       styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnSettings"   text="Settings"        styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
+                <Button minWidth="-Infinity" fx:id="btnDocumentation" text="Documentation" styleClass="nav-btn" maxWidth="Infinity" graphicTextGap="10" onAction="#navigate"/>
 
             </VBox>
         </ScrollPane>
@@ -64,7 +63,8 @@
         <VBox styleClass="sidebar-bottom" spacing="8">
             <Label fx:id="sidebarUserName" styleClass="sidebar-user-name" text="Loading..."/>
             <Label fx:id="sidebarUserRole" styleClass="sidebar-user-role" text=""/>
-            <Button text="Logout" styleClass="btn-logout" maxWidth="Infinity" onAction="#handleLogout"/>
+            <Button minWidth="-Infinity" fx:id="btnLogout" text="Logout" styleClass="btn-logout" maxWidth="Infinity"
+                    graphicTextGap="8" onAction="#handleLogout"/>
         </VBox>
     </VBox>
 
@@ -79,8 +79,8 @@
             </VBox>
             <HBox HBox.hgrow="ALWAYS"/>
 
-            <Button fx:id="btnViewWebsite" text="🌐  View Website" styleClass="btn-secondary"
-                    style="-fx-font-size:12px;-fx-padding:8 16;"
+            <Button minWidth="-Infinity" fx:id="btnViewWebsite" text="View Website" styleClass="btn-secondary"
+                    style="-fx-font-size:12px;-fx-padding:8 16;" graphicTextGap="8"
                     visible="false" managed="false"
                     onAction="#handleViewWebsite"/>
         </HBox>
