@@ -6,13 +6,13 @@
 -- or member records of any kind are included in this file.
 --
 -- HOW TO USE:
---   1. Install/run the CMS and complete the first-run Database Setup
---      wizard as normal (creates the schema + your own real admin account).
---   2. In the CMS: Settings > Backup > "Restore Backup..." > select this
---      file. NOTE: this REPLACES all current data in the database, so
---      only do this on a fresh/demo install, never on a real church DB.
---   3. Log in with one of the demo accounts below, or your own account
---      created in step 1 if you kept it.
+--   On a new install (easiest): when the first-run Database Setup wizard
+--   asks "How would you like to start?", choose "Restore a backup" and
+--   select this file, then log in with a demo account below.
+--
+--   On an existing install: Settings > Backup > "Restore Backup..." >
+--   select this file. NOTE: this REPLACES all current data in the database,
+--   so only do this on a fresh/demo install, never on a real church DB.
 --
 -- DEMO LOGINS (desktop CMS + mobile app both use the same accounts):
 --   Admin  — username: demo_admin   password: Demo@1234
