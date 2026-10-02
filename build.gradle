@@ -115,10 +115,16 @@ tasks.register('createInstaller', Exec) {
         // jpackage's --input dir becomes the installed app's "app\" folder
         // verbatim, so the Broadcast module's bundled tools (found by
         // BroadcastController next to the running jar) need to be copied in
-        // here too - otherwise the packaged .exe has no ffmpeg/yt-dlp/cookies
-        // at all, even though they work fine under `gradle run` from the
-        // project root.
-        ['ffmpeg.exe', 'yt-dlp.exe', 'cookies.txt'].each { name ->
+        // here too - otherwise the packaged .exe has no ffmpeg/yt-dlp at all,
+        // even though they work fine under `gradle run` from the project root.
+        //
+        // cookies.txt is deliberately NOT bundled: it holds a personal
+        // Facebook session (see .gitignore) and the installer is published
+        // publicly. It's optional - BroadcastController only passes
+        // --cookies when the file exists - so on a machine that needs it,
+        // place cookies.txt next to the installed app instead.
+        delete 'build/libs/cookies.txt'
+        ['ffmpeg.exe', 'yt-dlp.exe'].each { name ->
             def src = file(name)
             if (src.exists()) {
                 copy {
